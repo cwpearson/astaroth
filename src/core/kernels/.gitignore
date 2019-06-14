@@ -1,0 +1,2 @@
+# Ignore the generated headers
+stencil_process.cuh stencil_assembly.cuh
