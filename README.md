@@ -55,7 +55,7 @@ If you have clang-format, you may run `scripts/fix_style.sh`. This script will r
 #include "avoid_including_headers_here.h"
 
 /** Doxygen comments */
-void global_function(void);
+void globalFunction(void);
 ```
 
 
@@ -84,7 +84,7 @@ local_function(const SomeStruct& constant_struct, SomeStruct* modified_struct)
 }
 
 void
-global_function(void)
+globalFunction(void)
 {
 	return;
 }
