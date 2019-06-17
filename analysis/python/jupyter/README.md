@@ -4,8 +4,8 @@
 
 2. In the local machine write:  `ssh -N -L localhost:8888:localhost:8889 username@remote.machine`
 
-3. Access jupyter seession with a browser: `http://localhost:8888`
+3. Access jupyter session with a web browser by writing the the address prompt: `localhost:8888`
 
 Now it should work. 
 
-*PLEASE NOTE: Never commit `.ipyb` files without clearing them to the github repo.*
+**PLEASE NOTE: Never commit `.ipyb` files without clearing them to the git repo.**
