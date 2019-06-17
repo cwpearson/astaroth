@@ -805,13 +805,9 @@ Reduction steps:
 */
 
 // Function pointer definitions
-typedef AcReal (*ReduceFunc)(const AcReal&, const AcReal&);
-typedef AcReal (*ReduceInitialScalFunc)(const AcReal&);
-typedef AcReal (*ReduceInitialVecFunc)(const AcReal&, const AcReal&,
-                                       const AcReal&);
-
 typedef AcReal (*FilterFunc)(const AcReal&);
 typedef AcReal (*FilterFuncVec)(const AcReal&, const AcReal&, const AcReal&);
+typedef AcReal (*ReduceFunc)(const AcReal&, const AcReal&);
 
 // clang-format off
 /* Comparison funcs */
@@ -857,7 +853,6 @@ kernel_filter(const __restrict__ AcReal* src, const int3 start, const int3 end, 
 
     const int nx = end.x - start.x;
     const int ny = end.y - start.y;
-    const int nz = end.z - start.z;
     const int3 dst_idx = (int3) {
         threadIdx.x + blockIdx.x * blockDim.x,
         threadIdx.y + blockIdx.y * blockDim.y,
@@ -886,7 +881,6 @@ kernel_filter_vec(const __restrict__ AcReal* src0,
 
     const int nx = end.x - start.x;
     const int ny = end.y - start.y;
-    const int nz = end.z - start.z;
     const int3 dst_idx = (int3) {
         threadIdx.x + blockIdx.x * blockDim.x,
         threadIdx.y + blockIdx.y * blockDim.y,
@@ -939,11 +933,9 @@ kernel_reduce_block(const __restrict__ AcReal* scratchpad,
     if (idx != 0) {
         return;
     }
-    const int scratchpad_size = DCONST_INT(AC_nxyz);
+
     AcReal res = scratchpad[0];
     for (int i = 1; i < num_blocks; ++i) {
-        assert(i * block_size < num_blocks * block_size);
-        assert(i * block_size < scratchpad_size);
         res = reduce(res, scratchpad[i * block_size]);
     }
     *result = res;
@@ -1048,237 +1040,5 @@ reduce_vec(const cudaStream_t stream, const ReductionType rtype,
     }
     AcReal result;
     cudaMemcpy(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost);
-    return result;
-}
-
-static __device__ inline bool
-oob(const int& i, const int& j, const int& k)
-{
-    if (i >= d_mesh_info.int_params[AC_nx] ||
-        j >= d_mesh_info.int_params[AC_ny] ||
-        k >= d_mesh_info.int_params[AC_nz])
-        return true;
-    else
-        return false;
-}
-
-template <ReduceInitialScalFunc reduce_initial>
-__global__ void
-kernel_reduce_1of3(const __restrict__ AcReal* src, AcReal* dst)
-{
-    const int i = threadIdx.x + blockIdx.x * blockDim.x;
-    const int j = threadIdx.y + blockIdx.y * blockDim.y;
-    const int k = threadIdx.z + blockIdx.z * blockDim.z;
-
-    if (oob(i, j, k))
-        return;
-
-    const int src_idx = DEVICE_VTXBUF_IDX(
-        i + d_mesh_info.int_params[AC_nx_min],
-        j + d_mesh_info.int_params[AC_ny_min],
-        k + d_mesh_info.int_params[AC_nz_min]);
-    const int dst_idx = DEVICE_1D_COMPDOMAIN_IDX(i, j, k);
-
-    dst[dst_idx] = reduce_initial(src[src_idx]);
-}
-
-template <ReduceInitialVecFunc reduce_initial>
-__global__ void
-kernel_reduce_1of3_vec(const __restrict__ AcReal* src_a,
-                   const __restrict__ AcReal* src_b,
-                   const __restrict__ AcReal* src_c, AcReal* dst)
-{
-    const int i = threadIdx.x + blockIdx.x * blockDim.x;
-    const int j = threadIdx.y + blockIdx.y * blockDim.y;
-    const int k = threadIdx.z + blockIdx.z * blockDim.z;
-
-    if (oob(i, j, k))
-        return;
-
-    const int src_idx = DEVICE_VTXBUF_IDX(
-        i + d_mesh_info.int_params[AC_nx_min],
-        j + d_mesh_info.int_params[AC_ny_min],
-        k + d_mesh_info.int_params[AC_nz_min]);
-    const int dst_idx = DEVICE_1D_COMPDOMAIN_IDX(i, j, k);
-
-    dst[dst_idx] = reduce_initial(src_a[src_idx], src_b[src_idx],
-                                  src_c[src_idx]);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-#define BLOCK_SIZE (1024)
-#define ELEMS_PER_THREAD (32)
-
-template <ReduceFunc reduce>
-__global__ void
-kernel_reduce_2of3(AcReal* src, AcReal* result)
-{
-    const int idx = threadIdx.x + blockIdx.x * BLOCK_SIZE * ELEMS_PER_THREAD;
-    const int scratchpad_size = DCONST_INT(AC_nxyz);
-
-    if (idx >= scratchpad_size)
-        return;
-
-    __shared__ AcReal smem[BLOCK_SIZE];
-
-    AcReal tmp = src[idx];
-
-    for (int i = 1; i < ELEMS_PER_THREAD; ++i) {
-        const int src_idx = idx + i * BLOCK_SIZE;
-        if (src_idx >= scratchpad_size) {
-            // This check is for safety: if accessing uninitialized values
-            // beyond the mesh boundaries, we will immediately start seeing NANs
-            if (threadIdx.x < BLOCK_SIZE)
-                smem[threadIdx.x] = NAN;
-            else
-                break;
-        }
-        tmp = reduce(tmp, src[src_idx]);
-    }
-
-    smem[threadIdx.x] = tmp;
-    __syncthreads();
-
-    int offset = BLOCK_SIZE / 2;
-    while (offset > 0) {
-
-        if (threadIdx.x < offset) {
-            smem[threadIdx.x] = reduce(smem[threadIdx.x], smem[threadIdx.x + offset]);
-        }
-        offset /= 2;
-        __syncthreads();
-    }
-    if (threadIdx.x == 0)
-        src[idx] = smem[0];
-}
-
-template <ReduceFunc reduce>
-__global__ void
-kernel_reduce_3of3(const __restrict__ AcReal* src, AcReal* result)
-{
-    const int scratchpad_size = DCONST_INT(AC_nxyz);
-    const int idx = threadIdx.x + blockIdx.x * BLOCK_SIZE * ELEMS_PER_THREAD;
-    AcReal tmp    = src[idx];
-    const int block_offset = BLOCK_SIZE * ELEMS_PER_THREAD;
-    for (int i = 1; idx + i * block_offset < scratchpad_size; ++i)
-        tmp = reduce(tmp, src[idx + i * block_offset]);
-
-    *result = tmp;
-}
-//////////////////////////////////////////////////////////////////////////////
-
-AcReal
-reduce_scal2(const cudaStream_t stream,
-             const ReductionType& rtype, const int& nx, const int& ny,
-             const int& nz, const AcReal* vtxbuf,
-             AcReal* scratchpad, AcReal* reduce_result)
-{
-    const dim3 tpb(32, 4, 1);
-    const dim3 bpg(int(ceil(AcReal(nx) / tpb.x)), int(ceil(AcReal(ny) / tpb.y)),
-                   int(ceil(AcReal(nz) / tpb.z)));
-
-    const int scratchpad_size = nx * ny * nz;
-    const int bpg2            = (unsigned int)ceil(AcReal(scratchpad_size) /
-                                        AcReal(ELEMS_PER_THREAD * BLOCK_SIZE));
-
-    if (rtype == RTYPE_MAX || rtype == RTYPE_MIN) {
-        const int3 start = (int3){STENCIL_ORDER/2, STENCIL_ORDER/2, STENCIL_ORDER/2};
-        const int3 end = (int3){start.x + nx, start.y + ny, start.z + nz};
-        kernel_filter<dvalue><<<bpg, tpb, 0, stream>>>(vtxbuf, start, end, scratchpad);
-        ERRCHK_CUDA_KERNEL_ALWAYS();
-        //kernel_reduce_1of3<dvalue><<<bpg, tpb, 0, stream>>>(vtxbuf, scratchpad);
-    } else if (rtype == RTYPE_RMS) {
-        kernel_reduce_1of3<dsquared><<<bpg, tpb, 0, stream>>>(vtxbuf, scratchpad);
-    } else if (rtype == RTYPE_RMS_EXP) {
-        kernel_reduce_1of3<dexp_squared><<<bpg, tpb, 0, stream>>>(vtxbuf, scratchpad);
-    } else {
-        ERROR("Unrecognized RTYPE");
-    }
-
-    if (rtype == RTYPE_MAX) {
-        const int3 start = (int3){STENCIL_ORDER/2, STENCIL_ORDER/2, STENCIL_ORDER/2};
-        const int3 end = (int3){start.x + nx, start.y + ny, start.z + nz};
-        const int num_elems = (end.x - start.x) * (end.y - start.y) * (end.z - start.z);
-        const int tpb = 128;
-        const int bpg = num_elems / tpb;
-        assert(num_elems % tpb == 0);
-        assert(tpb * bpg <= num_elems);
-        kernel_reduce<dmax><<<bpg, tpb, sizeof(AcReal) * tpb, stream>>>(scratchpad, num_elems);
-        ERRCHK_CUDA_KERNEL_ALWAYS();
-        kernel_reduce_block<dmax><<<1, 1, 0, stream>>>(scratchpad, bpg, tpb, reduce_result);
-        ERRCHK_CUDA_KERNEL_ALWAYS();
-        // kernel_reduce_2of3<dmax><<<bpg2, BLOCK_SIZE, 0, stream>>>(scratchpad, reduce_result);
-        // kernel_reduce_3of3<dmax><<<1, 1, 0, stream>>>(scratchpad, reduce_result);
-    } else if (rtype == RTYPE_MIN) {
-        kernel_reduce_2of3<dmin><<<bpg2, BLOCK_SIZE, 0, stream>>>(scratchpad, reduce_result);
-        kernel_reduce_3of3<dmin><<<1, 1, 0, stream>>>(scratchpad, reduce_result);
-    } else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
-        kernel_reduce_2of3<dsum><<<bpg2, BLOCK_SIZE, 0, stream>>>(scratchpad, reduce_result);
-        kernel_reduce_3of3<dsum><<<1, 1, 0, stream>>>(scratchpad, reduce_result);
-    } else {
-        ERROR("Unrecognized RTYPE");
-    }
-
-    AcReal result;
-    cudaMemcpy(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost);
-    return result;
-}
-
-AcReal
-reduce_vec2(const cudaStream_t stream,
-           const ReductionType& rtype, const int& nx, const int& ny, const int& nz,
-           const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2,
-           AcReal* scratchpad, AcReal* reduce_result)
-{
-    const dim3 tpb(32, 4, 1);
-    const dim3 bpg(int(ceil(float(nx) / tpb.x)),
-                   int(ceil(float(ny) / tpb.y)),
-                   int(ceil(float(nz) / tpb.z)));
-
-    const int scratchpad_size = nx * ny * nz;
-    const int bpg2            = (unsigned int)ceil(float(scratchpad_size) /
-                                        float(ELEMS_PER_THREAD * BLOCK_SIZE));
-
-    // "Features" of this quick & efficient reduction:
-    // Block size must be smaller than the computational domain size
-    // (otherwise we would have do some additional bounds checking in the
-    // second half of kernel_reduce_2of3, which gets quite confusing)
-    // Also the BLOCK_SIZE must be a multiple of two s.t. we can easily split
-    // the work without worrying too much about the array bounds.
-    ERRCHK_ALWAYS(BLOCK_SIZE <= scratchpad_size);
-    ERRCHK_ALWAYS(!(BLOCK_SIZE % 2));
-    // NOTE! Also does not work properly with non-power of two mesh dimension
-    // Issue is with "smem[BLOCK_SIZE];". If you init smem to NANs, you can
-    // see that uninitialized smem values are used in the comparison
-    //ERRCHK_ALWAYS(is_power_of_two(nx));
-    //ERRCHK_ALWAYS(is_power_of_two(ny));
-    //ERRCHK_ALWAYS(is_power_of_two(nz));
-
-    if (rtype == RTYPE_MAX || rtype == RTYPE_MIN) {
-        kernel_reduce_1of3_vec<dlength_vec><<<bpg, tpb, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, scratchpad);
-    } else if (rtype == RTYPE_RMS) {
-        kernel_reduce_1of3_vec<dsquared_vec><<<bpg, tpb, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, scratchpad);
-    } else if (rtype == RTYPE_RMS_EXP) {
-        kernel_reduce_1of3_vec<dexp_squared_vec><<<bpg, tpb, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, scratchpad);
-    } else {
-        ERROR("Unrecognized RTYPE");
-    }
-
-    if (rtype == RTYPE_MAX) {
-        kernel_reduce_2of3<dmax><<<bpg2, BLOCK_SIZE, 0, stream>>>(scratchpad, reduce_result);
-        kernel_reduce_3of3<dmax><<<1, 1, 0, stream>>>(scratchpad, reduce_result);
-    } else if (rtype == RTYPE_MIN) {
-        kernel_reduce_2of3<dmin><<<bpg2, BLOCK_SIZE, 0, stream>>>(scratchpad, reduce_result);
-        kernel_reduce_3of3<dmin><<<1, 1, 0, stream>>>(scratchpad, reduce_result);
-    } else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
-        kernel_reduce_2of3<dsum><<<bpg2, BLOCK_SIZE, 0, stream>>>(scratchpad, reduce_result);
-        kernel_reduce_3of3<dsum><<<1, 1, 0, stream>>>(scratchpad, reduce_result);
-    } else {
-        ERROR("Unrecognized RTYPE");
-    }
-
-    AcReal result;
-    cudaMemcpyAsync(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost, stream);
-    cudaStreamSynchronize(stream);
     return result;
 }

@@ -213,14 +213,6 @@ reduceScal(const Device device, const StreamType stream_type, const ReductionTyp
     *result = reduce_scal(device->streams[stream_type], rtype,
                           start, end, device->vba.in[vtxbuf_handle],
                           device->reduce_scratchpad, device->reduce_result);
-    /*
-    *result = reduce_scal(device->streams[stream_type], rtype,
-                          device->local_config.int_params[AC_nx],
-                          device->local_config.int_params[AC_ny],
-                          device->local_config.int_params[AC_nz],
-                          device->vba.in[vtxbuf_handle],
-                          device->reduce_scratchpad, device->reduce_result);
-                          */
     return AC_SUCCESS;
 }
 
@@ -249,16 +241,6 @@ reduceVec(const Device device, const StreamType stream_type,
                           device->vba.in[vtxbuf1],
                           device->vba.in[vtxbuf2],
                           device->reduce_scratchpad, device->reduce_result);
-    /*
-    *result = reduce_vec(device->streams[stream_type], rtype,
-                         device->local_config.int_params[AC_nx],
-                         device->local_config.int_params[AC_ny],
-                         device->local_config.int_params[AC_nz],
-                         device->vba.in[vtxbuf0],
-                         device->vba.in[vtxbuf1],
-                         device->vba.in[vtxbuf2],
-                         device->reduce_scratchpad, device->reduce_result);
-    */
     return AC_SUCCESS;
 }
 
