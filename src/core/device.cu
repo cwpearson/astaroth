@@ -119,7 +119,7 @@ AcResult
 createDevice(const int id, const AcMeshInfo device_config, Device* device_handle)
 {
     cudaSetDevice(id);
-    cudaDeviceReset(); 
+    cudaDeviceReset();
 
     // Create Device
     struct device_s* device = (struct device_s*) malloc(sizeof(*device));
@@ -213,9 +213,9 @@ reduceScal(const Device device, const StreamType stream_type, const ReductionTyp
 AcResult
 reduceVec(const Device device, const StreamType stream_type,
           const ReductionType rtype,
-          const VertexBufferHandle vec0,
-          const VertexBufferHandle vec1,
-          const VertexBufferHandle vec2,
+          const VertexBufferHandle vtxbuf0,
+          const VertexBufferHandle vtxbuf1,
+          const VertexBufferHandle vtxbuf2,
           AcReal* result)
 {
     cudaSetDevice(device->id);
@@ -224,9 +224,9 @@ reduceVec(const Device device, const StreamType stream_type,
                          device->local_config.int_params[AC_nx],
                          device->local_config.int_params[AC_ny],
                          device->local_config.int_params[AC_nz],
-                         device->vba.in[vec0],
-                         device->vba.in[vec1],
-                         device->vba.in[vec2],
+                         device->vba.in[vtxbuf0],
+                         device->vba.in[vtxbuf1],
+                         device->vba.in[vtxbuf2],
                          device->reduce_scratchpad, device->reduce_result);
 
     return AC_SUCCESS;
