@@ -15,7 +15,7 @@ NVIDIA GPU with >= 3.0 compute capability. See https://en.wikipedia.org/wiki/CUD
 
 ## Building 
 
-There are two ways to build the code instructed below. 
+There are two ways to build the code as instructed below. 
 
 If you encounter issues, recheck that the 3rd party libraries were successfully built during the previous step.
 
@@ -28,9 +28,9 @@ If you encounter issues, recheck that the 3rd party libraries were successfully 
 
 Edit `config/astaroth.conf` to change the numerical setup. 
 
-### Method II: With script to a custom build directory
+### Method II: With a script in a custom build directory (RECOMMENDED) 
 
-1. `source sourceme.sh` to all relevant directories to the `PATH`
+1. `source sourceme.sh` to add relevant directories to the `PATH`
 1. `ac_mkbuilddir.sh -b my_build_dir/` to set up a custom build directory. There are also other options available. See `ac_mkbuilddir.sh -h` for more. 
 1. `$AC_HOME/scripts/compile_acc.sh` to generate kernels from the Domain Specific Language 
 1. `cd my_build_dir/` 
@@ -46,6 +46,10 @@ Edit `my_build_dir/astaroth.conf` to change the numerical setup.
 - `-t` automated test 
 
 By default, the program does a real-time visualization of the simulation domain. The camera and the initial conditions can be controller by `arrow keys`, `pgup`, `pgdown` and `spacebar`.
+
+## Visualization 
+
+See `analysis/python/` directory of existing data visualization and analysis scripts.  
 
 ## Generating documentation
 
