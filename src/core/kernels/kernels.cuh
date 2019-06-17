@@ -926,14 +926,13 @@ _kernel_reduce(AcReal* src, AcReal* result)
     while (offset > 0) {
 
         if (threadIdx.x < offset) {
-            tmp               = reduce(tmp, smem[threadIdx.x + offset]);
-            smem[threadIdx.x] = tmp;
+            smem[threadIdx.x] = reduce(smem[threadIdx.x], smem[threadIdx.x + offset]);
         }
         offset /= 2;
         __syncthreads();
     }
     if (threadIdx.x == 0)
-        src[idx] = tmp;
+        src[idx] = smem[threadIdx.x];
 }
 
 template <ReduceFunc reduce>
@@ -1080,6 +1079,7 @@ reduce_vec(const cudaStream_t stream,
     }
 
     AcReal result;
-    cudaMemcpy(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost);
+    cudaMemcpyAsync(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost, stream);
+    cudaStreamSynchronize(stream);
     return result;
 }
