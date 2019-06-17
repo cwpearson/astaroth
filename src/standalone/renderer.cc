@@ -153,8 +153,8 @@ draw_vertex_buffer(const AcMesh& mesh, const VertexBufferHandle& vertex_buffer,
     const float max = float(model_reduce_scal(mesh, RTYPE_MAX, vertex_buffer));
     const float min = float(model_reduce_scal(mesh, RTYPE_MIN, vertex_buffer));
     */
-    const float max = 1.f;//float(acReduceScal(RTYPE_MAX, vertex_buffer));
-    const float min = 0.f;//float(acReduceScal(RTYPE_MIN, vertex_buffer));
+    const float max = float(acReduceScal(RTYPE_MAX, vertex_buffer));
+    const float min = float(acReduceScal(RTYPE_MIN, vertex_buffer));
     const float range = fabsf(max - min);
     const float mid   = max - .5f * range;
 

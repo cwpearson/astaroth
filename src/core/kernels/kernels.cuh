@@ -1025,9 +1025,9 @@ reduce_vec(const cudaStream_t stream,
     // NOTE! Also does not work properly with non-power of two mesh dimension
     // Issue is with "smem[BLOCK_SIZE];". If you init smem to NANs, you can
     // see that uninitialized smem values are used in the comparison
-    ERRCHK_ALWAYS(is_power_of_two(nx));
-    ERRCHK_ALWAYS(is_power_of_two(ny));
-    ERRCHK_ALWAYS(is_power_of_two(nz));
+    //ERRCHK_ALWAYS(is_power_of_two(nx));
+    //ERRCHK_ALWAYS(is_power_of_two(ny));
+    //ERRCHK_ALWAYS(is_power_of_two(nz));
 
     if (rtype == RTYPE_MAX || rtype == RTYPE_MIN) {
         kernel_reduce_1of3_vec<dlength_vec><<<bpg, tpb, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, scratchpad);
