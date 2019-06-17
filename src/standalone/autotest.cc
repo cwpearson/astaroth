@@ -478,7 +478,7 @@ run_autotest(void)
 	//const vec3i test_dims[] = {{32, 32, 32}};
 
 	int num_failures = 0;
-	/*for (size_t i = 0; i < ARRAY_SIZE(test_dims); ++i) {
+	for (size_t i = 0; i < ARRAY_SIZE(test_dims); ++i) {
 		config.int_params[AC_nx] = test_dims[i].x;
 		config.int_params[AC_ny] = test_dims[i].y;
 		config.int_params[AC_nz] = test_dims[i].z;
@@ -489,7 +489,7 @@ run_autotest(void)
 
 		num_failures += check_reductions(config);
 		fflush(stdout);
-	}*/ // TODO uncomment
+	}
 
 	for (size_t i = 0; i < ARRAY_SIZE(test_dims); ++i) {
 		config.int_params[AC_nx] = test_dims[i].x;

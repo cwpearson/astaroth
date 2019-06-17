@@ -158,16 +158,16 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
     /*
     Here we decompose the host mesh and distribute it among the GPUs in
     the node.
-    
+
     The host mesh is a huge contiguous block of data. Its dimensions are given by
     the global variable named "grid". A "grid" is decomposed into "subgrids",
     one for each GPU. Here we check which parts of the range s0...s1 maps
     to the memory space stored by some GPU, ranging d0...d1, and transfer
     the data if needed.
-    
+
     The index mapping is inherently quite involved, but here's a picture which
     hopefully helps make sense out of all this.
-    
+
 
     Grid
                                      |----num_vertices---|
@@ -181,8 +181,8 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
              ^                   ^
             d0                  d1
 
-                                 ^   ^                   
-                                db  da                   
+                                 ^   ^
+                                db  da
 
     */
     for (int i = 0; i < num_devices; ++i) {
@@ -294,7 +294,7 @@ acBoundcondStep(void)
 
 /*
 // ===MIIKKANOTE START==========================================
-%JP: The old way for computing boundary conditions conflicts with the 
+%JP: The old way for computing boundary conditions conflicts with the
 way we have to do things with multiple GPUs.
 
 The older approach relied on unified memory, which represented the whole
@@ -303,7 +303,7 @@ in its current state is more meant for quick prototyping when performance is not
 Getting the CUDA driver to migrate data intelligently across GPUs is much more difficult than
 when managing the memory explicitly.
 
-In this new approach, I have simplified the multi- and single-GPU layers significantly. 
+In this new approach, I have simplified the multi- and single-GPU layers significantly.
 Quick rundown:
 	New struct: Grid. There are two global variables, "grid" and "subgrid", which
 	contain the extents of the whole simulation domain and the decomposed grids, respectively.
@@ -314,7 +314,7 @@ Quick rundown:
 	The whole simulation domain is decomposed with respect to the z dimension.
 	For example, if the grid contains (nx, ny, nz) vertices, then the subgrids
 	contain (nx, ny, nz / num_devices) vertices.
- 
+
 	An local index (i, j, k) in some subgrid can be mapped to the global grid with
 		global idx = (i, j, k + device_id * subgrid.n.z)
 
@@ -328,35 +328,35 @@ Changes required to this commented code block:
 	  laid out in device memory
 	- The unified memory buffer no longer exists (d_buffer). Instead, we have an opaque handle
 	  of type "Device" which should be passed to single-GPU functions. In this file, all devices
-	  are stored in a global array "devices[num_devices]". 
+	  are stored in a global array "devices[num_devices]".
 	- Every single-GPU function is executed asynchronously by default such that we
 	  can optimize Astaroth by executing memory transactions concurrently with computation.
 	  Therefore a StreamType should be passed as a parameter to single-GPU functions.
 	  Refresher: CUDA function calls are non-blocking when a stream is explicitly passed
-	  as a parameter and commands executing in different streams can be processed 
+	  as a parameter and commands executing in different streams can be processed
 	  in parallel/concurrently.
 
 
 Note on periodic boundaries (might be helpful when implementing other boundary conditions):
 
-	With multiple GPUs, periodic boundary conditions applied on indices ranging from 
-		
+	With multiple GPUs, periodic boundary conditions applied on indices ranging from
+
 		(0, 0, STENCIL_ORDER/2) to (subgrid.m.x, subgrid.m.y, subgrid.m.z - STENCIL_ORDER/2)
 
 	on a single device are "local", in the sense that they can be computed without having
 	to exchange data with neighboring GPUs. Special care is needed only for transferring
 	the data to the fron and back plates outside this range. In the solution we use here,
 	we solve the local boundaries first, and then just exchange the front and back plates
-	in a "ring", like so 
+	in a "ring", like so
 				device_id
 		    (n) <-> 0 <-> 1 <-> ... <-> n <-> (0)
-			
+
 
 // ======MIIKKANOTE END==========================================
 
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MIIKKANOTE: This code block was essentially
                                                           moved into device.cu, function boundCondStep()
-                                                          In astaroth.cu, we use acBoundcondStep() 
+                                                          In astaroth.cu, we use acBoundcondStep()
                                                           just to distribute the work and manage
                                                           communication between GPUs.
 
@@ -364,8 +364,8 @@ Note on periodic boundaries (might be helpful when implementing other boundary c
 
     exit(0);
     #else
-    
-        
+
+
         const int depth = (int)ceil(mesh_info.int_params[AC_mz]/(float)num_devices);
 
         const int3 start = (int3){0, 0, device_id * depth};
@@ -378,8 +378,8 @@ Note on periodic boundaries (might be helpful when implementing other boundary c
         // TODO uses the default stream currently
         if (mesh_info.int_params[AC_bc_type] == 666) { // TODO MAKE A BETTER SWITCH
             wedge_boundconds(0, tpb, start, end, d_buffer);
-        } else { 
-            for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) 
+        } else {
+            for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
                 periodic_boundconds(0, tpb, start, end, d_buffer.in[i]);
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 */
@@ -424,20 +424,52 @@ acIntegrate(const AcReal& dt)
     return AC_SUCCESS;
 }
 
+static AcReal
+simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, const int& n)
+{
+    AcReal res = results[0];
+    for (int i = 1; i < n; ++i) {
+        if (rtype == RTYPE_MAX) {
+            res = max(res, results[i]);
+        } else if (rtype == RTYPE_MIN) {
+            res = min(res, results[i]);
+        } else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+            res = sum(res, results[i]);
+        } else {
+            ERROR("Invalid rtype");
+        }
+    }
+
+    if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+        const AcReal inv_n = AcReal(1.) / (grid.n.x * grid.n.y * grid.n.z);
+        res = sqrt(inv_n * res);
+    }
+
+    return res;
+}
+
 AcReal
 acReduceScal(const ReductionType& rtype,
              const VertexBufferHandle& vtxbuffer_handle)
 {
-    // TODO
-    return 0;
+    AcReal results[num_devices];
+    for (int i = 0; i < num_devices; ++i) {
+        reduceScal(devices[i], STREAM_PRIMARY, rtype, vtxbuffer_handle, &results[i]);
+    }
+
+    return simple_final_reduce_scal(rtype, results, num_devices);
 }
 
 AcReal
 acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a,
             const VertexBufferHandle& b, const VertexBufferHandle& c)
 {
-    // TODO
-    return 0;
+    AcReal results[num_devices];
+    for (int i = 0; i < num_devices; ++i) {
+        reduceVec(devices[i], STREAM_PRIMARY, rtype, a, b, c, &results[i]);
+    }
+
+    return simple_final_reduce_scal(rtype, results, num_devices);
 }
 
 AcResult

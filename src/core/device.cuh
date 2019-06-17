@@ -51,10 +51,16 @@ AcResult boundcondStep(const Device device, const StreamType stream_type,
                        const int3& start, const int3& end);
 
 /** */
-AcResult reduceScal(const Device device);
+AcResult reduceScal(const Device device, const StreamType stream_type, const ReductionType rtype,
+                    const VertexBufferHandle vtxbuf_handle, AcReal* result);
 
 /** */
-AcResult reduceVec(const Device device);
+AcResult reduceVec(const Device device, const StreamType stream_type,
+                   const ReductionType rtype,
+                   const VertexBufferHandle vec0,
+                   const VertexBufferHandle vec1,
+                   const VertexBufferHandle vec2,
+                   AcReal* result);
 
 /** */
 AcResult rkStep(const Device device, const StreamType stream_type, const int step_number,

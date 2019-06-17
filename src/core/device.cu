@@ -37,6 +37,7 @@ __constant__ AcMeshInfo d_mesh_info;
 #define DCONST_INT(X)  (d_mesh_info.int_params[X])
 #define DCONST_REAL(X) (d_mesh_info.real_params[X])
 #define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
+#define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
 #include "kernels/kernels.cuh"
 
 struct device_s {
@@ -118,7 +119,7 @@ AcResult
 createDevice(const int id, const AcMeshInfo device_config, Device* device_handle)
 {
     cudaSetDevice(id);
-    cudaDeviceReset();
+    cudaDeviceReset(); 
 
     // Create Device
     struct device_s* device = (struct device_s*) malloc(sizeof(*device));
@@ -194,16 +195,40 @@ boundcondStep(const Device device, const StreamType stream_type, const int3& sta
 }
 
 AcResult
-reduceScal(const Device device)
+reduceScal(const Device device, const StreamType stream_type, const ReductionType rtype,
+           const VertexBufferHandle vtxbuf_handle, AcReal* result)
 {
     cudaSetDevice(device->id);
+
+    *result = reduce_scal(device->streams[stream_type], rtype,
+                          device->local_config.int_params[AC_nx],
+                          device->local_config.int_params[AC_ny],
+                          device->local_config.int_params[AC_nz],
+                          device->vba.in[vtxbuf_handle],
+                          device->reduce_scratchpad, device->reduce_result);
+
     return AC_SUCCESS;
 }
 
 AcResult
-reduceVec(const Device device)
+reduceVec(const Device device, const StreamType stream_type,
+          const ReductionType rtype,
+          const VertexBufferHandle vec0,
+          const VertexBufferHandle vec1,
+          const VertexBufferHandle vec2,
+          AcReal* result)
 {
     cudaSetDevice(device->id);
+
+    *result = reduce_vec(device->streams[stream_type], rtype,
+                         device->local_config.int_params[AC_nx],
+                         device->local_config.int_params[AC_ny],
+                         device->local_config.int_params[AC_nz],
+                         device->vba.in[vec0],
+                         device->vba.in[vec1],
+                         device->vba.in[vec2],
+                         device->reduce_scratchpad, device->reduce_result);
+
     return AC_SUCCESS;
 }
 
