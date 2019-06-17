@@ -1,3 +1,4 @@
+![astaroth_logo](./doc/astaroth_logo.png "Astaroth Sigil")
 
 # Astaroth - A Multi-GPU library for generic stencil computations
 
