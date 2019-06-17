@@ -13,22 +13,43 @@ NVIDIA GPU with >= 3.0 compute capability. See https://en.wikipedia.org/wiki/CUD
 1. `cd 3rdparty`
 1. `./setup_dependencies.sh` Note: this may take some time.
 
-## Building (Astaroth 2.0)
+## Building 
 
-1. `cd astaroth_2.0/build`
+There are two ways to build the code as instructed below. 
+
+If you encounter issues, recheck that the 3rd party libraries were successfully built during the previous step.
+
+### Method I: In the code directory
+
+1. `cd build/`
 1. `cmake -DDOUBLE_PRECISION=OFF -DBUILD_DEBUG=OFF ..` (Use `cmake -D CMAKE_C_COMPILER=icc -D CMAKE_CXX_COMPILER=icpc -DDOUBLE_PRECISION=OFF -DBUILD_DEBUG=OFF ..` if compiling on TIARA)
 1. `../scripts/compile_acc.sh && make -j`
 1. `./ac_run <options>`
 
-If you encounter issues, recheck that the 3rd party libraries were successfully built during the previous step.
+Edit `config/astaroth.conf` to change the numerical setup. 
+
+### Method II: With a script in a custom build directory (RECOMMENDED) 
+
+1. `source sourceme.sh` to add relevant directories to the `PATH`
+1. `ac_mkbuilddir.sh -b my_build_dir/` to set up a custom build directory. There are also other options available. See `ac_mkbuilddir.sh -h` for more. 
+1. `$AC_HOME/scripts/compile_acc.sh` to generate kernels from the Domain Specific Language 
+1. `cd my_build_dir/` 
+1. `make -j`
+1. `./ac_run <options>`
+
+Edit `my_build_dir/astaroth.conf` to change the numerical setup. 
 
 ### Available options
 
 - `-s` simulation
 - `-b` benchmark
-- `-t` automated test (NOTE! This is expected to fail with the default configuration as there's no CPU model solution for forcing/entropy)
+- `-t` automated test 
 
 By default, the program does a real-time visualization of the simulation domain. The camera and the initial conditions can be controller by `arrow keys`, `pgup`, `pgdown` and `spacebar`.
+
+## Visualization 
+
+See `analysis/python/` directory of existing data visualization and analysis scripts.  
 
 ## Generating documentation
 
@@ -90,9 +111,9 @@ globalFunction(void)
 	return;
 }
 ```
-## Miikka's compilation notes
+## TIARA cluster compilation notes
 
-Modules Modules usen when compiling when compiling
+Modules used when compiling the code on TIARA cluster. 
 
   * intel/2016                         
   * hdf5/1.8.16_openmpi_1.10.2_ic16.0   
@@ -100,20 +121,3 @@ Modules Modules usen when compiling when compiling
   * openmpi/1.10.2_ic16.0               
   * gcc/5.3.0
   * cuda/9.0
-
-Requires this gcc flag to compile: `-mno-bmi2` Otherwise you get assembler error! 
-
-For stencil pre-processing `flex` and particularly `libfl` is required for `acc/code_generator.c` to compile. 
-
-Need CUDA version 9.2 or above version. 
-
-Comment out cudaGetDeviceCount(&num_devices) in astaroth.cu 
-
-OLD: `astaroth_2.0/acc/build.sh` only work when each line is written individually. (**solution needed**)
-
-  
-(**These are here because I don't dare to delete them yet** OLD: Intel compiler does not get correct flags with cmake on default settings. 
-This worked with 1.0: `cmake -D CMAKE_C_COMPILER=icc -D CMAKE_CXX_COMPILER=icpc -DDOUBLE_PRECISION=OFF -DBUILD_DEBUG=OFF ..` 
-but not this time. Issue with calling c+11 + definin compiler flags correctly in nvcc. 
-
-OLD: I need to put `-I/software/opt/cuda/9.0/include` into the ../CMakeLists.txt so that it compiles. )
