@@ -96,9 +96,9 @@ class Mesh:
             aay = [] 
             aaz = []
 
-            self.xx =  self.minfo.contents['AC_inv_dsx']*np.arange(self.minfo.contents['AC_mx'])
-            self.yy =  self.minfo.contents['AC_inv_dsy']*np.arange(self.minfo.contents['AC_my'])
-            self.zz =  self.minfo.contents['AC_inv_dsz']*np.arange(self.minfo.contents['AC_mz'])
+            self.xx =  np.arange(self.minfo.contents['AC_mx']) * self.minfo.contents['AC_dsx']
+            self.yy =  np.arange(self.minfo.contents['AC_my']) * self.minfo.contents['AC_dsy']
+            self.zz =  np.arange(self.minfo.contents['AC_mz']) * self.minfo.contents['AC_dsz']
 
             self.xmid = int(self.minfo.contents['AC_mx']/2)
             self.ymid = int(self.minfo.contents['AC_my']/2)
