@@ -9,9 +9,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="15.75209mm"
-   height="15.752074mm"
-   viewBox="0 0 15.75209 15.752074"
+   width="16.55209mm"
+   height="16.552074mm"
+   viewBox="0 0 16.552089 16.552074"
    version="1.1"
    id="svg8"
    inkscape:version="0.92.4 (33fec40, 2019-01-16)"
@@ -24,9 +24,9 @@
     <inkscape:perspective
        sodipodi:type="inkscape:persp3d"
        inkscape:vp_x="0 : 148.49999 : 1"
-       inkscape:vp_y="0 : 999.99992 : 0"
-       inkscape:vp_z="209.99999 : 148.49999 : 1"
-       inkscape:persp3d-origin="105 : 98.999993 : 1"
+       inkscape:vp_y="0 : 999.99995 : 0"
+       inkscape:vp_z="210 : 148.49999 : 1"
+       inkscape:persp3d-origin="105 : 98.999995 : 1"
        id="perspective3721" />
   </defs>
   <sodipodi:namedview
@@ -37,25 +37,25 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="11.2"
-     inkscape:cx="11.905501"
-     inkscape:cy="27.368147"
+     inkscape:cx="10.023793"
+     inkscape:cy="50.308536"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer2"
+     inkscape:current-layer="layer1"
      showgrid="true"
-     inkscape:window-width="1855"
-     inkscape:window-height="1056"
-     inkscape:window-x="65"
-     inkscape:window-y="24"
-     inkscape:window-maximized="1"
-     fit-margin-top="0.6"
-     fit-margin-left="0.6"
-     fit-margin-right="0.6"
-     fit-margin-bottom="0.6">
+     inkscape:window-width="1343"
+     inkscape:window-height="622"
+     inkscape:window-x="554"
+     inkscape:window-y="268"
+     inkscape:window-maximized="0"
+     fit-margin-top="1"
+     fit-margin-left="1"
+     fit-margin-right="1"
+     fit-margin-bottom="1">
     <inkscape:grid
        type="xygrid"
        id="grid3715"
-       originx="-85.389584"
-       originy="-118.46249" />
+       originx="-84.989582"
+       originy="-118.06249" />
   </sodipodi:namedview>
   <metadata
      id="metadata5">
@@ -65,7 +65,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -74,7 +74,8 @@
      id="layer2"
      inkscape:label="Layer 2"
      style="display:inline"
-     transform="translate(-85.389586,-162.78542)">
+     transform="translate(-84.989586,-162.38542)"
+     sodipodi:insensitive="true">
     <rect
        style="fill:#000000;stroke-width:0.26458332"
        id="rect4133"
@@ -795,182 +796,181 @@
      inkscape:groupmode="layer"
      id="layer1"
      style="display:inline"
-     sodipodi:insensitive="true"
-     transform="translate(-85.389586,-162.78542)">
+     transform="translate(-84.989586,-162.38542)">
     <rect
        id="rect3737"
        width="1.3229166"
        height="1.3229166"
        x="93.927086"
        y="171.32292"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-3"
        width="1.3229166"
        height="1.3229166"
        x="95.25"
        y="172.64584"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-6"
        width="1.3229166"
        height="1.3229166"
        x="96.572922"
        y="173.96875"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-7"
        width="1.3229166"
        height="1.3229166"
        x="92.604172"
        y="170"
-       style="fill:#ffeeaa;stroke-width:0.26458332" />
+       style="fill:#00ffcc;stroke-width:0.26458332" />
     <rect
        id="rect3737-5"
        width="1.3229166"
        height="1.3229166"
        x="91.28125"
        y="168.67709"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-35"
        width="1.3229166"
        height="1.3229166"
        x="89.958336"
        y="167.35417"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-62"
        width="1.3229166"
        height="1.3229166"
        x="88.635422"
        y="166.03125"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-9"
        width="1.3229166"
        height="1.3229166"
        x="93.927086"
        y="168.67709"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-1"
        width="1.3229166"
        height="1.3229166"
        x="95.25"
        y="167.35417"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-2"
        width="1.3229166"
        height="1.3229166"
        x="96.572922"
        y="166.03125"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-70"
        width="1.3229166"
        height="1.3229166"
        x="91.28125"
        y="171.32292"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-93"
        width="1.3229166"
        height="1.3229166"
        x="89.958336"
        y="172.64584"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-60"
        width="1.3229166"
        height="1.3229166"
        x="88.635422"
        y="173.96875"
-       style="fill:#aa8800;stroke-width:0.26458332" />
+       style="fill:#7fff2a;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-5"
        width="1.3229166"
        height="1.3229166"
        x="91.28125"
        y="170"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-4"
        width="1.3229166"
        height="1.3229166"
        x="89.958336"
        y="170"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-7"
        width="1.3229166"
        height="1.3229166"
        x="88.635414"
        y="170"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-6"
        width="1.3229166"
        height="1.3229166"
        x="92.604164"
        y="168.67709"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-56"
        width="1.3229166"
        height="1.3229166"
        x="92.604164"
        y="167.35417"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-9"
        width="1.3229166"
        height="1.3229166"
        x="92.604164"
        y="166.03125"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-3"
        width="1.3229166"
        height="1.3229166"
        x="93.927086"
        y="170"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-74"
        width="1.3229166"
        height="1.3229166"
        x="95.25"
        y="170"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-52"
        width="1.3229166"
        height="1.3229166"
        x="96.572914"
        y="170"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-54"
        width="1.3229166"
        height="1.3229166"
        x="92.604164"
        y="171.32292"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-744"
        width="1.3229166"
        height="1.3229166"
        x="92.604164"
        y="172.64584"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
     <rect
        id="rect3737-70-30"
        width="1.3229166"
        height="1.3229166"
        x="92.604164"
        y="173.96875"
-       style="fill:#222b00;stroke-width:0.26458332" />
+       style="fill:#008000;stroke-width:0.26458332" />
   </g>
 </svg>
