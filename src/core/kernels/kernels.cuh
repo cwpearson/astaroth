@@ -805,36 +805,36 @@ typedef AcReal (*ReduceInitialVecFunc)(const AcReal&, const AcReal&,
 
 // clang-format off
 /* Comparison funcs */
-__device__ inline AcReal
-_device_max(const AcReal& a, const AcReal& b) { return a > b ? a : b; }
+static __device__ inline AcReal
+dmax(const AcReal& a, const AcReal& b) { return a > b ? a : b; }
 
-__device__ inline AcReal
-_device_min(const AcReal& a, const AcReal& b) { return a < b ? a : b; }
+static __device__ inline AcReal
+dmin(const AcReal& a, const AcReal& b) { return a < b ? a : b; }
 
-__device__ inline AcReal
-_device_sum(const AcReal& a, const AcReal& b) { return a + b; }
+static __device__ inline AcReal
+dsum(const AcReal& a, const AcReal& b) { return a + b; }
 
 /* Function used to determine the values used during reduction */
-__device__ inline AcReal
-_device_length_scal(const AcReal& a) { return AcReal(a); }
+static __device__ inline AcReal
+dvalue(const AcReal& a) { return AcReal(a); }
 
-__device__ inline AcReal
-_device_squared_scal(const AcReal& a) { return (AcReal)(a*a); }
+static __device__ inline AcReal
+dsquared(const AcReal& a) { return (AcReal)(a*a); }
 
-__device__ inline AcReal
-_device_exp_squared_scal(const AcReal& a) { return exp(a)*exp(a); }
+static __device__ inline AcReal
+dexp_squared(const AcReal& a) { return exp(a)*exp(a); }
 
-__device__ inline AcReal
-_device_length_vec(const AcReal& a, const AcReal& b, const AcReal& c) { return sqrt(a*a + b*b + c*c); }
+static __device__ inline AcReal
+dlength_vec(const AcReal& a, const AcReal& b, const AcReal& c) { return sqrt(a*a + b*b + c*c); }
 
-__device__ inline AcReal
-_device_squared_vec(const AcReal& a, const AcReal& b, const AcReal& c) { return _device_squared_scal(a) + _device_squared_scal(b) + _device_squared_scal(c); }
+static __device__ inline AcReal
+dsquared_vec(const AcReal& a, const AcReal& b, const AcReal& c) { return dsquared(a) + dsquared(b) + dsquared(c); }
 
-__device__ inline AcReal
-_device_exp_squared_vec(const AcReal& a, const AcReal& b, const AcReal& c) { return _device_exp_squared_scal(a) + _device_exp_squared_scal(b) + _device_exp_squared_scal(c); }
+static __device__ inline AcReal
+dexp_squared_vec(const AcReal& a, const AcReal& b, const AcReal& c) { return dexp_squared(a) + dexp_squared(b) + dexp_squared(c); }
 // clang-format on
 
-__device__ inline bool
+static __device__ inline bool
 oob(const int& i, const int& j, const int& k)
 {
     if (i >= d_mesh_info.int_params[AC_nx] ||
@@ -966,35 +966,35 @@ reduce_scal(const cudaStream_t stream,
 
     switch (rtype) {
     case RTYPE_MAX:
-        _kernel_reduce_scal<_device_length_scal>
+        _kernel_reduce_scal<dvalue>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer, reduce_scratchpad);
-        _kernel_reduce<_device_max>
+        _kernel_reduce<dmax>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_max>
+        _kernel_reduce_block<dmax>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     case RTYPE_MIN:
-        _kernel_reduce_scal<_device_length_scal>
+        _kernel_reduce_scal<dvalue>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer, reduce_scratchpad);
-        _kernel_reduce<_device_min>
+        _kernel_reduce<dmin>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_min>
+        _kernel_reduce_block<dmin>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     case RTYPE_RMS:
-        _kernel_reduce_scal<_device_squared_scal>
+        _kernel_reduce_scal<dsquared>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer, reduce_scratchpad);
-        _kernel_reduce<_device_sum>
+        _kernel_reduce<dsum>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_sum>
+        _kernel_reduce_block<dsum>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     case RTYPE_RMS_EXP:
-        _kernel_reduce_scal<_device_exp_squared_scal>
+        _kernel_reduce_scal<dexp_squared>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer, reduce_scratchpad);
-        _kernel_reduce<_device_sum>
+        _kernel_reduce<dsum>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_sum>
+        _kernel_reduce_block<dsum>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     default:
@@ -1039,39 +1039,39 @@ reduce_vec(const cudaStream_t stream,
 
     switch (rtype) {
     case RTYPE_MAX:
-        _kernel_reduce_vec<_device_length_vec>
+        _kernel_reduce_vec<dlength_vec>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer_a, vertex_buffer_b, vertex_buffer_c,
                            reduce_scratchpad);
-        _kernel_reduce<_device_max>
+        _kernel_reduce<dmax>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_max>
+        _kernel_reduce_block<dmax>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     case RTYPE_MIN:
-        _kernel_reduce_vec<_device_length_vec>
+        _kernel_reduce_vec<dlength_vec>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer_a, vertex_buffer_b, vertex_buffer_c,
                            reduce_scratchpad);
-        _kernel_reduce<_device_min>
+        _kernel_reduce<dmin>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_min>
+        _kernel_reduce_block<dmin>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     case RTYPE_RMS:
-        _kernel_reduce_vec<_device_squared_vec>
+        _kernel_reduce_vec<dsquared_vec>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer_a, vertex_buffer_b, vertex_buffer_c,
                            reduce_scratchpad);
-        _kernel_reduce<_device_sum>
+        _kernel_reduce<dsum>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_sum>
+        _kernel_reduce_block<dsum>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     case RTYPE_RMS_EXP:
-        _kernel_reduce_vec<_device_exp_squared_vec>
+        _kernel_reduce_vec<dexp_squared_vec>
             <<<bpg, tpb, 0, stream>>>(vertex_buffer_a, vertex_buffer_b, vertex_buffer_c,
                            reduce_scratchpad);
-        _kernel_reduce<_device_sum>
+        _kernel_reduce<dsum>
             <<<bpg2, BLOCK_SIZE, 0, stream>>>(reduce_scratchpad, reduce_result);
-        _kernel_reduce_block<_device_sum>
+        _kernel_reduce_block<dsum>
             <<<1, 1, 0, stream>>>(reduce_scratchpad, reduce_result);
         break;
     default:
