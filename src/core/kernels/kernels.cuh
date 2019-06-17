@@ -811,6 +811,7 @@ typedef AcReal (*ReduceInitialVecFunc)(const AcReal&, const AcReal&,
                                        const AcReal&);
 
 typedef AcReal (*FilterFunc)(const AcReal&);
+typedef AcReal (*FilterFuncVec)(const AcReal&, const AcReal&, const AcReal&);
 
 // clang-format off
 /* Comparison funcs */
@@ -870,6 +871,35 @@ kernel_filter(const __restrict__ AcReal* src, const int3 start, const int3 end, 
     dst[dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny] = filter(src[IDX(src_idx)]);
 }
 
+template <FilterFuncVec filter>
+__global__ void
+kernel_filter_vec(const __restrict__ AcReal* src0,
+                  const __restrict__ AcReal* src1,
+                  const __restrict__ AcReal* src2,
+                  const int3 start, const int3 end, AcReal* dst)
+{
+    const int3 src_idx = (int3) {
+        start.x + threadIdx.x + blockIdx.x * blockDim.x,
+        start.y + threadIdx.y + blockIdx.y * blockDim.y,
+        start.z + threadIdx.z + blockIdx.z * blockDim.z
+    };
+
+    const int nx = end.x - start.x;
+    const int ny = end.y - start.y;
+    const int nz = end.z - start.z;
+    const int3 dst_idx = (int3) {
+        threadIdx.x + blockIdx.x * blockDim.x,
+        threadIdx.y + blockIdx.y * blockDim.y,
+        threadIdx.z + blockIdx.z * blockDim.z
+    };
+
+    assert(src_idx.x < DCONST_INT(AC_nx_max) && src_idx.y < DCONST_INT(AC_ny_max) && src_idx.z < DCONST_INT(AC_nz_max));
+    assert(dst_idx.x < nx && dst_idx.y < ny && dst_idx.z < nz);
+    assert(dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny < nx * ny * nz);
+
+    dst[dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny] = filter(src0[IDX(src_idx)], src1[IDX(src_idx)], src2[IDX(src_idx)]);
+}
+
 template <ReduceFunc reduce>
 __global__ void
 kernel_reduce(AcReal* scratchpad, const int num_elems)
@@ -919,6 +949,107 @@ kernel_reduce_block(const __restrict__ AcReal* scratchpad,
     *result = res;
 }
 
+
+AcReal
+reduce_scal(const cudaStream_t stream, const ReductionType rtype,
+            const int3& start, const int3& end,
+            const AcReal* vtxbuf, AcReal* scratchpad, AcReal* reduce_result)
+{
+    const unsigned nx = end.x - start.x;
+    const unsigned ny = end.y - start.y;
+    const unsigned nz = end.z - start.z;
+    const unsigned num_elems = nx * ny * nz;
+
+    const dim3 tpb_filter(32, 4, 1);
+    const dim3 bpg_filter(
+        (unsigned int)ceil(nx / AcReal(tpb_filter.x)),
+        (unsigned int)ceil(ny / AcReal(tpb_filter.y)),
+        (unsigned int)ceil(nz / AcReal(tpb_filter.z))
+    );
+
+    const int tpb_reduce = 128;
+    const int bpg_reduce = num_elems / tpb_reduce;
+
+    ERRCHK(nx >= tpb_filter.x);
+    ERRCHK(ny >= tpb_filter.y);
+    ERRCHK(nz >= tpb_filter.z);
+    ERRCHK(tpb_reduce <= num_elems);
+    ERRCHK(nx * ny * nz % 2 == 0);
+
+    if (rtype == RTYPE_MAX) {
+        kernel_filter<dvalue><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dmax><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dmax><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else if (rtype == RTYPE_MIN) {
+        kernel_filter<dvalue><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dmin><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dmin><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else if (rtype == RTYPE_RMS) {
+        kernel_filter<dsquared><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else if (rtype == RTYPE_RMS_EXP) {
+        kernel_filter<dexp_squared><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else {
+        ERROR("Unrecognized rtype");
+    }
+    AcReal result;
+    cudaMemcpy(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost);
+    return result;
+}
+
+AcReal
+reduce_vec(const cudaStream_t stream, const ReductionType rtype,
+            const int3& start, const int3& end,
+            const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2,
+            AcReal* scratchpad, AcReal* reduce_result)
+{
+    const unsigned nx = end.x - start.x;
+    const unsigned ny = end.y - start.y;
+    const unsigned nz = end.z - start.z;
+    const unsigned num_elems = nx * ny * nz;
+
+    const dim3 tpb_filter(32, 4, 1);
+    const dim3 bpg_filter(
+        (unsigned int)ceil(nx / AcReal(tpb_filter.x)),
+        (unsigned int)ceil(ny / AcReal(tpb_filter.y)),
+        (unsigned int)ceil(nz / AcReal(tpb_filter.z))
+    );
+
+    const int tpb_reduce = 128;
+    const int bpg_reduce = num_elems / tpb_reduce;
+
+    ERRCHK(nx >= tpb_filter.x);
+    ERRCHK(ny >= tpb_filter.y);
+    ERRCHK(nz >= tpb_filter.z);
+    ERRCHK(tpb_reduce <= num_elems);
+    ERRCHK(nx * ny * nz % 2 == 0);
+
+    if (rtype == RTYPE_MAX) {
+        kernel_filter_vec<dlength_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dmax><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dmax><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else if (rtype == RTYPE_MIN) {
+        kernel_filter_vec<dlength_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dmin><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dmin><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else if (rtype == RTYPE_RMS) {
+        kernel_filter_vec<dsquared_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else if (rtype == RTYPE_RMS_EXP) {
+        kernel_filter_vec<dexp_squared_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
+        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    } else {
+        ERROR("Unrecognized rtype");
+    }
+    AcReal result;
+    cudaMemcpy(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost);
+    return result;
+}
 
 static __device__ inline bool
 oob(const int& i, const int& j, const int& k)
@@ -1037,7 +1168,7 @@ kernel_reduce_3of3(const __restrict__ AcReal* src, AcReal* result)
 //////////////////////////////////////////////////////////////////////////////
 
 AcReal
-reduce_scal(const cudaStream_t stream,
+reduce_scal2(const cudaStream_t stream,
              const ReductionType& rtype, const int& nx, const int& ny,
              const int& nz, const AcReal* vtxbuf,
              AcReal* scratchpad, AcReal* reduce_result)
@@ -1094,7 +1225,7 @@ reduce_scal(const cudaStream_t stream,
 }
 
 AcReal
-reduce_vec(const cudaStream_t stream,
+reduce_vec2(const cudaStream_t stream,
            const ReductionType& rtype, const int& nx, const int& ny, const int& nz,
            const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2,
            AcReal* scratchpad, AcReal* reduce_result)

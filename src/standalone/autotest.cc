@@ -457,25 +457,16 @@ run_autotest(void)
 
 	if (STENCIL_ORDER > 6)
 		printf("WARNING!!! If the stencil order is larger than the computational domain some vertices may be done twice (f.ex. doing inner and outer domains separately and some of the front/back/left/right/etc slabs collide). The mesh must be large enough s.t. this doesn't happen.");
-	/*
-	   const vec3i test_dims[] = {              //
-	   {15, 11, 13}, //
-	   {17, 61, 127}, //
-	   {511, 17, 16},  //
-	   {64, 64, 8},  //
-	   {32, 32, 64}, //
-	   {64, 32, 32}, //
-	   {128, 64, 32}};
-	 */
-	const vec3i test_dims[] = {{512, 16, 32},  //
-		{64, 64, 32},  //
-		{32, 32, 64}, //
-		{64, 32, 32}, //
-		{128, 64, 32}};
 
-	//const vec3i test_dims[] = {{256,256,256}};
-	//const vec3i test_dims[] = {{256,256,256}};
-	//const vec3i test_dims[] = {{32, 32, 32}};
+    const vec3i test_dims[] = {
+        {32, 32, 32},
+        {64, 32, 32},
+        {32, 64, 32},
+        {32, 32, 64},
+        {64, 64, 32},
+        {64, 32, 64},
+        {32, 64, 64}
+    };
 
 	int num_failures = 0;
 	for (size_t i = 0; i < ARRAY_SIZE(test_dims); ++i) {
