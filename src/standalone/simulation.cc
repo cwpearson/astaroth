@@ -90,6 +90,9 @@ void write_mesh_info(const AcMeshInfo* config)
     fprintf(infotxt, "int  AC_nz_max    %i \n", config->int_params[AC_nz_max]);
 
     // Spacing
+    fprintf(infotxt, "real AC_dsx       %e \n", (double)config->real_params[AC_dsx]);
+    fprintf(infotxt, "real AC_dsy       %e \n", (double)config->real_params[AC_dsy]);
+    fprintf(infotxt, "real AC_dsz       %e \n", (double)config->real_params[AC_dsz]);
     fprintf(infotxt, "real AC_inv_dsx   %e \n", (double)config->real_params[AC_inv_dsx]);
     fprintf(infotxt, "real AC_inv_dsy   %e \n", (double)config->real_params[AC_inv_dsy]);
     fprintf(infotxt, "real AC_inv_dsz   %e \n", (double)config->real_params[AC_inv_dsz]);
