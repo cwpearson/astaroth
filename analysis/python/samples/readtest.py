@@ -43,8 +43,9 @@ AC_unit_length   = 1.496e+13
 print("sys.argv", sys.argv)
 
 #meshdir = "/tiara/home/mvaisala/astaroth-code/astaroth_2.0/build/"
-meshdir  = "/tiara/ara/data/mvaisala/tmp/astaroth-code/astaroth_2.0/build/"
+#meshdir  = "/tiara/ara/data/mvaisala/tmp/astaroth-code/astaroth_2.0/build/"
 #meshdir = "/tiara/ara/data/mvaisala/asth_testbed_double/"
+meshdir  = "/scratch/data/mvaisala/iotest/"
 
 if "xtopbound" in sys.argv: 
     for i in range(0, 171):
@@ -166,8 +167,10 @@ if '1d' in sys.argv:
 
 
 if 'sl' in sys.argv:
-    maxfiles = 200002
-    stride = 10000
+    #maxfiles = 200002
+    #stride = 10000
+    maxfiles = 1001
+    stride = 100
     for i in range(0, maxfiles, stride):
         mesh = ad.read.Mesh(i, fdir=meshdir) 
         print(" %i / %i" % (i, maxfiles))
