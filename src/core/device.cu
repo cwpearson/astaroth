@@ -34,6 +34,7 @@ typedef struct {
 } VertexBufferArray;
 
 __constant__ AcMeshInfo d_mesh_info;
+__constant__ int3 d_multigpu_offset;
 #define DCONST_INT(X)  (d_mesh_info.int_params[X])
 #define DCONST_REAL(X) (d_mesh_info.real_params[X])
 #define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
@@ -155,6 +156,15 @@ createDevice(const int id, const AcMeshInfo device_config, Device* device_handle
     // Device constants
     ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_mesh_info, &device_config, sizeof(device_config), 0,
                                           cudaMemcpyHostToDevice));
+
+
+    // Multi-GPU offset. This is used to compute globalVertexIdx.
+    // Might be better to calculate this in astaroth.cu instead of here, s.t.
+    // everything related to the decomposition is limited to the multi-GPU layer
+    const int3 multigpu_offset = (int3){0, 0, device->id * device->local_config.int_params[AC_nz]};
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_multigpu_offset, &multigpu_offset,
+                                          sizeof(multigpu_offset), 0, cudaMemcpyHostToDevice));
+
 
     printf("Created device %d (%p)\n", device->id, device);
     *device_handle = device;
@@ -332,7 +342,6 @@ copyMeshDeviceToDevice(const Device src_device, const StreamType stream_type,
     return AC_SUCCESS;
 }
 
-
 AcResult
 swapBuffers(const Device device)
 {
@@ -342,5 +351,29 @@ swapBuffers(const Device device)
         device->vba.in[i]  = device->vba.out[i];
         device->vba.out[i] = tmp;
     }
+    return AC_SUCCESS;
+}
+
+AcResult
+loadDeviceConstant(const Device device, const AcIntParam param, const int value)
+{
+    cudaSetDevice(device->id);
+    // CUDA 10 apparently creates only a single name for a device constant (d_mesh_info here)
+    // and something like d_mesh_info.real_params[] cannot be directly accessed.
+    // Therefore we have to obfuscate the code a bit and compute the offset address before
+    // invoking cudaMemcpyToSymbol.
+    const size_t offset = (size_t)&d_mesh_info.int_params[param] - (size_t)&d_mesh_info;
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_mesh_info, &value, sizeof(value),
+                                          offset, cudaMemcpyHostToDevice));
+    return AC_SUCCESS;
+}
+
+AcResult
+loadDeviceConstant(const Device device, const AcRealParam param, const AcReal value)
+{
+    cudaSetDevice(device->id);
+    const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_mesh_info, &value, sizeof(value),
+                                          offset, cudaMemcpyHostToDevice));
     return AC_SUCCESS;
 }

@@ -86,3 +86,9 @@ AcResult copyMeshDeviceToDevice(const Device src, const StreamType stream_type, 
 
 /** Swaps the input/output buffers used in computations */
 AcResult swapBuffers(const Device device);
+
+/** */
+AcResult loadDeviceConstant(const Device device, const AcIntParam param, const int value);
+
+/** */
+AcResult loadDeviceConstant(const Device device, const AcRealParam param, const AcReal value);
