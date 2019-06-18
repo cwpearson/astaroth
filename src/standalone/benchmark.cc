@@ -35,10 +35,10 @@
 #include "model/model_rk3.h"
 #include "timer_hires.h"
 
-#include <vector>
+#include "src/core/errchk.h"
 #include <algorithm>
 #include <math.h>
-#include "src/core/errchk.h"
+#include <vector>
 
 static bool
 smaller_than(const double& a, const double& b)
@@ -47,7 +47,8 @@ smaller_than(const double& a, const double& b)
 }
 
 static int
-write_runningtimes(const char* path, const int n, const double min, const double max, const double median, const double perc)
+write_runningtimes(const char* path, const int n, const double min, const double max,
+                   const double median, const double perc)
 {
     FILE* fp;
     fp = fopen(path, "a");
@@ -80,7 +81,8 @@ int
 run_benchmark(void)
 {
     char runningtime_path[256];
-    sprintf(runningtime_path, "%s_%s_runningtimes.out", AC_DOUBLE_PRECISION ? "double" : "float", GEN_BENCHMARK_RK3 ? "rk3substep" : "fullstep");
+    sprintf(runningtime_path, "%s_%s_runningtimes.out", AC_DOUBLE_PRECISION ? "double" : "float",
+            GEN_BENCHMARK_RK3 ? "rk3substep" : "fullstep");
 
     FILE* fp;
     fp = fopen(runningtime_path, "w");
@@ -88,13 +90,14 @@ run_benchmark(void)
     if (fp != NULL) {
         fprintf(fp, "n, min, max, median, perc\n");
         fclose(fp);
-    } else {
+    }
+    else {
         return EXIT_FAILURE;
     }
 
-    #define N_STEP_SIZE (128)
-    #define MAX_MESH_DIM (128)
-    #define NUM_ITERS (100)
+#define N_STEP_SIZE (128)
+#define MAX_MESH_DIM (128)
+#define NUM_ITERS (100)
     for (int n = N_STEP_SIZE; n <= MAX_MESH_DIM; n += N_STEP_SIZE) {
         /* Parse configs */
         AcMeshInfo mesh_info;
@@ -113,7 +116,6 @@ run_benchmark(void)
         std::vector<double> results;
         results.reserve(NUM_ITERS);
 
-
         // Warmup
         for (int i = 0; i < 10; ++i) {
             acIntegrate(0);
@@ -124,28 +126,35 @@ run_benchmark(void)
         for (int i = 0; i < NUM_ITERS; ++i) {
 
             timer_reset(&t);
-            #if GEN_BENCHMARK_RK3 == 1
+#if GEN_BENCHMARK_RK3 == 1
             acIntegrateStep(2, FLT_EPSILON);
-            #else // GEN_BENCHMARK_FULL
-            //const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
-            const AcReal dt   = AcReal(1e-2); // TODO adaptive timestep //host_timestep(umax, mesh_info);
+#else // GEN_BENCHMARK_FULL
+            // const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+            const AcReal dt = AcReal(
+                1e-2); // TODO adaptive timestep //host_timestep(umax, mesh_info);
             acIntegrate(dt);
-            #endif
+#endif
             acSynchronize();
 
             const double ms_elapsed = timer_diff_nsec(t) / 1e6;
             results.push_back(ms_elapsed);
         }
 
-        #define NTH_PERCENTILE (0.95)
+#define NTH_PERCENTILE (0.95)
         std::sort(results.begin(), results.end(), smaller_than);
-        write_runningtimes(runningtime_path, n, results[0], results[results.size()-1], results[int(0.5 * NUM_ITERS)], results[int(NTH_PERCENTILE * NUM_ITERS)]);
+        write_runningtimes(runningtime_path, n, results[0], results[results.size() - 1],
+                           results[int(0.5 * NUM_ITERS)], results[int(NTH_PERCENTILE * NUM_ITERS)]);
 
         char percentile_path[256];
-        sprintf(percentile_path, "%d_%s_%s_percentiles.out", n, AC_DOUBLE_PRECISION ? "double" : "float", GEN_BENCHMARK_RK3 ? "rk3substep" : "fullstep");
+        sprintf(percentile_path, "%d_%s_%s_percentiles.out", n,
+                AC_DOUBLE_PRECISION ? "double" : "float",
+                GEN_BENCHMARK_RK3 ? "rk3substep" : "fullstep");
         write_percentiles(percentile_path, NUM_ITERS, results);
 
-        printf("%s running time %g ms, (%dth percentile, nx = %d) \n", GEN_BENCHMARK_RK3 ? "RK3 step" : "Fullstep", double(results[int(NTH_PERCENTILE * NUM_ITERS)]), int(NTH_PERCENTILE * 100), mesh_info.int_params[AC_nx]);
+        printf("%s running time %g ms, (%dth percentile, nx = %d) \n",
+               GEN_BENCHMARK_RK3 ? "RK3 step" : "Fullstep",
+               double(results[int(NTH_PERCENTILE * NUM_ITERS)]), int(NTH_PERCENTILE * 100),
+               mesh_info.int_params[AC_nx]);
 
         acStore(mesh);
         acQuit();
@@ -225,7 +234,8 @@ run_benchmark(void)
     return 0;
 }
 
-#else //////////////////////////////////////////////////////////////////////////GENERATE_BENCHMARK_DATA
+#else
+//////////////////////////////////////////////////////////////////////////GENERATE_BENCHMARK_DATA
 
 
 
@@ -290,8 +300,8 @@ run_benchmark(void)
 
         #define NTH_PERCENTILE (0.95)
         std::sort(results.begin(), results.end(), smaller_than);
-        write_result(n, results[0], results[results.size()-1], results[int(0.5 * NUM_ITERS)], results[int(NTH_PERCENTILE * NUM_ITERS)]);
-        write_percentiles(n, NUM_ITERS, results);
+        write_result(n, results[0], results[results.size()-1], results[int(0.5 * NUM_ITERS)],
+results[int(NTH_PERCENTILE * NUM_ITERS)]); write_percentiles(n, NUM_ITERS, results);
     }
 
     return 0;

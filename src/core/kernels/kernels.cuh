@@ -24,7 +24,7 @@
  * Detailed info.
  *
  */
- #pragma once
+#pragma once
 
 __global__ void
 kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
@@ -38,7 +38,7 @@ kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
     if (i_dst >= end.x || j_dst >= end.y || k_dst >= end.z)
         return;
 
-    //if (i_dst >= DCONST_INT(AC_mx) || j_dst >= DCONST_INT(AC_my) || k_dst >= DCONST_INT(AC_mz))
+    // if (i_dst >= DCONST_INT(AC_mx) || j_dst >= DCONST_INT(AC_my) || k_dst >= DCONST_INT(AC_mz))
     //    return;
 
     // If destination index is inside the computational domain, return since
@@ -69,15 +69,15 @@ kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
     j_src += DCONST_INT(AC_ny_min);
     k_src += DCONST_INT(AC_nz_min);
 
-    const int src_idx      = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
-    const int dst_idx      = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
-    vtxbuf[dst_idx] = vtxbuf[src_idx];
+    const int src_idx = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
+    const int dst_idx = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
+    vtxbuf[dst_idx]   = vtxbuf[src_idx];
 }
 
 void
 periodic_boundconds(const cudaStream_t stream, const int3& start, const int3& end, AcReal* vtxbuf)
 {
-    const dim3 tpb(8,2,8);
+    const dim3 tpb(8, 2, 8);
     const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),
                    (unsigned int)ceil((end.y - start.y) / (float)tpb.y),
                    (unsigned int)ceil((end.z - start.z) / (float)tpb.z));
@@ -88,7 +88,6 @@ periodic_boundconds(const cudaStream_t stream, const int3& start, const int3& en
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include <assert.h>
-
 
 static __device__ __forceinline__ int
 IDX(const int i)
@@ -120,14 +119,12 @@ create_rotz(const AcReal radians)
     return mat;
 }
 
-
 #if AC_DOUBLE_PRECISION == 0
 #define sin __sinf
 #define cos __cosf
 #define exp __expf
 #define rsqrt rsqrtf // hardware reciprocal sqrt
-#endif // AC_DOUBLE_PRECISION == 0
-
+#endif               // AC_DOUBLE_PRECISION == 0
 
 /*
 typedef struct {
@@ -155,12 +152,11 @@ first_derivative(const AcReal* __restrict__ pencil, const AcReal inv_ds)
 #elif STENCIL_ORDER == 6
     const AcReal coefficients[] = {0, 3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0};
 #elif STENCIL_ORDER == 8
-    const AcReal coefficients[] = {0, 4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0,
-                                   -1.0 / 280.0};
+    const AcReal coefficients[] = {0, 4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0};
 #endif
 
-    #define MID (STENCIL_ORDER / 2)
-    AcReal res    = 0;
+#define MID (STENCIL_ORDER / 2)
+    AcReal res = 0;
 
 #pragma unroll
     for (int i = 1; i <= MID; ++i)
@@ -175,17 +171,15 @@ second_derivative(const AcReal* __restrict__ pencil, const AcReal inv_ds)
 #if STENCIL_ORDER == 2
     const AcReal coefficients[] = {-2., 1.};
 #elif STENCIL_ORDER == 4
-    const AcReal coefficients[] = {-5.0/2.0, 4.0/3.0, -1.0/12.0};
+    const AcReal coefficients[] = {-5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0};
 #elif STENCIL_ORDER == 6
-    const AcReal coefficients[] = {-49.0 / 18.0, 3.0 / 2.0, -3.0 / 20.0,
-                                   1.0 / 90.0};
+    const AcReal coefficients[] = {-49.0 / 18.0, 3.0 / 2.0, -3.0 / 20.0, 1.0 / 90.0};
 #elif STENCIL_ORDER == 8
-    const AcReal coefficients[] = {-205.0 / 72.0, 8.0 / 5.0, -1.0 / 5.0,
-                                   8.0 / 315.0, -1.0 / 560.0};
+    const AcReal coefficients[] = {-205.0 / 72.0, 8.0 / 5.0, -1.0 / 5.0, 8.0 / 315.0, -1.0 / 560.0};
 #endif
 
-    #define MID (STENCIL_ORDER / 2)
-    AcReal res    = coefficients[0] * pencil[MID];
+#define MID (STENCIL_ORDER / 2)
+    AcReal res = coefficients[0] * pencil[MID];
 
 #pragma unroll
     for (int i = 1; i <= MID; ++i)
@@ -196,31 +190,29 @@ second_derivative(const AcReal* __restrict__ pencil, const AcReal inv_ds)
 
 /** inv_ds: inverted mesh spacing f.ex. 1. / mesh.int_params[AC_dsx] */
 static __device__ __forceinline__ AcReal
-cross_derivative(const AcReal* __restrict__ pencil_a,
-                 const AcReal* __restrict__ pencil_b, const AcReal inv_ds_a,
-                 const AcReal inv_ds_b)
+cross_derivative(const AcReal* __restrict__ pencil_a, const AcReal* __restrict__ pencil_b,
+                 const AcReal inv_ds_a, const AcReal inv_ds_b)
 {
 #if STENCIL_ORDER == 2
     const AcReal coefficients[] = {0, 1.0 / 4.0};
 #elif STENCIL_ORDER == 4
-    const AcReal coefficients[] = {0, 1.0 / 32.0, 1.0 / 64.0}; // TODO correct coefficients, these are just placeholders
+    const AcReal coefficients[] = {
+        0, 1.0 / 32.0, 1.0 / 64.0}; // TODO correct coefficients, these are just placeholders
 #elif STENCIL_ORDER == 6
     const AcReal fac            = (1. / 720.);
-    const AcReal coefficients[] = {0.0 * fac, 270.0 * fac, -27.0 * fac,
-                                   2.0 * fac};
+    const AcReal coefficients[] = {0.0 * fac, 270.0 * fac, -27.0 * fac, 2.0 * fac};
 #elif STENCIL_ORDER == 8
     const AcReal fac            = (1. / 20160.);
-    const AcReal coefficients[] = {0.0 * fac, 8064. * fac, -1008. * fac,
-                                   128. * fac, -9. * fac};
+    const AcReal coefficients[] = {0.0 * fac, 8064. * fac, -1008. * fac, 128. * fac, -9. * fac};
 #endif
 
-    #define MID (STENCIL_ORDER / 2)
-    AcReal res    = AcReal(0.);
+#define MID (STENCIL_ORDER / 2)
+    AcReal res = AcReal(0.);
 
-    #pragma unroll
+#pragma unroll
     for (int i = 1; i <= MID; ++i) {
-        res += coefficients[i] * (pencil_a[MID + i] + pencil_a[MID - i] -
-                                  pencil_b[MID + i] - pencil_b[MID - i]);
+        res += coefficients[i] *
+               (pencil_a[MID + i] + pencil_a[MID - i] - pencil_b[MID + i] - pencil_b[MID - i]);
     }
     return res * inv_ds_a * inv_ds_b;
 }
@@ -231,7 +223,8 @@ derx(const int3 vertexIdx, const AcReal* __restrict__ arr)
     AcReal pencil[STENCIL_ORDER + 1];
 #pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil[offset] = arr[IDX(vertexIdx.x + offset - STENCIL_ORDER / 2, vertexIdx.y, vertexIdx.z)];
+        pencil[offset] = arr[IDX(vertexIdx.x + offset - STENCIL_ORDER / 2, vertexIdx.y,
+                                 vertexIdx.z)];
 
     return first_derivative(pencil, DCONST_REAL(AC_inv_dsx));
 }
@@ -242,7 +235,8 @@ derxx(const int3 vertexIdx, const AcReal* __restrict__ arr)
     AcReal pencil[STENCIL_ORDER + 1];
 #pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil[offset] = arr[IDX(vertexIdx.x + offset - STENCIL_ORDER / 2, vertexIdx.y, vertexIdx.z)];
+        pencil[offset] = arr[IDX(vertexIdx.x + offset - STENCIL_ORDER / 2, vertexIdx.y,
+                                 vertexIdx.z)];
 
     return second_derivative(pencil, DCONST_REAL(AC_inv_dsx));
 }
@@ -262,8 +256,7 @@ derxy(const int3 vertexIdx, const AcReal* __restrict__ arr)
         pencil_b[offset] = arr[IDX(vertexIdx.x + offset - STENCIL_ORDER / 2,
                                    vertexIdx.y + STENCIL_ORDER / 2 - offset, vertexIdx.z)];
 
-    return cross_derivative(pencil_a, pencil_b, DCONST_REAL(AC_inv_dsx),
-                            DCONST_REAL(AC_inv_dsy));
+    return cross_derivative(pencil_a, pencil_b, DCONST_REAL(AC_inv_dsx), DCONST_REAL(AC_inv_dsy));
 }
 
 static __device__ __forceinline__ AcReal
@@ -281,8 +274,7 @@ derxz(const int3 vertexIdx, const AcReal* __restrict__ arr)
         pencil_b[offset] = arr[IDX(vertexIdx.x + offset - STENCIL_ORDER / 2, vertexIdx.y,
                                    vertexIdx.z + STENCIL_ORDER / 2 - offset)];
 
-    return cross_derivative(pencil_a, pencil_b, DCONST_REAL(AC_inv_dsx),
-                            DCONST_REAL(AC_inv_dsz));
+    return cross_derivative(pencil_a, pencil_b, DCONST_REAL(AC_inv_dsx), DCONST_REAL(AC_inv_dsz));
 }
 
 static __device__ __forceinline__ AcReal
@@ -291,7 +283,8 @@ dery(const int3 vertexIdx, const AcReal* __restrict__ arr)
     AcReal pencil[STENCIL_ORDER + 1];
 #pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y + offset - STENCIL_ORDER / 2, vertexIdx.z)];
+        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y + offset - STENCIL_ORDER / 2,
+                                 vertexIdx.z)];
 
     return first_derivative(pencil, DCONST_REAL(AC_inv_dsy));
 }
@@ -302,7 +295,8 @@ deryy(const int3 vertexIdx, const AcReal* __restrict__ arr)
     AcReal pencil[STENCIL_ORDER + 1];
 #pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y + offset - STENCIL_ORDER / 2, vertexIdx.z)];
+        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y + offset - STENCIL_ORDER / 2,
+                                 vertexIdx.z)];
 
     return second_derivative(pencil, DCONST_REAL(AC_inv_dsy));
 }
@@ -322,8 +316,7 @@ deryz(const int3 vertexIdx, const AcReal* __restrict__ arr)
         pencil_b[offset] = arr[IDX(vertexIdx.x, vertexIdx.y + offset - STENCIL_ORDER / 2,
                                    vertexIdx.z + STENCIL_ORDER / 2 - offset)];
 
-    return cross_derivative(pencil_a, pencil_b, DCONST_REAL(AC_inv_dsy),
-                            DCONST_REAL(AC_inv_dsz));
+    return cross_derivative(pencil_a, pencil_b, DCONST_REAL(AC_inv_dsy), DCONST_REAL(AC_inv_dsz));
 }
 
 static __device__ __forceinline__ AcReal
@@ -332,7 +325,8 @@ derz(const int3 vertexIdx, const AcReal* __restrict__ arr)
     AcReal pencil[STENCIL_ORDER + 1];
 #pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z + offset - STENCIL_ORDER / 2)];
+        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y,
+                                 vertexIdx.z + offset - STENCIL_ORDER / 2)];
 
     return first_derivative(pencil, DCONST_REAL(AC_inv_dsz));
 }
@@ -343,7 +337,8 @@ derzz(const int3 vertexIdx, const AcReal* __restrict__ arr)
     AcReal pencil[STENCIL_ORDER + 1];
 #pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z + offset - STENCIL_ORDER / 2)];
+        pencil[offset] = arr[IDX(vertexIdx.x, vertexIdx.y,
+                                 vertexIdx.z + offset - STENCIL_ORDER / 2)];
 
     return second_derivative(pencil, DCONST_REAL(AC_inv_dsz));
 }
@@ -401,8 +396,7 @@ operator-(const AcReal3& a)
     return (AcReal3){-a.x, -a.y, -a.z};
 }
 
-static __host__  __device__ __forceinline__ AcReal3
-operator*(const AcReal a, const AcReal3& b)
+static __host__ __device__ __forceinline__ AcReal3 operator*(const AcReal a, const AcReal3& b)
 {
     return (AcReal3){a * b.x, a * b.y, a * b.z};
 }
@@ -443,7 +437,6 @@ is_valid(const AcReal3& a)
     return is_valid(a.x) && is_valid(a.y) && is_valid(a.z);
 }
 
-
 /*
  * =============================================================================
  * Level 1 (Stencil Processing Stage)
@@ -476,8 +469,7 @@ laplace_vec(const AcReal3Data& vec)
 static __device__ __forceinline__ AcReal3
 curl(const AcReal3Data& vec)
 {
-    return (AcReal3){gradient(vec.z).y - gradient(vec.y).z,
-                     gradient(vec.x).z - gradient(vec.z).x,
+    return (AcReal3){gradient(vec.z).y - gradient(vec.y).z, gradient(vec.x).z - gradient(vec.z).x,
                      gradient(vec.y).x - gradient(vec.x).y};
 }
 
@@ -520,7 +512,7 @@ contract(const AcMatrix& mat)
 {
     AcReal res = 0;
 
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < 3; ++i)
         res += dot(mat.row[i], mat.row[i]);
 
@@ -558,12 +550,13 @@ __constant__ AcReal forcing_phi;
 static __device__ __forceinline__ AcReal3
 forcing(const int i, const int j, const int k)
 {
-    #define DOMAIN_SIZE_X (DCONST_INT(AC_nx) * DCONST_REAL(AC_dsx))
-    #define DOMAIN_SIZE_Y (DCONST_INT(AC_ny) * DCONST_REAL(AC_dsy))
-    #define DOMAIN_SIZE_Z (DCONST_INT(AC_nz) * DCONST_REAL(AC_dsz))
-    const AcReal3 k_vec = (AcReal3){(i - DCONST_INT(AC_nx_min)) * DCONST_REAL(AC_dsx) - AcReal(.5) * DOMAIN_SIZE_X,
-                                    (j - DCONST_INT(AC_ny_min)) * DCONST_REAL(AC_dsy) - AcReal(.5) * DOMAIN_SIZE_Y,
-                                    (k - DCONST_INT(AC_nz_min)) * DCONST_REAL(AC_dsz) - AcReal(.5) * DOMAIN_SIZE_Z};
+#define DOMAIN_SIZE_X (DCONST_INT(AC_nx) * DCONST_REAL(AC_dsx))
+#define DOMAIN_SIZE_Y (DCONST_INT(AC_ny) * DCONST_REAL(AC_dsy))
+#define DOMAIN_SIZE_Z (DCONST_INT(AC_nz) * DCONST_REAL(AC_dsz))
+    const AcReal3 k_vec = (AcReal3){
+        (i - DCONST_INT(AC_nx_min)) * DCONST_REAL(AC_dsx) - AcReal(.5) * DOMAIN_SIZE_X,
+        (j - DCONST_INT(AC_ny_min)) * DCONST_REAL(AC_dsy) - AcReal(.5) * DOMAIN_SIZE_Y,
+        (k - DCONST_INT(AC_nz_min)) * DCONST_REAL(AC_dsz) - AcReal(.5) * DOMAIN_SIZE_Z};
     AcReal inv_len = reciprocal_len(k_vec);
     if (isnan(inv_len) || isinf(inv_len))
         inv_len = 0;
@@ -571,46 +564,41 @@ forcing(const int i, const int j, const int k)
         inv_len = 2;
     const AcReal k_dot_x = dot(k_vec, forcing_vec);
 
-    const AcReal waves = cos(k_dot_x)*cos(forcing_phi) - sin(k_dot_x) * sin(forcing_phi);
+    const AcReal waves = cos(k_dot_x) * cos(forcing_phi) - sin(k_dot_x) * sin(forcing_phi);
 
     return inv_len * inv_len * waves * forcing_vec;
 }
 
-
-// Note: LNT0 and LNRHO0 must be set very carefully: if the magnitude is different that other values in the mesh, then we will inherently lose precision
+// Note: LNT0 and LNRHO0 must be set very carefully: if the magnitude is different that other values
+// in the mesh, then we will inherently lose precision
 #define LNT0 (AcReal(0.0))
 #define LNRHO0 (AcReal(0.0))
 
 #define H_CONST (AcReal(0.0))
 #define C_CONST (AcReal(0.0))
 
-
-
 template <int step_number>
 static __device__ __forceinline__ AcReal
-rk3_integrate(const AcReal state_previous, const AcReal state_current,
-              const AcReal rate_of_change, const AcReal dt)
+rk3_integrate(const AcReal state_previous, const AcReal state_current, const AcReal rate_of_change,
+              const AcReal dt)
 {
     // Williamson (1980)
     const AcReal alpha[] = {0, AcReal(.0), AcReal(-5. / 9.), AcReal(-153. / 128.)};
-    const AcReal beta[]  = {0, AcReal(1. / 3.), AcReal(15. / 16.),
-                           AcReal(8. / 15.)};
-
+    const AcReal beta[]  = {0, AcReal(1. / 3.), AcReal(15. / 16.), AcReal(8. / 15.)};
 
     // Note the indexing: +1 to avoid an unnecessary warning about "out-of-bounds"
     // access (when accessing beta[step_number-1] even when step_number >= 1)
     switch (step_number) {
-        case 0:
-            return state_current + beta[step_number + 1] * rate_of_change * dt;
-        case 1: // Fallthrough
-        case 2:
-            return state_current +
-               beta[step_number + 1] *
-                   (alpha[step_number + 1] * (AcReal(1.) / beta[step_number]) *
-                        (state_current - state_previous) +
-                    rate_of_change * dt);
-        default:
-            return NAN;
+    case 0:
+        return state_current + beta[step_number + 1] * rate_of_change * dt;
+    case 1: // Fallthrough
+    case 2:
+        return state_current +
+               beta[step_number + 1] * (alpha[step_number + 1] * (AcReal(1.) / beta[step_number]) *
+                                            (state_current - state_previous) +
+                                        rate_of_change * dt);
+    default:
+        return NAN;
     }
 }
 /*
@@ -646,13 +634,14 @@ static __device__ __forceinline__ AcReal3
 rk3_integrate(const AcReal3 state_previous, const AcReal3 state_current,
               const AcReal3 rate_of_change, const AcReal dt)
 {
-    return (AcReal3) { rk3_integrate<step_number>(state_previous.x, state_current.x, rate_of_change.x, dt),
-                                       rk3_integrate<step_number>(state_previous.y, state_current.y, rate_of_change.y, dt),
-                                       rk3_integrate<step_number>(state_previous.z, state_current.z, rate_of_change.z, dt)};
+    return (AcReal3){
+        rk3_integrate<step_number>(state_previous.x, state_current.x, rate_of_change.x, dt),
+        rk3_integrate<step_number>(state_previous.y, state_current.y, rate_of_change.y, dt),
+        rk3_integrate<step_number>(state_previous.z, state_current.z, rate_of_change.z, dt)};
 }
 
-#define rk3(state_previous, state_current, rate_of_change, dt)\
-rk3_integrate<step_number>(state_previous, value(state_current), rate_of_change, dt)
+#define rk3(state_previous, state_current, rate_of_change, dt)                                     \
+    rk3_integrate<step_number>(state_previous, value(state_current), rate_of_change, dt)
 
 /*
 template <int step_number>
@@ -708,9 +697,8 @@ read_out(const int idx, AcReal* __restrict__ field[], const int handle)
 static __device__ AcReal3
 read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
 {
-    return (AcReal3) { read_out(idx, field, handle.x),
-                                       read_out(idx, field, handle.y),
-                                       read_out(idx, field, handle.z) };
+    return (AcReal3){read_out(idx, field, handle.x), read_out(idx, field, handle.y),
+                     read_out(idx, field, handle.z)};
 }
 
 #define WRITE_OUT(handle, value) (write(buffer.out, handle, idx, value))
@@ -718,29 +706,28 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
 #define READ_OUT(handle) (read_out(idx, buffer.out, handle))
 
 // also write for clarity here also, not for the DSL
-//#define WRITE(HANDLE) (write(idx, ...)) s.t. we don't have to insert boilerplat in the mid of the function
+//#define WRITE(HANDLE) (write(idx, ...)) s.t. we don't have to insert boilerplat in the mid of the
+// function
 
-#define GEN_KERNEL_PARAM_BOILERPLATE \
-        const int3 start, const int3 end, VertexBufferArray buffer
+#define GEN_KERNEL_PARAM_BOILERPLATE const int3 start, const int3 end, VertexBufferArray buffer
 
-#define GEN_KERNEL_BUILTIN_VARIABLES_BOILERPLATE() \
-        const int3 vertexIdx = (int3){threadIdx.x + blockIdx.x * blockDim.x + start.x,\
-                                                            threadIdx.y + blockIdx.y * blockDim.y + start.y,\
-                                                            threadIdx.z + blockIdx.z * blockDim.z + start.z};\
-        const int3 globalVertexIdx = (int3){d_multigpu_offset.x + vertexIdx.x, \
-                                            d_multigpu_offset.y + vertexIdx.y, \
-                                            d_multigpu_offset.z + vertexIdx.z}; \
-        if (vertexIdx.x >= end.x || vertexIdx.y >= end.y || vertexIdx.z >= end.z)\
-            return;\
-\
-\
-        assert(vertexIdx.x < DCONST_INT(AC_nx_max) && vertexIdx.y < DCONST_INT(AC_ny_max) &&\
-               vertexIdx.z < DCONST_INT(AC_nz_max));\
-\
-        assert(vertexIdx.x >= DCONST_INT(AC_nx_min) && vertexIdx.y >= DCONST_INT(AC_ny_min) &&\
-               vertexIdx.z >= DCONST_INT(AC_nz_min));\
-\
-        const int idx          = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
+#define GEN_KERNEL_BUILTIN_VARIABLES_BOILERPLATE()                                                 \
+    const int3 vertexIdx       = (int3){threadIdx.x + blockIdx.x * blockDim.x + start.x,           \
+                                  threadIdx.y + blockIdx.y * blockDim.y + start.y,           \
+                                  threadIdx.z + blockIdx.z * blockDim.z + start.z};          \
+    const int3 globalVertexIdx = (int3){d_multigpu_offset.x + vertexIdx.x,                         \
+                                        d_multigpu_offset.y + vertexIdx.y,                         \
+                                        d_multigpu_offset.z + vertexIdx.z};                        \
+    if (vertexIdx.x >= end.x || vertexIdx.y >= end.y || vertexIdx.z >= end.z)                      \
+        return;                                                                                    \
+                                                                                                   \
+    assert(vertexIdx.x < DCONST_INT(AC_nx_max) && vertexIdx.y < DCONST_INT(AC_ny_max) &&           \
+           vertexIdx.z < DCONST_INT(AC_nz_max));                                                   \
+                                                                                                   \
+    assert(vertexIdx.x >= DCONST_INT(AC_nx_min) && vertexIdx.y >= DCONST_INT(AC_ny_min) &&         \
+           vertexIdx.z >= DCONST_INT(AC_nz_min));                                                  \
+                                                                                                   \
+    const int idx = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
 
 #include "stencil_process.cuh"
 
@@ -757,33 +744,31 @@ randf(void)
 }
 
 AcResult
-rk3_step_async(const cudaStream_t stream, const int& step_number, const int3& start, const int3& end,
-               const AcReal dt, VertexBufferArray* buffer)
+rk3_step_async(const cudaStream_t stream, const int& step_number, const int3& start,
+               const int3& end, const AcReal dt, VertexBufferArray* buffer)
 {
     const dim3 tpb(32, 1, 4);
-    /////////////////// Forcing
-    #if LFORCING
+/////////////////// Forcing
+#if LFORCING
     const AcReal ff_scale = AcReal(.2);
-    static AcReal3 ff = ff_scale * (AcReal3){1, 0, 0};
-    const AcReal radians = randf() * AcReal(2*M_PI) / 360 / 8;
-    const AcMatrix rotz = create_rotz(radians);
-    ff = mul(rotz, ff);
+    static AcReal3 ff     = ff_scale * (AcReal3){1, 0, 0};
+    const AcReal radians  = randf() * AcReal(2 * M_PI) / 360 / 8;
+    const AcMatrix rotz   = create_rotz(radians);
+    ff                    = mul(rotz, ff);
     cudaMemcpyToSymbolAsync(forcing_vec, &ff, sizeof(ff), 0, cudaMemcpyHostToDevice, stream);
 
-    const AcReal ff_phi = AcReal(M_PI);//AcReal(2 * M_PI) * randf();
-    cudaMemcpyToSymbolAsync(forcing_phi, &ff_phi, sizeof(ff_phi), 0, cudaMemcpyHostToDevice, stream);
-    #endif // LFORCING
+    const AcReal ff_phi = AcReal(M_PI); // AcReal(2 * M_PI) * randf();
+    cudaMemcpyToSymbolAsync(forcing_phi, &ff_phi, sizeof(ff_phi), 0, cudaMemcpyHostToDevice,
+                            stream);
+#endif // LFORCING
     //////////////////////////
 
     const int nx = end.x - start.x;
     const int ny = end.y - start.y;
     const int nz = end.z - start.z;
 
-    const dim3 bpg(
-        (unsigned int)ceil(nx / AcReal(tpb.x)),
-        (unsigned int)ceil(ny / AcReal(tpb.y)),
-        (unsigned int)ceil(nz / AcReal(tpb.z)));
-
+    const dim3 bpg((unsigned int)ceil(nx / AcReal(tpb.x)), (unsigned int)ceil(ny / AcReal(tpb.y)),
+                   (unsigned int)ceil(nz / AcReal(tpb.z)));
 
     if (step_number == 0)
         solve<0><<<bpg, tpb, 0, stream>>>(start, end, *buffer, dt);
@@ -795,7 +780,6 @@ rk3_step_async(const cudaStream_t stream, const int& step_number, const int3& st
     ERRCHK_CUDA_KERNEL();
     return AC_SUCCESS;
 }
-
 
 ////////////////REDUCE///////////////////////////
 #include "src/core/math_utils.h" // is_power_of_two
@@ -848,22 +832,19 @@ template <FilterFunc filter>
 __global__ void
 kernel_filter(const __restrict__ AcReal* src, const int3 start, const int3 end, AcReal* dst)
 {
-    const int3 src_idx = (int3) {
-        start.x + threadIdx.x + blockIdx.x * blockDim.x,
-        start.y + threadIdx.y + blockIdx.y * blockDim.y,
-        start.z + threadIdx.z + blockIdx.z * blockDim.z
-    };
+    const int3 src_idx = (int3){start.x + threadIdx.x + blockIdx.x * blockDim.x,
+                                start.y + threadIdx.y + blockIdx.y * blockDim.y,
+                                start.z + threadIdx.z + blockIdx.z * blockDim.z};
 
-    const int nx = end.x - start.x;
-    const int ny = end.y - start.y;
-    const int nz = end.z - start.z; //MV: Added this because it was undefined
-    const int3 dst_idx = (int3) {
-        threadIdx.x + blockIdx.x * blockDim.x,
-        threadIdx.y + blockIdx.y * blockDim.y,
-        threadIdx.z + blockIdx.z * blockDim.z
-    };
+    const int nx       = end.x - start.x;
+    const int ny       = end.y - start.y;
+    const int nz       = end.z - start.z; // MV: Added this because it was undefined
+    const int3 dst_idx = (int3){threadIdx.x + blockIdx.x * blockDim.x,
+                                threadIdx.y + blockIdx.y * blockDim.y,
+                                threadIdx.z + blockIdx.z * blockDim.z};
 
-    assert(src_idx.x < DCONST_INT(AC_nx_max) && src_idx.y < DCONST_INT(AC_ny_max) && src_idx.z < DCONST_INT(AC_nz_max));
+    assert(src_idx.x < DCONST_INT(AC_nx_max) && src_idx.y < DCONST_INT(AC_ny_max) &&
+           src_idx.z < DCONST_INT(AC_nz_max));
     assert(dst_idx.x < nx && dst_idx.y < ny && dst_idx.z < nz);
     assert(dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny < nx * ny * nz);
 
@@ -872,31 +853,27 @@ kernel_filter(const __restrict__ AcReal* src, const int3 start, const int3 end, 
 
 template <FilterFuncVec filter>
 __global__ void
-kernel_filter_vec(const __restrict__ AcReal* src0,
-                  const __restrict__ AcReal* src1,
-                  const __restrict__ AcReal* src2,
-                  const int3 start, const int3 end, AcReal* dst)
+kernel_filter_vec(const __restrict__ AcReal* src0, const __restrict__ AcReal* src1,
+                  const __restrict__ AcReal* src2, const int3 start, const int3 end, AcReal* dst)
 {
-    const int3 src_idx = (int3) {
-        start.x + threadIdx.x + blockIdx.x * blockDim.x,
-        start.y + threadIdx.y + blockIdx.y * blockDim.y,
-        start.z + threadIdx.z + blockIdx.z * blockDim.z
-    };
+    const int3 src_idx = (int3){start.x + threadIdx.x + blockIdx.x * blockDim.x,
+                                start.y + threadIdx.y + blockIdx.y * blockDim.y,
+                                start.z + threadIdx.z + blockIdx.z * blockDim.z};
 
-    const int nx = end.x - start.x;
-    const int ny = end.y - start.y;
-    const int nz = end.z - start.z; //MV: Added this because it was undefined
-    const int3 dst_idx = (int3) {
-        threadIdx.x + blockIdx.x * blockDim.x,
-        threadIdx.y + blockIdx.y * blockDim.y,
-        threadIdx.z + blockIdx.z * blockDim.z
-    };
+    const int nx       = end.x - start.x;
+    const int ny       = end.y - start.y;
+    const int nz       = end.z - start.z; // MV: Added this because it was undefined
+    const int3 dst_idx = (int3){threadIdx.x + blockIdx.x * blockDim.x,
+                                threadIdx.y + blockIdx.y * blockDim.y,
+                                threadIdx.z + blockIdx.z * blockDim.z};
 
-    assert(src_idx.x < DCONST_INT(AC_nx_max) && src_idx.y < DCONST_INT(AC_ny_max) && src_idx.z < DCONST_INT(AC_nz_max));
+    assert(src_idx.x < DCONST_INT(AC_nx_max) && src_idx.y < DCONST_INT(AC_ny_max) &&
+           src_idx.z < DCONST_INT(AC_nz_max));
     assert(dst_idx.x < nx && dst_idx.y < ny && dst_idx.z < nz);
     assert(dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny < nx * ny * nz);
 
-    dst[dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny] = filter(src0[IDX(src_idx)], src1[IDX(src_idx)], src2[IDX(src_idx)]);
+    dst[dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny] = filter(
+        src0[IDX(src_idx)], src1[IDX(src_idx)], src2[IDX(src_idx)]);
 }
 
 template <ReduceFunc reduce>
@@ -908,7 +885,8 @@ kernel_reduce(AcReal* scratchpad, const int num_elems)
     extern __shared__ AcReal smem[];
     if (idx < num_elems) {
         smem[threadIdx.x] = scratchpad[idx];
-    } else {
+    }
+    else {
         smem[threadIdx.x] = NAN;
     }
     __syncthreads();
@@ -930,9 +908,8 @@ kernel_reduce(AcReal* scratchpad, const int num_elems)
 
 template <ReduceFunc reduce>
 __global__ void
-kernel_reduce_block(const __restrict__ AcReal* scratchpad,
-                    const int num_blocks, const int block_size,
-                    AcReal* result)
+kernel_reduce_block(const __restrict__ AcReal* scratchpad, const int num_blocks,
+                    const int block_size, AcReal* result)
 {
     const int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx != 0) {
@@ -946,23 +923,19 @@ kernel_reduce_block(const __restrict__ AcReal* scratchpad,
     *result = res;
 }
 
-
 AcReal
-reduce_scal(const cudaStream_t stream, const ReductionType rtype,
-            const int3& start, const int3& end,
-            const AcReal* vtxbuf, AcReal* scratchpad, AcReal* reduce_result)
+reduce_scal(const cudaStream_t stream, const ReductionType rtype, const int3& start,
+            const int3& end, const AcReal* vtxbuf, AcReal* scratchpad, AcReal* reduce_result)
 {
-    const unsigned nx = end.x - start.x;
-    const unsigned ny = end.y - start.y;
-    const unsigned nz = end.z - start.z;
+    const unsigned nx        = end.x - start.x;
+    const unsigned ny        = end.y - start.y;
+    const unsigned nz        = end.z - start.z;
     const unsigned num_elems = nx * ny * nz;
 
     const dim3 tpb_filter(32, 4, 1);
-    const dim3 bpg_filter(
-        (unsigned int)ceil(nx / AcReal(tpb_filter.x)),
-        (unsigned int)ceil(ny / AcReal(tpb_filter.y)),
-        (unsigned int)ceil(nz / AcReal(tpb_filter.z))
-    );
+    const dim3 bpg_filter((unsigned int)ceil(nx / AcReal(tpb_filter.x)),
+                          (unsigned int)ceil(ny / AcReal(tpb_filter.y)),
+                          (unsigned int)ceil(nz / AcReal(tpb_filter.z)));
 
     const int tpb_reduce = 128;
     const int bpg_reduce = num_elems / tpb_reduce;
@@ -974,22 +947,38 @@ reduce_scal(const cudaStream_t stream, const ReductionType rtype,
     ERRCHK(nx * ny * nz % 2 == 0);
 
     if (rtype == RTYPE_MAX) {
-        kernel_filter<dvalue><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
-        kernel_reduce<dmax><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dmax><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else if (rtype == RTYPE_MIN) {
-        kernel_filter<dvalue><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
-        kernel_reduce<dmin><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dmin><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else if (rtype == RTYPE_RMS) {
-        kernel_filter<dsquared><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
-        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else if (rtype == RTYPE_RMS_EXP) {
-        kernel_filter<dexp_squared><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
-        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else {
+        kernel_filter<dvalue>
+            <<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dmax><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dmax>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else if (rtype == RTYPE_MIN) {
+        kernel_filter<dvalue>
+            <<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dmin><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dmin>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else if (rtype == RTYPE_RMS) {
+        kernel_filter<dsquared>
+            <<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dsum>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else if (rtype == RTYPE_RMS_EXP) {
+        kernel_filter<dexp_squared>
+            <<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dsum>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else {
         ERROR("Unrecognized rtype");
     }
     AcReal result;
@@ -998,22 +987,19 @@ reduce_scal(const cudaStream_t stream, const ReductionType rtype,
 }
 
 AcReal
-reduce_vec(const cudaStream_t stream, const ReductionType rtype,
-            const int3& start, const int3& end,
-            const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2,
-            AcReal* scratchpad, AcReal* reduce_result)
+reduce_vec(const cudaStream_t stream, const ReductionType rtype, const int3& start, const int3& end,
+           const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2, AcReal* scratchpad,
+           AcReal* reduce_result)
 {
-    const unsigned nx = end.x - start.x;
-    const unsigned ny = end.y - start.y;
-    const unsigned nz = end.z - start.z;
+    const unsigned nx        = end.x - start.x;
+    const unsigned ny        = end.y - start.y;
+    const unsigned nz        = end.z - start.z;
     const unsigned num_elems = nx * ny * nz;
 
     const dim3 tpb_filter(32, 4, 1);
-    const dim3 bpg_filter(
-        (unsigned int)ceil(nx / AcReal(tpb_filter.x)),
-        (unsigned int)ceil(ny / AcReal(tpb_filter.y)),
-        (unsigned int)ceil(nz / AcReal(tpb_filter.z))
-    );
+    const dim3 bpg_filter((unsigned int)ceil(nx / AcReal(tpb_filter.x)),
+                          (unsigned int)ceil(ny / AcReal(tpb_filter.y)),
+                          (unsigned int)ceil(nz / AcReal(tpb_filter.z)));
 
     const int tpb_reduce = 128;
     const int bpg_reduce = num_elems / tpb_reduce;
@@ -1025,22 +1011,38 @@ reduce_vec(const cudaStream_t stream, const ReductionType rtype,
     ERRCHK(nx * ny * nz % 2 == 0);
 
     if (rtype == RTYPE_MAX) {
-        kernel_filter_vec<dlength_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
-        kernel_reduce<dmax><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dmax><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else if (rtype == RTYPE_MIN) {
-        kernel_filter_vec<dlength_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
-        kernel_reduce<dmin><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dmin><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else if (rtype == RTYPE_RMS) {
-        kernel_filter_vec<dsquared_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
-        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else if (rtype == RTYPE_RMS_EXP) {
-        kernel_filter_vec<dexp_squared_vec><<<bpg_filter, tpb_filter, 0, stream>>>(vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
-        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(scratchpad, num_elems);
-        kernel_reduce_block<dsum><<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
-    } else {
+        kernel_filter_vec<dlength_vec><<<bpg_filter, tpb_filter, 0, stream>>>(
+            vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dmax><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dmax>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else if (rtype == RTYPE_MIN) {
+        kernel_filter_vec<dlength_vec><<<bpg_filter, tpb_filter, 0, stream>>>(
+            vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dmin><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dmin>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else if (rtype == RTYPE_RMS) {
+        kernel_filter_vec<dsquared_vec><<<bpg_filter, tpb_filter, 0, stream>>>(
+            vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dsum>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else if (rtype == RTYPE_RMS_EXP) {
+        kernel_filter_vec<dexp_squared_vec><<<bpg_filter, tpb_filter, 0, stream>>>(
+            vtxbuf0, vtxbuf1, vtxbuf2, start, end, scratchpad);
+        kernel_reduce<dsum><<<bpg_reduce, tpb_reduce, sizeof(AcReal) * tpb_reduce, stream>>>(
+            scratchpad, num_elems);
+        kernel_reduce_block<dsum>
+            <<<1, 1, 0, stream>>>(scratchpad, bpg_reduce, tpb_reduce, reduce_result);
+    }
+    else {
         ERROR("Unrecognized rtype");
     }
     AcReal result;

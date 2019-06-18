@@ -63,7 +63,7 @@ parse_config(const char* path, AcMeshInfo* config)
 {
     FILE* fp;
     fp = fopen(path, "r");
-    // For knowing which .conf file will be used 
+    // For knowing which .conf file will be used
     printf("Config file path: \n %s \n ", path);
     ERRCHK(fp != NULL);
 
@@ -79,8 +79,7 @@ parse_config(const char* path, AcMeshInfo* config)
         int idx = -1;
         if ((idx = find_str(keyword, intparam_names, NUM_INT_PARAM_TYPES)) >= 0)
             config->int_params[idx] = atoi(value);
-        else if ((idx = find_str(keyword, realparam_names,
-                                 NUM_REAL_PARAM_TYPES)) >= 0)
+        else if ((idx = find_str(keyword, realparam_names, NUM_REAL_PARAM_TYPES)) >= 0)
             config->real_params[idx] = AcReal(atof(value));
     }
 
@@ -92,68 +91,66 @@ update_config(AcMeshInfo* config)
 {
     config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER;
     ///////////// PAD TEST
-    //config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER + PAD_SIZE;
+    // config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER + PAD_SIZE;
     ///////////// PAD TEST
     config->int_params[AC_my] = config->int_params[AC_ny] + STENCIL_ORDER;
     config->int_params[AC_mz] = config->int_params[AC_nz] + STENCIL_ORDER;
 
     // Bounds for the computational domain, i.e. nx_min <= i < nx_max
     config->int_params[AC_nx_min] = STENCIL_ORDER / 2;
-    config->int_params[AC_nx_max] = config->int_params[AC_nx_min] +
-                                    config->int_params[AC_nx];
+    config->int_params[AC_nx_max] = config->int_params[AC_nx_min] + config->int_params[AC_nx];
     config->int_params[AC_ny_min] = STENCIL_ORDER / 2;
-    config->int_params[AC_ny_max] = config->int_params[AC_ny] +
-                                    STENCIL_ORDER / 2;
+    config->int_params[AC_ny_max] = config->int_params[AC_ny] + STENCIL_ORDER / 2;
     config->int_params[AC_nz_min] = STENCIL_ORDER / 2;
-    config->int_params[AC_nz_max] = config->int_params[AC_nz] +
-                                    STENCIL_ORDER / 2;
+    config->int_params[AC_nz_max] = config->int_params[AC_nz] + STENCIL_ORDER / 2;
 
     // Spacing
     config->real_params[AC_inv_dsx] = AcReal(1.) / config->real_params[AC_dsx];
     config->real_params[AC_inv_dsy] = AcReal(1.) / config->real_params[AC_dsy];
     config->real_params[AC_inv_dsz] = AcReal(1.) / config->real_params[AC_dsz];
-    config->real_params[AC_dsmin] = min(config->real_params[AC_dsx], min(config->real_params[AC_dsy], config->real_params[AC_dsz]));
+    config->real_params[AC_dsmin]   = min(
+        config->real_params[AC_dsx], min(config->real_params[AC_dsy], config->real_params[AC_dsz]));
 
     // Real grid coordanates (DEFINE FOR GRID WITH THE GHOST ZONES)
-    config->real_params[AC_xlen] = config->real_params[AC_dsx]*config->int_params[AC_mx]; 
-    config->real_params[AC_ylen] = config->real_params[AC_dsy]*config->int_params[AC_my];
-    config->real_params[AC_zlen] = config->real_params[AC_dsz]*config->int_params[AC_mz];
+    config->real_params[AC_xlen] = config->real_params[AC_dsx] * config->int_params[AC_mx];
+    config->real_params[AC_ylen] = config->real_params[AC_dsy] * config->int_params[AC_my];
+    config->real_params[AC_zlen] = config->real_params[AC_dsz] * config->int_params[AC_mz];
 
-    config->real_params[AC_xorig] = AcReal(.5) * config->real_params[AC_xlen];  
-    config->real_params[AC_yorig] = AcReal(.5) * config->real_params[AC_ylen]; 
-    config->real_params[AC_zorig] = AcReal(.5) * config->real_params[AC_zlen]; 
+    config->real_params[AC_xorig] = AcReal(.5) * config->real_params[AC_xlen];
+    config->real_params[AC_yorig] = AcReal(.5) * config->real_params[AC_ylen];
+    config->real_params[AC_zorig] = AcReal(.5) * config->real_params[AC_zlen];
 
     /* Additional helper params */
     // Int helpers
-    config->int_params[AC_mxy] = config->int_params[AC_mx] *
-                                 config->int_params[AC_my];
-    config->int_params[AC_nxy] = config->int_params[AC_nx] *
-                                 config->int_params[AC_ny];
-    config->int_params[AC_nxyz] = config->int_params[AC_nxy] *
-                                  config->int_params[AC_nz];
+    config->int_params[AC_mxy]  = config->int_params[AC_mx] * config->int_params[AC_my];
+    config->int_params[AC_nxy]  = config->int_params[AC_nx] * config->int_params[AC_ny];
+    config->int_params[AC_nxyz] = config->int_params[AC_nxy] * config->int_params[AC_nz];
 
     // Real helpers
     config->real_params[AC_cs2_sound] = config->real_params[AC_cs_sound] *
                                         config->real_params[AC_cs_sound];
 
-    config->real_params[AC_cv_sound] = config->real_params[AC_cp_sound] / config->real_params[AC_gamma];
+    config->real_params[AC_cv_sound] = config->real_params[AC_cp_sound] /
+                                       config->real_params[AC_gamma];
 
-    AcReal G_CONST_CGS = AcReal(6.674e-8); // g/cm3/s GGS definition //TODO define in a separate module
-    AcReal M_sun       = AcReal(1.989e33);  // g solar mass
+    AcReal G_CONST_CGS = AcReal(
+        6.674e-8);                   // g/cm3/s GGS definition //TODO define in a separate module
+    AcReal M_sun = AcReal(1.989e33); // g solar mass
 
-    config->real_params[AC_M_star] = config->real_params[AC_M_star]*M_sun / 
-                                     ( (config->real_params[AC_unit_length]*
-                                        config->real_params[AC_unit_length]*
-                                        config->real_params[AC_unit_length]) * 
-                                        config->real_params[AC_unit_density] ) ;
+    config->real_params[AC_M_star] = config->real_params[AC_M_star] * M_sun /
+                                     ((config->real_params[AC_unit_length] *
+                                       config->real_params[AC_unit_length] *
+                                       config->real_params[AC_unit_length]) *
+                                      config->real_params[AC_unit_density]);
 
-    config->real_params[AC_G_CONST] = G_CONST_CGS / 
-                                      ( (config->real_params[AC_unit_velocity]*config->real_params[AC_unit_velocity]) /
-                                        (config->real_params[AC_unit_density] *config->real_params[AC_unit_length]) ) ;
+    config->real_params[AC_G_CONST] = G_CONST_CGS / ((config->real_params[AC_unit_velocity] *
+                                                      config->real_params[AC_unit_velocity]) /
+                                                     (config->real_params[AC_unit_density] *
+                                                      config->real_params[AC_unit_length]));
 
-    config->real_params[AC_GM_star]  = config->real_params[AC_M_star]*config->real_params[AC_G_CONST];
-    config->real_params[AC_sq2GM_star]  = AcReal(sqrt(AcReal(2)*config->real_params[AC_GM_star]));
-
+    config->real_params[AC_GM_star] = config->real_params[AC_M_star] *
+                                      config->real_params[AC_G_CONST];
+    config->real_params[AC_sq2GM_star] = AcReal(sqrt(AcReal(2) * config->real_params[AC_GM_star]));
 
     const bool print_config = true;
     if (print_config) {

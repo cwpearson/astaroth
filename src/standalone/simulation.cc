@@ -60,23 +60,23 @@ print_diagnostics(const AcMesh& mesh, const int& step, const AcReal& dt)
 }
 */
 
-//Write all setting info into a separate ascii file. This is done to guarantee
-//that we have the data specifi information in the thing, even though in
-//principle these things are in the astaroth.conf.
-static inline 
-void write_mesh_info(const AcMeshInfo* config)
+// Write all setting info into a separate ascii file. This is done to guarantee
+// that we have the data specifi information in the thing, even though in
+// principle these things are in the astaroth.conf.
+static inline void
+write_mesh_info(const AcMeshInfo* config)
 {
- 
+
     FILE* infotxt;
 
-    infotxt = fopen("purge.sh","w");
+    infotxt = fopen("purge.sh", "w");
     fprintf(infotxt, "#!/bin/bash\n");
     fprintf(infotxt, "rm *.list *.mesh *.ts purge.sh\n");
-    fclose(infotxt);   
+    fclose(infotxt);
 
-    infotxt = fopen("mesh_info.list","w");
+    infotxt = fopen("mesh_info.list", "w");
 
-    //Total grid dimensions
+    // Total grid dimensions
     fprintf(infotxt, "int  AC_mx        %i \n", config->int_params[AC_mx]);
     fprintf(infotxt, "int  AC_my        %i \n", config->int_params[AC_my]);
     fprintf(infotxt, "int  AC_mz        %i \n", config->int_params[AC_mz]);
@@ -96,30 +96,28 @@ void write_mesh_info(const AcMeshInfo* config)
     fprintf(infotxt, "real AC_inv_dsx   %e \n", (double)config->real_params[AC_inv_dsx]);
     fprintf(infotxt, "real AC_inv_dsy   %e \n", (double)config->real_params[AC_inv_dsy]);
     fprintf(infotxt, "real AC_inv_dsz   %e \n", (double)config->real_params[AC_inv_dsz]);
-    fprintf(infotxt, "real AC_dsmin     %e \n", (double)config->real_params[AC_dsmin  ]);
+    fprintf(infotxt, "real AC_dsmin     %e \n", (double)config->real_params[AC_dsmin]);
 
     /* Additional helper params */
     // Int helpers
-    fprintf(infotxt, "int  AC_mxy       %i \n", config->int_params[AC_mxy ]);
-    fprintf(infotxt, "int  AC_nxy       %i \n", config->int_params[AC_nxy ]);
+    fprintf(infotxt, "int  AC_mxy       %i \n", config->int_params[AC_mxy]);
+    fprintf(infotxt, "int  AC_nxy       %i \n", config->int_params[AC_nxy]);
     fprintf(infotxt, "int  AC_nxyz      %i \n", config->int_params[AC_nxyz]);
 
     // Real helpers
     fprintf(infotxt, "real AC_cs2_sound %e \n", (double)config->real_params[AC_cs2_sound]);
-    fprintf(infotxt, "real AC_cv_sound  %e \n", (double)config->real_params[AC_cv_sound ]);
+    fprintf(infotxt, "real AC_cv_sound  %e \n", (double)config->real_params[AC_cv_sound]);
 
     fclose(infotxt);
 }
 
-
-//This funtion writes a run state into a set of C binaries. For the sake of
-//accuracy, all floating point numbers are to be saved in long double precision
-//regardless of the choise of accuracy during runtime. 
+// This funtion writes a run state into a set of C binaries. For the sake of
+// accuracy, all floating point numbers are to be saved in long double precision
+// regardless of the choise of accuracy during runtime.
 static inline void
-save_mesh(const AcMesh &save_mesh, const int step, 
-          const AcReal t_step)
+save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
 {
-    FILE* save_ptr;  
+    FILE* save_ptr;
 
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
         const size_t n = AC_VTXBUF_SIZE(save_mesh.info);
@@ -128,7 +126,7 @@ save_mesh(const AcMesh &save_mesh, const int step,
         char cstep[10];
         char bin_filename[80] = "\0";
 
-        //sprintf(bin_filename, "");
+        // sprintf(bin_filename, "");
 
         sprintf(cstep, "%d", step);
 
@@ -139,30 +137,27 @@ save_mesh(const AcMesh &save_mesh, const int step,
 
         printf("Savefile %s \n", bin_filename);
 
-        save_ptr = fopen(bin_filename,"wb");
+        save_ptr = fopen(bin_filename, "wb");
 
-        //Start file with time stamp
-        long double write_long_buf =  (long double) t_step;
+        // Start file with time stamp
+        long double write_long_buf = (long double)t_step;
         fwrite(&write_long_buf, sizeof(long double), 1, save_ptr);
-        //Grid data
+        // Grid data
         for (size_t i = 0; i < n; ++i) {
-            const AcReal point_val = save_mesh.vertex_buffer[VertexBufferHandle(w)][i];
-            long double write_long_buf =  (long double) point_val;
+            const AcReal point_val     = save_mesh.vertex_buffer[VertexBufferHandle(w)][i];
+            long double write_long_buf = (long double)point_val;
             fwrite(&write_long_buf, sizeof(long double), 1, save_ptr);
         }
         fclose(save_ptr);
     }
-
 }
 
-
-
 // This function prints out the diagnostic values to std.out and also saves and
-// appends an ascii file to contain all the result. 
+// appends an ascii file to contain all the result.
 static inline void
-print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE *diag_file)
+print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file)
 {
-    
+
     AcReal buf_rms, buf_max, buf_min;
     const int max_name_width = 16;
 
@@ -172,20 +167,19 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE *di
     buf_rms = acReduceVec(RTYPE_RMS, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
 
     // MV: The ordering in the earlier version was wrong in terms of variable
-    // MV: name and its diagnostics. 
+    // MV: name and its diagnostics.
     printf("Step %d, t_step %.3e, dt %e s\n", step, double(t_step), double(dt));
-    printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, "uu total",
-           double(buf_min), double(buf_rms), double(buf_max));
-    fprintf(diag_file, "%d %e %e %e %e %e ", step, double(t_step), double(dt), 
-           double(buf_min), double(buf_rms), double(buf_max));
-    
+    printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, "uu total", double(buf_min),
+           double(buf_rms), double(buf_max));
+    fprintf(diag_file, "%d %e %e %e %e %e ", step, double(t_step), double(dt), double(buf_min),
+            double(buf_rms), double(buf_max));
 
     // Calculate rms, min and max from the variables as scalars
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         buf_max = acReduceScal(RTYPE_MAX, VertexBufferHandle(i));
         buf_min = acReduceScal(RTYPE_MIN, VertexBufferHandle(i));
         buf_rms = acReduceScal(RTYPE_RMS, VertexBufferHandle(i));
-        
+
         printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, vtxbuf_names[i],
                double(buf_min), double(buf_rms), double(buf_max));
         fprintf(diag_file, "%e %e %e ", double(buf_min), double(buf_rms), double(buf_max));
@@ -194,11 +188,11 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE *di
     fprintf(diag_file, "\n");
 }
 
-    /* 
-        MV NOTE: At the moment I have no clear idea how to calculate magnetic
-        diagnostic variables from grid. Vector potential measures have a limited
-        value. TODO: Smart way to get brms, bmin and bmax.
-    */ 
+/*
+    MV NOTE: At the moment I have no clear idea how to calculate magnetic
+    diagnostic variables from grid. Vector potential measures have a limited
+    value. TODO: Smart way to get brms, bmin and bmax.
+*/
 
 int
 run_simulation(void)
@@ -213,16 +207,16 @@ run_simulation(void)
     acInit(mesh_info);
     acLoad(*mesh);
 
-
-    FILE *diag_file;
+    FILE* diag_file;
     diag_file = fopen("timeseries.ts", "a");
-    // TODO Get time from earlier state. 
+    // TODO Get time from earlier state.
     AcReal t_step = 0.0;
 
     // Generate the title row.
     fprintf(diag_file, "step  t_step  dt  uu_total_min  uu_total_rms  uu_total_max  ");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i], vtxbuf_names[i]);
+        fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
+                vtxbuf_names[i]);
     }
 
     fprintf(diag_file, "\n");
@@ -234,56 +228,54 @@ run_simulation(void)
     acStore(mesh);
     save_mesh(*mesh, 0, t_step);
 
-    const int max_steps = mesh_info.int_params[AC_max_steps];
+    const int max_steps  = mesh_info.int_params[AC_max_steps];
     const int save_steps = mesh_info.int_params[AC_save_steps];
-    const int bin_save_steps = mesh_info.int_params[AC_bin_steps]; //TODO Get from mesh_info
+    const int bin_save_steps = mesh_info.int_params[AC_bin_steps]; // TODO Get from mesh_info
 
     AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
     /* Step the simulation */
     for (int i = 1; i < max_steps; ++i) {
-        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY,
-                                        VTXBUF_UUZ);
+        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
         acIntegrate(dt);
 
-        t_step += dt; 
+        t_step += dt;
 
         /* Save the simulation state and print diagnostics */
         if ((i % save_steps) == 0) {
 
             /*
-		print_diagnostics() writes out both std.out printout from the
-		results and saves the diagnostics into a table for ascii file
+                print_diagnostics() writes out both std.out printout from the
+                results and saves the diagnostics into a table for ascii file
                 timeseries.ts.
             */
 
             print_diagnostics(i, dt, t_step, diag_file);
 
             /*
-		We would also might want an XY-average calculating funtion,
-		which can be very useful when observing behaviour of turbulent
+                We would also might want an XY-average calculating funtion,
+                which can be very useful when observing behaviour of turbulent
                 simulations. (TODO)
             */
-
         }
 
         /* Save the simulation state and print diagnostics */
         if ((i % bin_save_steps) == 0 || t_step >= bin_crit_t) {
 
             /*
-		This loop saves the data into simple C binaries which can be
+                This loop saves the data into simple C binaries which can be
                 used for analysing the data snapshots closely.
- 
-                Saving simulation state should happen in a separate stage. We do 
-                not want to save it as often as diagnostics. The file format 
-                should IDEALLY be HDF5 which has become a well supported, portable and 
-		reliable data format when it comes to HPC applications.
-		However, implementing it will have to for more simpler approach
+
+                Saving simulation state should happen in a separate stage. We do
+                not want to save it as often as diagnostics. The file format
+                should IDEALLY be HDF5 which has become a well supported, portable and
+                reliable data format when it comes to HPC applications.
+                However, implementing it will have to for more simpler approach
                 to function. (TODO?)
             */
-                
+
             /*
                 The updated mesh will be located on the GPU. Also all calls
                 to the astaroth interface (functions beginning with ac*) are
@@ -299,10 +291,8 @@ run_simulation(void)
 
             save_mesh(*mesh, i, t_step);
 
-            bin_crit_t += bin_save_t; 
-
+            bin_crit_t += bin_save_t;
         }
-
     }
 
     //////Save the final snapshot
@@ -318,25 +308,3 @@ run_simulation(void)
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

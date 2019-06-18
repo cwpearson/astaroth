@@ -50,12 +50,12 @@ static const int window_bpp = 32; // Bits per pixel
 SDL_Surface* surfaces[NUM_VTXBUF_HANDLES];
 static int datasurface_width  = -1;
 static int datasurface_height = -1;
-static int k_slice = 0;
-static int k_slice_max = 0;
+static int k_slice            = 0;
+static int k_slice_max        = 0;
 
 // Colors
-static SDL_Color color_bg = (SDL_Color){30, 30, 35, 255};
-static const int num_tiles = NUM_VTXBUF_HANDLES + 1;
+static SDL_Color color_bg      = (SDL_Color){30, 30, 35, 255};
+static const int num_tiles     = NUM_VTXBUF_HANDLES + 1;
 static const int tiles_per_row = 3;
 
 /*
@@ -82,10 +82,9 @@ static Camera camera = (Camera){(float2){.0f, .0f}, 1.f};
 static inline vec4
 project_ortho(const float2& pos, const float2& bbox, const float2& wdims)
 {
-    const vec4 rect = (vec4){
-        camera.scale * (pos.x - camera.pos.x) + 0.5f * wdims.x,
-        camera.scale * (pos.y - camera.pos.y) + 0.5f * wdims.y,
-        camera.scale * bbox.x, camera.scale * bbox.y};
+    const vec4 rect = (vec4){camera.scale * (pos.x - camera.pos.x) + 0.5f * wdims.x,
+                             camera.scale * (pos.y - camera.pos.y) + 0.5f * wdims.y,
+                             camera.scale * bbox.x, camera.scale * bbox.y};
 
     return rect;
 }
@@ -103,13 +102,12 @@ renderer_init(const int& mx, const int& my)
     SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
     // Setup window
-    window = SDL_CreateWindow("Astaroth", SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED, window_width,
-                              window_height, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("Astaroth", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                              window_width, window_height, SDL_WINDOW_SHOWN);
 
     // Setup SDL renderer
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    //SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    // SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     SDL_GetWindowSize(window, &window_width, &window_height);
 
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1"); // Linear filtering
@@ -118,24 +116,24 @@ renderer_init(const int& mx, const int& my)
     datasurface_height = my;
     // vec drawing uses the surface of the first component, no memory issues here
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-        surfaces[i] = SDL_CreateRGBSurfaceWithFormat(
-            0, datasurface_width, datasurface_height, window_bpp,
-            SDL_PIXELFORMAT_RGBA8888);
+        surfaces[i] = SDL_CreateRGBSurfaceWithFormat(0, datasurface_width, datasurface_height,
+                                                     window_bpp, SDL_PIXELFORMAT_RGBA8888);
 
-    camera.pos = (float2){.5f * tiles_per_row * datasurface_width - .5f * datasurface_width,
-                          -.5f * (num_tiles / tiles_per_row) * datasurface_height + .5f * datasurface_height};
+    camera.pos   = (float2){.5f * tiles_per_row * datasurface_width - .5f * datasurface_width,
+                          -.5f * (num_tiles / tiles_per_row) * datasurface_height +
+                              .5f * datasurface_height};
     camera.scale = min(window_width / float(datasurface_width * tiles_per_row),
-                       window_height / float(datasurface_height * (num_tiles/tiles_per_row)));
+                       window_height / float(datasurface_height * (num_tiles / tiles_per_row)));
 
     SDL_RendererInfo renderer_info;
     SDL_GetRendererInfo(renderer, &renderer_info);
-    printf("SDL renderer max texture dims: (%d, %d)\n", renderer_info.max_texture_width, renderer_info.max_texture_height);
+    printf("SDL renderer max texture dims: (%d, %d)\n", renderer_info.max_texture_width,
+           renderer_info.max_texture_height);
     return 0;
 }
 
 static int
-set_pixel(const int& i, const int& j, const uint32_t& color,
-          SDL_Surface* surface)
+set_pixel(const int& i, const int& j, const uint32_t& color, SDL_Surface* surface)
 {
     uint32_t* pixels           = (uint32_t*)surface->pixels;
     pixels[i + j * surface->w] = color;
@@ -143,22 +141,21 @@ set_pixel(const int& i, const int& j, const uint32_t& color,
 }
 
 static int
-draw_vertex_buffer(const AcMesh& mesh, const VertexBufferHandle& vertex_buffer,
-                   const int& tile)
+draw_vertex_buffer(const AcMesh& mesh, const VertexBufferHandle& vertex_buffer, const int& tile)
 {
     const float xoffset = (tile % tiles_per_row) * datasurface_width;
-    const float yoffset = - (tile / tiles_per_row) * datasurface_height;
+    const float yoffset = -(tile / tiles_per_row) * datasurface_height;
 
     /*
     const float max = float(model_reduce_scal(mesh, RTYPE_MAX, vertex_buffer));
     const float min = float(model_reduce_scal(mesh, RTYPE_MIN, vertex_buffer));
     */
-    const float max = float(acReduceScal(RTYPE_MAX, vertex_buffer));
-    const float min = float(acReduceScal(RTYPE_MIN, vertex_buffer));
+    const float max   = float(acReduceScal(RTYPE_MAX, vertex_buffer));
+    const float min   = float(acReduceScal(RTYPE_MIN, vertex_buffer));
     const float range = fabsf(max - min);
     const float mid   = max - .5f * range;
 
-    const int k = k_slice; //mesh.info.int_params[AC_mz] / 2;
+    const int k = k_slice; // mesh.info.int_params[AC_mz] / 2;
 
     for (int j = 0; j < mesh.info.int_params[AC_my]; ++j) {
         for (int i = 0; i < mesh.info.int_params[AC_mx]; ++i) {
@@ -166,29 +163,23 @@ draw_vertex_buffer(const AcMesh& mesh, const VertexBufferHandle& vertex_buffer,
 
             const int idx       = AC_VTXBUF_IDX(i, j, k, mesh.info);
             const uint8_t shade = (uint8_t)(
-                255.f *
-                (fabsf(float(mesh.vertex_buffer[vertex_buffer][idx]) - mid)) /
-                range);
+                255.f * (fabsf(float(mesh.vertex_buffer[vertex_buffer][idx]) - mid)) / range);
             uint8_t color[4]            = {0, 0, 0, 255};
             color[tile % 3]             = shade;
-            const uint32_t mapped_color = SDL_MapRGBA(
-                surfaces[vertex_buffer]->format, color[0], color[1], color[2],
-                color[3]);
+            const uint32_t mapped_color = SDL_MapRGBA(surfaces[vertex_buffer]->format, color[0],
+                                                      color[1], color[2], color[3]);
             set_pixel(i, j, mapped_color, surfaces[vertex_buffer]);
         }
     }
 
     const float2 pos   = (float2){xoffset, yoffset};
-    const float2 bbox  = (float2){.5f * datasurface_width,
-                                 .5f * datasurface_height};
+    const float2 bbox  = (float2){.5f * datasurface_width, .5f * datasurface_height};
     const float2 wsize = (float2){float(window_width), float(window_height)};
     const vec4 rectf   = project_ortho(pos, bbox, wsize);
-    SDL_Rect rect      = (SDL_Rect){
-        int(rectf.x - rectf.w), int(wsize.y - rectf.y - rectf.h),
-        int(ceil(2.f * rectf.w)), int(ceil(2.f * rectf.h))};
+    SDL_Rect rect      = (SDL_Rect){int(rectf.x - rectf.w), int(wsize.y - rectf.y - rectf.h),
+                               int(ceil(2.f * rectf.w)), int(ceil(2.f * rectf.h))};
 
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer,
-                                                    surfaces[vertex_buffer]);
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surfaces[vertex_buffer]);
     SDL_RenderCopy(renderer, tex, NULL, &rect);
     SDL_DestroyTexture(tex);
 
@@ -196,14 +187,12 @@ draw_vertex_buffer(const AcMesh& mesh, const VertexBufferHandle& vertex_buffer,
 }
 
 static int
-draw_vertex_buffer_vec(const AcMesh& mesh,
-                       const VertexBufferHandle& vertex_buffer_a,
+draw_vertex_buffer_vec(const AcMesh& mesh, const VertexBufferHandle& vertex_buffer_a,
                        const VertexBufferHandle& vertex_buffer_b,
-                       const VertexBufferHandle& vertex_buffer_c,
-                       const int& tile)
+                       const VertexBufferHandle& vertex_buffer_c, const int& tile)
 {
     const float xoffset = (tile % tiles_per_row) * datasurface_width;
-    const float yoffset = - (tile / tiles_per_row) * datasurface_height;
+    const float yoffset = -(tile / tiles_per_row) * datasurface_height;
 
     /*
     const float maxx = float(
@@ -215,52 +204,41 @@ draw_vertex_buffer_vec(const AcMesh& mesh,
             min(model_reduce_scal(mesh, RTYPE_MIN, vertex_buffer_b),
                 model_reduce_scal(mesh, RTYPE_MIN, vertex_buffer_c))));
     */
-    const float maxx = float(
-        max(acReduceScal(RTYPE_MAX, vertex_buffer_a),
-            max(acReduceScal(RTYPE_MAX, vertex_buffer_b),
-                acReduceScal(RTYPE_MAX, vertex_buffer_c))));
-    const float minn = float(
-        min(acReduceScal(RTYPE_MIN, vertex_buffer_a),
-            min(acReduceScal(RTYPE_MIN, vertex_buffer_b),
-                acReduceScal(RTYPE_MIN, vertex_buffer_c))));
+    const float maxx  = float(max(
+        acReduceScal(RTYPE_MAX, vertex_buffer_a),
+        max(acReduceScal(RTYPE_MAX, vertex_buffer_b), acReduceScal(RTYPE_MAX, vertex_buffer_c))));
+    const float minn  = float(min(
+        acReduceScal(RTYPE_MIN, vertex_buffer_a),
+        min(acReduceScal(RTYPE_MIN, vertex_buffer_b), acReduceScal(RTYPE_MIN, vertex_buffer_c))));
     const float range = fabsf(maxx - minn);
     const float mid   = maxx - .5f * range;
 
-    const int k = k_slice; //mesh.info.int_params[AC_mz] / 2;
+    const int k = k_slice; // mesh.info.int_params[AC_mz] / 2;
     for (int j = 0; j < mesh.info.int_params[AC_my]; ++j) {
         for (int i = 0; i < mesh.info.int_params[AC_mx]; ++i) {
             ERRCHK(i < datasurface_width && j < datasurface_height);
 
             const int idx   = AC_VTXBUF_IDX(i, j, k, mesh.info);
             const uint8_t r = (uint8_t)(
-                255.f *
-                (fabsf(float(mesh.vertex_buffer[vertex_buffer_a][idx]) - mid)) /
-                range);
+                255.f * (fabsf(float(mesh.vertex_buffer[vertex_buffer_a][idx]) - mid)) / range);
             const uint8_t g = (uint8_t)(
-                255.f *
-                (fabsf(float(mesh.vertex_buffer[vertex_buffer_b][idx]) - mid)) /
-                range);
+                255.f * (fabsf(float(mesh.vertex_buffer[vertex_buffer_b][idx]) - mid)) / range);
             const uint8_t b = (uint8_t)(
-                255.f *
-                (fabsf(float(mesh.vertex_buffer[vertex_buffer_c][idx]) - mid)) /
-                range);
-            const uint32_t mapped_color = SDL_MapRGBA(
-                surfaces[vertex_buffer_a]->format, r, g, b, 255);
+                255.f * (fabsf(float(mesh.vertex_buffer[vertex_buffer_c][idx]) - mid)) / range);
+            const uint32_t mapped_color = SDL_MapRGBA(surfaces[vertex_buffer_a]->format, r, g, b,
+                                                      255);
             set_pixel(i, j, mapped_color, surfaces[vertex_buffer_a]);
         }
     }
 
     const float2 pos   = (float2){xoffset, yoffset};
-    const float2 bbox  = (float2){.5f * datasurface_width,
-                                 .5f * datasurface_height};
+    const float2 bbox  = (float2){.5f * datasurface_width, .5f * datasurface_height};
     const float2 wsize = (float2){float(window_width), float(window_height)};
     const vec4 rectf   = project_ortho(pos, bbox, wsize);
-    SDL_Rect rect      = (SDL_Rect){
-        int(rectf.x - rectf.w), int(wsize.y - rectf.y - rectf.h),
-        int(ceil(2.f * rectf.w)), int(ceil(2.f * rectf.h))};
+    SDL_Rect rect      = (SDL_Rect){int(rectf.x - rectf.w), int(wsize.y - rectf.y - rectf.h),
+                               int(ceil(2.f * rectf.w)), int(ceil(2.f * rectf.h))};
 
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer,
-                                                    surfaces[vertex_buffer_a]);
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surfaces[vertex_buffer_a]);
     SDL_RenderCopy(renderer, tex, NULL, &rect);
     SDL_DestroyTexture(tex);
 
@@ -272,13 +250,11 @@ renderer_draw(const AcMesh& mesh)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
         draw_vertex_buffer(mesh, VertexBufferHandle(i), i);
-    draw_vertex_buffer_vec(mesh, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ,
-                           NUM_VTXBUF_HANDLES);
+    draw_vertex_buffer_vec(mesh, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, NUM_VTXBUF_HANDLES);
 
     // Drawing done, present
     SDL_RenderPresent(renderer);
-    SDL_SetRenderDrawColor(renderer, color_bg.r, color_bg.g, color_bg.b,
-                           color_bg.a);
+    SDL_SetRenderDrawColor(renderer, color_bg.r, color_bg.g, color_bg.b, color_bg.a);
     SDL_RenderClear(renderer);
 
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
@@ -404,14 +380,14 @@ run_renderer(void)
 
 /* Step the simulation */
 #if 1
-        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY,
-                                        VTXBUF_UUZ);
+        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
         acIntegrate(dt);
 #else
         ModelMesh* model_mesh = modelmesh_create(mesh->info);
-        const AcReal umax = AcReal(model_reduce_vec(*model_mesh, RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ));
-        const AcReal dt   = host_timestep(umax, mesh_info);
+        const AcReal umax     = AcReal(
+            model_reduce_vec(*model_mesh, RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ));
+        const AcReal dt = host_timestep(umax, mesh_info);
         acmesh_to_modelmesh(*mesh, model_mesh);
         model_rk3(dt, model_mesh);
         modelmesh_to_acmesh(*model_mesh, mesh);
@@ -425,7 +401,7 @@ run_renderer(void)
         /* Render */
         const float timer_diff_sec = timer_diff_nsec(frame_timer) / 1e9f;
         if (timer_diff_sec >= desired_frame_time) {
-            //acStore(mesh);
+            // acStore(mesh);
             const int num_vertices = mesh->info.int_params[AC_mxy];
             const int3 dst         = (int3){0, 0, k_slice};
             acStoreWithOffset(dst, num_vertices, mesh);

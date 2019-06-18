@@ -52,8 +52,7 @@ timer_diff_nsec(const Timer start)
 {
     Timer end;
     timer_reset(&end);
-    const long diff = (end.tv_sec - start.tv_sec) * 1000000000l +
-                      (end.tv_nsec - start.tv_nsec);
+    const long diff = (end.tv_sec - start.tv_sec) * 1000000000l + (end.tv_nsec - start.tv_nsec);
     return diff;
 }
 

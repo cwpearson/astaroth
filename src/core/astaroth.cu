@@ -28,33 +28,24 @@
 #include "errchk.h"
 
 #include "device.cuh"
-#include "math_utils.h" // sum for reductions
+#include "math_utils.h"               // sum for reductions
 #include "standalone/config_loader.h" // update_config
 
-const char* intparam_names[]      = {AC_FOR_INT_PARAM_TYPES(AC_GEN_STR)};
-const char* realparam_names[]     = {AC_FOR_REAL_PARAM_TYPES(AC_GEN_STR)};
-const char* vtxbuf_names[]        = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
+const char* intparam_names[]  = {AC_FOR_INT_PARAM_TYPES(AC_GEN_STR)};
+const char* realparam_names[] = {AC_FOR_REAL_PARAM_TYPES(AC_GEN_STR)};
+const char* vtxbuf_names[]    = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 
-
-static const int MAX_NUM_DEVICES = 32;
-static int num_devices = 1;
+static const int MAX_NUM_DEVICES       = 32;
+static int num_devices                 = 1;
 static Device devices[MAX_NUM_DEVICES] = {};
 
 static Grid
 createGrid(const AcMeshInfo& config)
 {
     Grid grid;
-    grid.m = (int3) {
-        config.int_params[AC_mx],
-        config.int_params[AC_my],
-        config.int_params[AC_mz]
-    };
 
-    grid.n = (int3) {
-        config.int_params[AC_nx],
-        config.int_params[AC_ny],
-        config.int_params[AC_nz]
-    };
+    grid.m = (int3){config.int_params[AC_mx], config.int_params[AC_my], config.int_params[AC_mz]};
+    grid.n = (int3){config.int_params[AC_nx], config.int_params[AC_ny], config.int_params[AC_nz]};
 
     return grid;
 }
@@ -71,8 +62,7 @@ gridIdx(const Grid& grid, const int i, const int j, const int k)
 static int3
 gridIdx3d(const Grid& grid, const int idx)
 {
-    return (int3){idx % grid.m.x,
-                 (idx % (grid.m.x * grid.m.y)) / grid.m.x,
+    return (int3){idx % grid.m.x, (idx % (grid.m.x * grid.m.y)) / grid.m.x,
                   idx / (grid.m.x * grid.m.y)};
 }
 
@@ -119,10 +109,12 @@ acInit(const AcMeshInfo& config)
     ERRCHK_ALWAYS(subgrid.n.y >= STENCIL_ORDER);
     ERRCHK_ALWAYS(subgrid.n.z >= STENCIL_ORDER);
 
-    printf("Grid m "); printInt3(grid.m); printf("\n");
-    printf("Grid n "); printInt3(grid.n); printf("\n");
+    // clang-format off
+    printf("Grid m ");   printInt3(grid.m);    printf("\n");
+    printf("Grid n ");   printInt3(grid.n);    printf("\n");
     printf("Subrid m "); printInt3(subgrid.m); printf("\n");
     printf("Subrid n "); printInt3(subgrid.n); printf("\n");
+    // clang-format on
 
     // Initialize the devices
     for (int i = 0; i < num_devices; ++i) {
@@ -202,8 +194,10 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
         */
         if (db.z >= da.z) {
             const int copy_cells = gridIdxx(subgrid, db) - gridIdxx(subgrid, da);
-            const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
-            // printf("\t\tcopy %d cells to local index ", copy_cells); printInt3(da_local); printf("\n");
+            const int3 da_local  = (int3){
+                da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
+            // printf("\t\tcopy %d cells to local index ", copy_cells); printInt3(da_local);
+            // printf("\n");
             copyMeshToDevice(devices[i], STREAM_PRIMARY, host_mesh, da, da_local, copy_cells);
         }
         printf("\n");
@@ -236,8 +230,10 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
         */
         if (db.z >= da.z) {
             const int copy_cells = gridIdxx(subgrid, db) - gridIdxx(subgrid, da);
-            const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
-            // printf("\t\tcopy %d cells from local index ", copy_cells); printInt3(da_local); printf("\n");
+            const int3 da_local  = (int3){
+                da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
+            // printf("\t\tcopy %d cells from local index ", copy_cells); printInt3(da_local);
+            // printf("\n");
             copyMeshToHost(devices[i], STREAM_PRIMARY, da_local, da, copy_cells, host_mesh);
         }
         printf("\n");
@@ -262,10 +258,9 @@ acStore(AcMesh* host_mesh)
 AcResult
 acIntegrateStep(const int& isubstep, const AcReal& dt)
 {
-    const int3 start = (int3){STENCIL_ORDER/2, STENCIL_ORDER/2, STENCIL_ORDER/2};
-    const int3 end   = (int3){STENCIL_ORDER/2 + subgrid.n.x,
-                              STENCIL_ORDER/2 + subgrid.n.y,
-                              STENCIL_ORDER/2 + subgrid.n.z};
+    const int3 start = (int3){STENCIL_ORDER / 2, STENCIL_ORDER / 2, STENCIL_ORDER / 2};
+    const int3 end   = (int3){STENCIL_ORDER / 2 + subgrid.n.x, STENCIL_ORDER / 2 + subgrid.n.y,
+                            STENCIL_ORDER / 2 + subgrid.n.z};
     for (int i = 0; i < num_devices; ++i) {
         rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
     }
@@ -278,121 +273,125 @@ acBoundcondStep(void)
 {
     acSynchronize();
     if (num_devices == 1) {
-        boundcondStep(devices[0], STREAM_PRIMARY,
-                      (int3){0, 0, 0}, (int3){subgrid.m.x, subgrid.m.y, subgrid.m.z});
-    } else {
+        boundcondStep(devices[0], STREAM_PRIMARY, (int3){0, 0, 0},
+                      (int3){subgrid.m.x, subgrid.m.y, subgrid.m.z});
+    }
+    else {
         // Local boundary conditions
         for (int i = 0; i < num_devices; ++i) {
-            const int3 d0 = (int3){0, 0, STENCIL_ORDER/2}; // DECOMPOSITION OFFSET HERE
+            const int3 d0 = (int3){0, 0, STENCIL_ORDER / 2}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
             boundcondStep(devices[i], STREAM_PRIMARY, d0, d1);
         }
 
-/*
-// ===MIIKKANOTE START==========================================
-%JP: The old way for computing boundary conditions conflicts with the
-way we have to do things with multiple GPUs.
+        /*
+        // ===MIIKKANOTE START==========================================
+        %JP: The old way for computing boundary conditions conflicts with the
+        way we have to do things with multiple GPUs.
 
-The older approach relied on unified memory, which represented the whole
-memory area as one huge mesh instead of several smaller ones. However, unified memory
-in its current state is more meant for quick prototyping when performance is not an issue.
-Getting the CUDA driver to migrate data intelligently across GPUs is much more difficult than
-when managing the memory explicitly.
+        The older approach relied on unified memory, which represented the whole
+        memory area as one huge mesh instead of several smaller ones. However, unified memory
+        in its current state is more meant for quick prototyping when performance is not an issue.
+        Getting the CUDA driver to migrate data intelligently across GPUs is much more difficult
+        than when managing the memory explicitly.
 
-In this new approach, I have simplified the multi- and single-GPU layers significantly.
-Quick rundown:
-	New struct: Grid. There are two global variables, "grid" and "subgrid", which
-	contain the extents of the whole simulation domain and the decomposed grids, respectively.
-	To simplify thing, we require that each GPU is assigned the same amount of work,
-	therefore each GPU in the node is assigned and "subgrid.m" -sized block of data
-	to work with.
+        In this new approach, I have simplified the multi- and single-GPU layers significantly.
+        Quick rundown:
+                New struct: Grid. There are two global variables, "grid" and "subgrid", which
+                contain the extents of the whole simulation domain and the decomposed grids,
+        respectively. To simplify thing, we require that each GPU is assigned the same amount of
+        work, therefore each GPU in the node is assigned and "subgrid.m" -sized block of data to
+        work with.
 
-	The whole simulation domain is decomposed with respect to the z dimension.
-	For example, if the grid contains (nx, ny, nz) vertices, then the subgrids
-	contain (nx, ny, nz / num_devices) vertices.
+                The whole simulation domain is decomposed with respect to the z dimension.
+                For example, if the grid contains (nx, ny, nz) vertices, then the subgrids
+                contain (nx, ny, nz / num_devices) vertices.
 
-	An local index (i, j, k) in some subgrid can be mapped to the global grid with
-		global idx = (i, j, k + device_id * subgrid.n.z)
+                An local index (i, j, k) in some subgrid can be mapped to the global grid with
+                        global idx = (i, j, k + device_id * subgrid.n.z)
 
-Terminology:
-	- Single-GPU function: a function defined on the single-GPU layer (device.cu)
+        Terminology:
+                - Single-GPU function: a function defined on the single-GPU layer (device.cu)
 
-Changes required to this commented code block:
-	- The thread block dimensions (tpb) are no longer passed to the kernel here but in device.cu
-	  instead. Same holds for any complex index calculations. Instead, the local coordinates
-  	  should be passed as an int3 type without having to consider how the data is actually
-	  laid out in device memory
-	- The unified memory buffer no longer exists (d_buffer). Instead, we have an opaque handle
-	  of type "Device" which should be passed to single-GPU functions. In this file, all devices
-	  are stored in a global array "devices[num_devices]".
-	- Every single-GPU function is executed asynchronously by default such that we
-	  can optimize Astaroth by executing memory transactions concurrently with computation.
-	  Therefore a StreamType should be passed as a parameter to single-GPU functions.
-	  Refresher: CUDA function calls are non-blocking when a stream is explicitly passed
-	  as a parameter and commands executing in different streams can be processed
-	  in parallel/concurrently.
-
-
-Note on periodic boundaries (might be helpful when implementing other boundary conditions):
-
-	With multiple GPUs, periodic boundary conditions applied on indices ranging from
-
-		(0, 0, STENCIL_ORDER/2) to (subgrid.m.x, subgrid.m.y, subgrid.m.z - STENCIL_ORDER/2)
-
-	on a single device are "local", in the sense that they can be computed without having
-	to exchange data with neighboring GPUs. Special care is needed only for transferring
-	the data to the fron and back plates outside this range. In the solution we use here,
-	we solve the local boundaries first, and then just exchange the front and back plates
-	in a "ring", like so
-				device_id
-		    (n) <-> 0 <-> 1 <-> ... <-> n <-> (0)
+        Changes required to this commented code block:
+                - The thread block dimensions (tpb) are no longer passed to the kernel here but in
+        device.cu instead. Same holds for any complex index calculations. Instead, the local
+        coordinates should be passed as an int3 type without having to consider how the data is
+        actually laid out in device memory
+                - The unified memory buffer no longer exists (d_buffer). Instead, we have an opaque
+        handle of type "Device" which should be passed to single-GPU functions. In this file, all
+        devices are stored in a global array "devices[num_devices]".
+                - Every single-GPU function is executed asynchronously by default such that we
+                  can optimize Astaroth by executing memory transactions concurrently with
+        computation. Therefore a StreamType should be passed as a parameter to single-GPU functions.
+                  Refresher: CUDA function calls are non-blocking when a stream is explicitly passed
+                  as a parameter and commands executing in different streams can be processed
+                  in parallel/concurrently.
 
 
-// ======MIIKKANOTE END==========================================
+        Note on periodic boundaries (might be helpful when implementing other boundary conditions):
 
-<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MIIKKANOTE: This code block was essentially
-                                                          moved into device.cu, function boundCondStep()
-                                                          In astaroth.cu, we use acBoundcondStep()
-                                                          just to distribute the work and manage
-                                                          communication between GPUs.
+                With multiple GPUs, periodic boundary conditions applied on indices ranging from
 
-    printf("Boundconds best dims (%d, %d, %d) %f ms\n", best_dims.x, best_dims.y, best_dims.z, double(best_time) / NUM_ITERATIONS);
+                        (0, 0, STENCIL_ORDER/2) to (subgrid.m.x, subgrid.m.y, subgrid.m.z -
+        STENCIL_ORDER/2)
 
-    exit(0);
-    #else
+                on a single device are "local", in the sense that they can be computed without
+        having to exchange data with neighboring GPUs. Special care is needed only for transferring
+                the data to the fron and back plates outside this range. In the solution we use
+        here, we solve the local boundaries first, and then just exchange the front and back plates
+                in a "ring", like so
+                                        device_id
+                            (n) <-> 0 <-> 1 <-> ... <-> n <-> (0)
 
 
-        const int depth = (int)ceil(mesh_info.int_params[AC_mz]/(float)num_devices);
+        // ======MIIKKANOTE END==========================================
 
-        const int3 start = (int3){0, 0, device_id * depth};
-        const int3 end = (int3){mesh_info.int_params[AC_mx],
-                                mesh_info.int_params[AC_my],
-                                min((device_id+1) * depth, mesh_info.int_params[AC_mz])};
+        <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MIIKKANOTE: This code block was essentially
+                                                                  moved into device.cu, function
+        boundCondStep() In astaroth.cu, we use acBoundcondStep() just to distribute the work and
+        manage communication between GPUs.
 
-        const dim3 tpb(8,2,8);
+            printf("Boundconds best dims (%d, %d, %d) %f ms\n", best_dims.x, best_dims.y,
+        best_dims.z, double(best_time) / NUM_ITERATIONS);
 
-        // TODO uses the default stream currently
-        if (mesh_info.int_params[AC_bc_type] == 666) { // TODO MAKE A BETTER SWITCH
-            wedge_boundconds(0, tpb, start, end, d_buffer);
-        } else {
-            for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-                periodic_boundconds(0, tpb, start, end, d_buffer.in[i]);
-<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-*/
+            exit(0);
+            #else
+
+
+                const int depth = (int)ceil(mesh_info.int_params[AC_mz]/(float)num_devices);
+
+                const int3 start = (int3){0, 0, device_id * depth};
+                const int3 end = (int3){mesh_info.int_params[AC_mx],
+                                        mesh_info.int_params[AC_my],
+                                        min((device_id+1) * depth, mesh_info.int_params[AC_mz])};
+
+                const dim3 tpb(8,2,8);
+
+                // TODO uses the default stream currently
+                if (mesh_info.int_params[AC_bc_type] == 666) { // TODO MAKE A BETTER SWITCH
+                    wedge_boundconds(0, tpb, start, end, d_buffer);
+                } else {
+                    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
+                        periodic_boundconds(0, tpb, start, end, d_buffer.in[i]);
+        <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        */
         // Exchange halos
         for (int i = 0; i < num_devices; ++i) {
-            const int num_vertices = subgrid.m.x * subgrid.m.y * STENCIL_ORDER/2;
+            const int num_vertices = subgrid.m.x * subgrid.m.y * STENCIL_ORDER / 2;
             // ...|ooooxxx|... -> xxx|ooooooo|...
             {
-                const int3 src = (int3) {0, 0, subgrid.n.z};
-                const int3 dst = (int3) {0, 0, 0};
-                copyMeshDeviceToDevice(devices[i], STREAM_PRIMARY, src, devices[(i+1) % num_devices], dst, num_vertices);
+                const int3 src = (int3){0, 0, subgrid.n.z};
+                const int3 dst = (int3){0, 0, 0};
+                copyMeshDeviceToDevice(devices[i], STREAM_PRIMARY, src,
+                                       devices[(i + 1) % num_devices], dst, num_vertices);
             }
             // ...|ooooooo|xxx <- ...|xxxoooo|...
             {
-                const int3 src = (int3) {0, 0, STENCIL_ORDER/2};
-                const int3 dst = (int3) {0, 0, STENCIL_ORDER/2 + subgrid.n.z};
-                copyMeshDeviceToDevice(devices[(i+1) % num_devices], STREAM_PRIMARY, src, devices[i], dst, num_vertices);
+                const int3 src = (int3){0, 0, STENCIL_ORDER / 2};
+                const int3 dst = (int3){0, 0, STENCIL_ORDER / 2 + subgrid.n.z};
+                copyMeshDeviceToDevice(devices[(i + 1) % num_devices], STREAM_PRIMARY, src,
+                                       devices[i], dst, num_vertices);
             }
         }
     }
@@ -427,26 +426,28 @@ simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, cons
     for (int i = 1; i < n; ++i) {
         if (rtype == RTYPE_MAX) {
             res = max(res, results[i]);
-        } else if (rtype == RTYPE_MIN) {
+        }
+        else if (rtype == RTYPE_MIN) {
             res = min(res, results[i]);
-        } else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+        }
+        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
             res = sum(res, results[i]);
-        } else {
+        }
+        else {
             ERROR("Invalid rtype");
         }
     }
 
     if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
         const AcReal inv_n = AcReal(1.) / (grid.n.x * grid.n.y * grid.n.z);
-        res = sqrt(inv_n * res);
+        res                = sqrt(inv_n * res);
     }
 
     return res;
 }
 
 AcReal
-acReduceScal(const ReductionType& rtype,
-             const VertexBufferHandle& vtxbuffer_handle)
+acReduceScal(const ReductionType& rtype, const VertexBufferHandle& vtxbuffer_handle)
 {
     AcReal results[num_devices];
     for (int i = 0; i < num_devices; ++i) {
@@ -457,8 +458,8 @@ acReduceScal(const ReductionType& rtype,
 }
 
 AcReal
-acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a,
-            const VertexBufferHandle& b, const VertexBufferHandle& c)
+acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a, const VertexBufferHandle& b,
+            const VertexBufferHandle& c)
 {
     AcReal results[num_devices];
     for (int i = 0; i < num_devices; ++i) {

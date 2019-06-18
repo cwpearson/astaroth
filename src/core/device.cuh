@@ -27,12 +27,14 @@
 #pragma once
 #include "astaroth.h"
 
+// clang-format off
 typedef enum {
-  STREAM_PRIMARY,
-  STREAM_SECONDARY,
-  NUM_STREAM_TYPES,
-  STREAM_ALL
+    STREAM_PRIMARY,
+    STREAM_SECONDARY,
+    NUM_STREAM_TYPES,
+    STREAM_ALL
 } StreamType;
+// clang-format on
 
 typedef struct {
     int3 m;
@@ -52,20 +54,17 @@ AcResult createDevice(const int id, const AcMeshInfo device_config, Device* devi
 AcResult destroyDevice(Device device);
 
 /** */
-AcResult boundcondStep(const Device device, const StreamType stream_type,
-                       const int3& start, const int3& end);
+AcResult boundcondStep(const Device device, const StreamType stream_type, const int3& start,
+                       const int3& end);
 
 /** */
 AcResult reduceScal(const Device device, const StreamType stream_type, const ReductionType rtype,
                     const VertexBufferHandle vtxbuf_handle, AcReal* result);
 
 /** */
-AcResult reduceVec(const Device device, const StreamType stream_type,
-                   const ReductionType rtype,
-                   const VertexBufferHandle vec0,
-                   const VertexBufferHandle vec1,
-                   const VertexBufferHandle vec2,
-                   AcReal* result);
+AcResult reduceVec(const Device device, const StreamType stream_type, const ReductionType rtype,
+                   const VertexBufferHandle vec0, const VertexBufferHandle vec1,
+                   const VertexBufferHandle vec2, AcReal* result);
 
 /** */
 AcResult rkStep(const Device device, const StreamType stream_type, const int step_number,
@@ -81,9 +80,8 @@ AcResult copyMeshToDevice(const Device device, const StreamType stream_type,
                           const int num_vertices);
 
 /** */
-AcResult copyMeshToHost(const Device device, const StreamType stream_type,
-                        const int3& src, const int3& dst, const int num_vertices,
-                        AcMesh* host_mesh);
+AcResult copyMeshToHost(const Device device, const StreamType stream_type, const int3& src,
+                        const int3& dst, const int num_vertices, AcMesh* host_mesh);
 
 /** */
 AcResult copyMeshDeviceToDevice(const Device src, const StreamType stream_type, const int3& src_idx,

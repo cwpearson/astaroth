@@ -316,9 +316,13 @@ traverse(const ASTNode* node)
             if (symbol_table[i].type_qualifier == IN) {
                 printf("const %sData %s = READ(%s%s);\n", translate(symbol_table[i].type_specifier),
                        symbol_table[i].identifier, inout_name_prefix, symbol_table[i].identifier);
-            } else if (symbol_table[i].type_qualifier == OUT) {
-                printf("%s %s = READ_OUT(%s%s);", translate(symbol_table[i].type_specifier), symbol_table[i].identifier, inout_name_prefix, symbol_table[i].identifier);
-                //printf("%s %s = buffer.out[%s%s][IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z)];\n", translate(symbol_table[i].type_specifier), symbol_table[i].identifier, inout_name_prefix, symbol_table[i].identifier);
+            }
+            else if (symbol_table[i].type_qualifier == OUT) {
+                printf("%s %s = READ_OUT(%s%s);", translate(symbol_table[i].type_specifier),
+                       symbol_table[i].identifier, inout_name_prefix, symbol_table[i].identifier);
+                // printf("%s %s = buffer.out[%s%s][IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z)];\n",
+                // translate(symbol_table[i].type_specifier), symbol_table[i].identifier,
+                // inout_name_prefix, symbol_table[i].identifier);
             }
         }
     }
@@ -326,8 +330,7 @@ traverse(const ASTNode* node)
     // Preprocessed parameter boilerplate
     if (node->type == NODE_TYPE_QUALIFIER && node->token == PREPROCESSED)
         inside_preprocessed = true;
-    static const char
-        preprocessed_parameter_boilerplate[] = "const int3 vertexIdx, ";
+    static const char preprocessed_parameter_boilerplate[] = "const int3 vertexIdx, ";
     if (inside_preprocessed && node->type == NODE_FUNCTION_PARAMETER_DECLARATION)
         printf("%s ", preprocessed_parameter_boilerplate);
     // BOILERPLATE END////////////////////////////////////////////////////////
@@ -343,7 +346,6 @@ traverse(const ASTNode* node)
     if (node->type == NODE_FUNCTION_DECLARATION)
         inside_function_declaration = false;
 
-
     // If the node is a subscript expression and the expression list inside it is not empty
     if (node->type == NODE_MULTIDIM_SUBSCRIPT_EXPRESSION && node->rhs)
         printf("IDX(");
@@ -354,7 +356,7 @@ traverse(const ASTNode* node)
         if (handle >= 0) { // The variable exists in the symbol table
             const Symbol* symbol = &symbol_table[handle];
 
-            //if (symbol->type_qualifier == OUT) {
+            // if (symbol->type_qualifier == OUT) {
             //    printf("%s%s", inout_name_prefix, symbol->identifier);
             //}
             if (symbol->type_qualifier == UNIFORM) {
@@ -394,14 +396,16 @@ traverse(const ASTNode* node)
     // Postfix logic  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     // If the node is a subscript expression and the expression list inside it is not empty
     if (node->type == NODE_MULTIDIM_SUBSCRIPT_EXPRESSION && node->rhs)
-        printf(")");    // Closing bracket of IDX()
+        printf(")"); // Closing bracket of IDX()
 
     // Generate writeback boilerplate for OUT fields
     if (inside_kernel && node->type == NODE_COMPOUND_STATEMENT) {
         for (int i = 0; i < num_symbols; ++i) {
             if (symbol_table[i].type_qualifier == OUT) {
-                printf("WRITE_OUT(%s%s, %s);\n", inout_name_prefix, symbol_table[i].identifier, symbol_table[i].identifier);
-                //printf("buffer.out[%s%s][IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z)] = %s;\n", inout_name_prefix, symbol_table[i].identifier, symbol_table[i].identifier);
+                printf("WRITE_OUT(%s%s, %s);\n", inout_name_prefix, symbol_table[i].identifier,
+                       symbol_table[i].identifier);
+                // printf("buffer.out[%s%s][IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z)] = %s;\n",
+                // inout_name_prefix, symbol_table[i].identifier, symbol_table[i].identifier);
             }
         }
     }
@@ -486,8 +490,8 @@ generate_preprocessed_structures(void)
 
     for (int i = 0; i < num_symbols; ++i) {
         if (symbol_table[i].type_qualifier == PREPROCESSED)
-            printf("data.%s = preprocessed_%s(vertexIdx, buf[handle]);\n", symbol_table[i].identifier,
-                   symbol_table[i].identifier);
+            printf("data.%s = preprocessed_%s(vertexIdx, buf[handle]);\n",
+                   symbol_table[i].identifier, symbol_table[i].identifier);
     }
     printf("return data;\n");
     printf("}\n");
