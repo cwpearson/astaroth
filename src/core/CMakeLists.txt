@@ -14,7 +14,7 @@ endif()
 
 #----------------------CUDA settings-------------------------------------------#
 
-set(CUDA_SEPARABLE_COMPILATION ON)
+set(CUDA_SEPARABLE_COMPILATION OFF)
 set(CUDA_PROPAGATE_HOST_FLAGS ON)
 
 # CUDA_BUILD_CUBIN requires that we're compiling for only one architecture
@@ -25,12 +25,12 @@ set(CUDA_PROPAGATE_HOST_FLAGS ON)
 
 # Generate code for the default architecture (Pascal)
 set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
-                    -gencode arch=compute_50,code=sm_50 
-                    -gencode arch=compute_60,code=sm_60 
-                    -gencode arch=compute_61,code=sm_61 
-                    -lineinfo 
+                    -gencode arch=compute_50,code=sm_50
+                    -gencode arch=compute_60,code=sm_60
+                    -gencode arch=compute_61,code=sm_61
+                    -lineinfo
                     --maxrregcount=255
-                    -ftz=true 
+                    -ftz=true
                     -std=c++11) #--maxrregcount=255 -ftz=true #ftz = flush denormalized floats to zero
 # -Xptxas -dlcm=ca opt-in to cache all global loads to L1/texture cache
 # =cg to opt out
