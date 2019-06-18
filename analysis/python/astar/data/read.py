@@ -118,6 +118,7 @@ def parse_ts(fdir, fname):
         line[i] = line[i].replace('_total', "tot")
         line[i] = line[i].replace('A', "aa")
         line[i] = line[i].replace('LNRHO', "lnrho")
+        line[i] = line[i].replace('ENTROPY', "ss")
         line[i] = line[i].replace('X', "x")
         line[i] = line[i].replace('Y', "y")
         line[i] = line[i].replace('Z', "z")

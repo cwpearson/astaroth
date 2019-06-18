@@ -19,3 +19,4 @@
 
 
 from . import slices
+from . import lineplot

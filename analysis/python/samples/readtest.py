@@ -199,65 +199,6 @@ if 'sl' in sys.argv:
 
 if 'ts' in sys.argv:
    ts = ad.read.TimeSeries(fdir=meshdir)
-
-   end_rm = -1 #-35#-40
-
-   plt.figure()
-   xaxis  = 't_step'
-   yaxis1 = 'lnrho_rms'
-   yaxis2 = 'lnrho_min'
-   yaxis3 = 'lnrho_max'
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis1][:end_rm], label=yaxis1)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis2][:end_rm], label=yaxis2)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis3][:end_rm], label=yaxis3)
-   plt.xlabel(xaxis)
-   plt.legend()
-  
-   plt.figure()
-   xaxis = 't_step'
-   yaxis1 = 'uutot_rms'
-   yaxis2 = 'uutot_min'
-   yaxis3 = 'uutot_max'
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis1][:end_rm], label=yaxis1)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis2][:end_rm], label=yaxis2)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis3][:end_rm], label=yaxis3)
-   plt.xlabel(xaxis)
-   plt.legend()
-
-   plt.figure()
-   xaxis = 't_step'
-   yaxis1 = 'uux_rms'
-   yaxis2 = 'uux_min'
-   yaxis3 = 'uux_max'
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis1][:end_rm], label=yaxis1)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis2][:end_rm], label=yaxis2)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis3][:end_rm], label=yaxis3)
-   plt.xlabel(xaxis)
-   plt.legend()
-  
-   plt.figure()
-   xaxis = 't_step'
-   yaxis1 = 'uuy_rms'
-   yaxis2 = 'uuy_min'
-   yaxis3 = 'uuy_max'
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis1][:end_rm], label=yaxis1)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis2][:end_rm], label=yaxis2)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis3][:end_rm], label=yaxis3)
-   plt.xlabel(xaxis)
-   plt.legend()
-  
-   plt.figure()
-   xaxis = 't_step'
-   yaxis1 = 'uuz_rms'
-   yaxis2 = 'uuz_min'
-   yaxis3 = 'uuz_max'
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis1][:end_rm], label=yaxis1)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis2][:end_rm], label=yaxis2)
-   plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis3][:end_rm], label=yaxis3)
-   plt.xlabel(xaxis)
-   plt.legend()
-  
-  
-   plt.show()
+   vis.lineplot.plot_ts(ts, lnrho=1, uutot=1, uux=1, ss=1)
 
 
