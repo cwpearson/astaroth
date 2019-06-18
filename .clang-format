@@ -7,3 +7,4 @@ AlwaysBreakAfterReturnType: TopLevelDefinitions
 PointerAlignment: Left
 BreakBeforeBinaryOperators: None
 PenaltyBreakAssignment: 10000
+ColumnLimit: 100
