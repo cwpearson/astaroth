@@ -853,6 +853,7 @@ kernel_filter(const __restrict__ AcReal* src, const int3 start, const int3 end, 
 
     const int nx = end.x - start.x;
     const int ny = end.y - start.y;
+    const int nz = end.z - start.z; //MV: Added this because it was undefined
     const int3 dst_idx = (int3) {
         threadIdx.x + blockIdx.x * blockDim.x,
         threadIdx.y + blockIdx.y * blockDim.y,
@@ -881,6 +882,7 @@ kernel_filter_vec(const __restrict__ AcReal* src0,
 
     const int nx = end.x - start.x;
     const int ny = end.y - start.y;
+    const int nz = end.z - start.z; //MV: Added this because it was undefined
     const int3 dst_idx = (int3) {
         threadIdx.x + blockIdx.x * blockDim.x,
         threadIdx.y + blockIdx.y * blockDim.y,
