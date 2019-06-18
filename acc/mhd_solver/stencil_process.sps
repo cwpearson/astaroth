@@ -2,7 +2,7 @@
 #define LENTROPY (1)
 #define LTEMPERATURE (0)
 #define LGRAVITY (0)
-#define LFORCING (1)
+#define LFORCING (0)
 
 
 // Declare uniforms (i.e. device constants)
