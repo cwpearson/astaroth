@@ -189,20 +189,21 @@ Vector
 forcing(int3 globalVertexIdx)
 {
     #if LFORCING
-    Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
-                                     globalGrid.n.y * dsy,
-                                     globalGrid.n.z * dsz}; // source (origin)
-    Vector b = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                        (globalVertexIdx.y - ny_min) * dsy,
-                        (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
-    Vector dir = normalized(b - a);
-    if (is_valid(dir)) {
-        return Scalar(1.) * dir;
-    } else {
-        return (Vector){0, 0, 0};
-    }
+        Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
+                                         globalGrid.n.y * dsy,
+                                         globalGrid.n.z * dsz}; // source (origin)
+        Vector b = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                            (globalVertexIdx.y - ny_min) * dsy,
+                            (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
+
+        Scalar magnitude = 0.1;
+        // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
+        Vector c = magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex
+        if (is_valid(c)) { return c; }
+        else             { return (Vector){0, 0, 0}; }
+
     #else
-    return (Vector){0, 0, 0};
+        return (Vector){0, 0, 0};
     #endif // LFORCING
 }
 
