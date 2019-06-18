@@ -2,6 +2,7 @@
 #define LENTROPY (1)
 #define LTEMPERATURE (0)
 #define LGRAVITY (0)
+#define LFORCING (1)
 
 
 // Declare uniforms (i.e. device constants)
@@ -14,12 +15,17 @@ uniform Scalar eta;
 uniform Scalar gamma;
 uniform Scalar zeta;
 
+uniform Scalar dsx;
+uniform Scalar dsy;
+uniform Scalar dsz;
+
 uniform int nx_min;
 uniform int ny_min;
 uniform int nz_min;
 uniform int nx;
 uniform int ny;
 uniform int nz;
+
 
 Vector
 value(in Vector uu)
@@ -49,12 +55,12 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
 
     // Regex replace CPU constants with get\(AC_([a-zA-Z_0-9]*)\)
     // \1
-    const Vector mom = - mul(gradients(uu), value(uu)) 
+    const Vector mom = - mul(gradients(uu), value(uu))
                                                        - cs2 * ((Scalar(1.) / cp_sound) * gradient(ss) + gradient(lnrho))
                                                        + inv_rho * cross(j, B)
                                                        + nu_visc * (
-                                                            laplace_vec(uu) 
-                                                        + Scalar(1. / 3.) * gradient_of_divergence(uu) 
+                                                            laplace_vec(uu)
+                                                        + Scalar(1. / 3.) * gradient_of_divergence(uu)
                                                         + Scalar(2.) * mul(S, gradient(lnrho))
                                                         )
                                                         + zeta * gradient_of_divergence(uu);
@@ -159,7 +165,7 @@ entropy(in Scalar ss, in Vector uu, in Scalar lnrho, in Vector aa) {
     const Scalar inv_pT = Scalar(1.) / (exp(value(lnrho)) * exp(lnT(ss, lnrho)));
     const Vector  j = (Scalar(1.) / mu0) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
     const Scalar RHS = H_CONST - C_CONST
-                                                + eta * (mu0) * dot(j, j) 
+                                                + eta * (mu0) * dot(j, j)
                                                 + Scalar(2.) * exp(value(lnrho)) * nu_visc * contract(S)
                                                 + zeta * exp(value(lnrho)) * divergence(uu) * divergence(uu);
 
@@ -178,6 +184,27 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
     return -dot(value(uu), gradient(tt)) + heat_diffusivity_k * laplace(tt) + heat_diffusivity_k * dot(gradient(lnrho), gradient(tt)) + nu_visc * contract(S) * (Scalar(1.) / cv_sound) - (gamma - 1) * value(tt) * divergence(uu);
 }
 #endif
+
+Vector
+forcing(int3 globalVertexIdx)
+{
+    #if LFORCING
+    Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
+                                     globalGrid.n.y * dsy,
+                                     globalGrid.n.z * dsz}; // source (origin)
+    Vector b = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                        (globalVertexIdx.y - ny_min) * dsy,
+                        (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
+    Vector dir = normalized(b - a);
+    if (is_valid(dir)) {
+        return Scalar(1.) * dir;
+    } else {
+        return (Vector){0, 0, 0};
+    }
+    #else
+    return (Vector){0, 0, 0};
+    #endif // LFORCING
+}
 
 // Declare input and output arrays using locations specified in the
 // array enum in astaroth.h
@@ -212,54 +239,12 @@ solve(Scalar dt) {
     #endif
 
     #if LENTROPY
-        out_uu = rk3(out_uu, uu, momentum(uu, lnrho, ss, aa), dt);
+        out_uu = rk3(out_uu, uu, momentum(uu, lnrho, ss, aa) + forcing(globalVertexIdx), dt);
         out_ss  = rk3(out_ss, ss, entropy(ss, uu, lnrho, aa), dt);
     #elif LTEMPERATURE
         out_uu =rk3(out_uu, uu, momentum(uu, lnrho, tt), dt);
         out_tt = rk3(out_tt, tt, heat_transfer(uu, lnrho, tt), dt);
     #else
         out_uu = rk3(out_uu, uu, momentum(uu, lnrho), dt);
-    #endif    
+    #endif
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

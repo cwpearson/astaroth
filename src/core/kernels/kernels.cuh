@@ -727,6 +727,9 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
         const int3 vertexIdx = (int3){threadIdx.x + blockIdx.x * blockDim.x + start.x,\
                                                             threadIdx.y + blockIdx.y * blockDim.y + start.y,\
                                                             threadIdx.z + blockIdx.z * blockDim.z + start.z};\
+        const int3 globalVertexIdx = (int3){d_multigpu_offset.x + vertexIdx.x, \
+                                            d_multigpu_offset.y + vertexIdx.y, \
+                                            d_multigpu_offset.z + vertexIdx.z}; \
         if (vertexIdx.x >= end.x || vertexIdx.y >= end.y || vertexIdx.z >= end.z)\
             return;\
 \

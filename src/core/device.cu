@@ -35,6 +35,7 @@ typedef struct {
 
 __constant__ AcMeshInfo d_mesh_info;
 __constant__ int3 d_multigpu_offset;
+__constant__ Grid globalGrid;
 #define DCONST_INT(X)  (d_mesh_info.int_params[X])
 #define DCONST_REAL(X) (d_mesh_info.real_params[X])
 #define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
@@ -375,5 +376,14 @@ loadDeviceConstant(const Device device, const AcRealParam param, const AcReal va
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_mesh_info, &value, sizeof(value),
                                           offset, cudaMemcpyHostToDevice));
+    return AC_SUCCESS;
+}
+
+AcResult
+loadGlobalGrid(const Device device, const Grid grid)
+{
+    cudaSetDevice(device->id);
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(globalGrid, &grid, sizeof(grid),
+                                          0, cudaMemcpyHostToDevice));
     return AC_SUCCESS;
 }

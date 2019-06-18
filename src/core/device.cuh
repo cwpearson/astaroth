@@ -34,6 +34,11 @@ typedef enum {
   STREAM_ALL
 } StreamType;
 
+typedef struct {
+    int3 m;
+    int3 n;
+} Grid;
+
 typedef struct device_s* Device; // Opaque pointer to device_s. Analogous to dispatchable handles
                                  // in Vulkan, f.ex. VkDevice
 
@@ -92,3 +97,6 @@ AcResult loadDeviceConstant(const Device device, const AcIntParam param, const i
 
 /** */
 AcResult loadDeviceConstant(const Device device, const AcRealParam param, const AcReal value);
+
+/** */
+AcResult loadGlobalGrid(const Device device, const Grid grid);

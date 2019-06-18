@@ -40,11 +40,6 @@ static const int MAX_NUM_DEVICES = 32;
 static int num_devices = 1;
 static Device devices[MAX_NUM_DEVICES] = {};
 
-typedef struct {
-    int3 m;
-    int3 n;
-} Grid;
-
 static Grid
 createGrid(const AcMeshInfo& config)
 {
@@ -132,6 +127,7 @@ acInit(const AcMeshInfo& config)
     // Initialize the devices
     for (int i = 0; i < num_devices; ++i) {
         createDevice(i, subgrid_config, &devices[i]);
+        loadGlobalGrid(devices[i], grid);
         printDeviceInfo(devices[i]);
     }
     return AC_SUCCESS;
