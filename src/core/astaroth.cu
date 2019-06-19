@@ -270,6 +270,20 @@ acIntegrateStep(const int& isubstep, const AcReal& dt)
 }
 
 AcResult
+acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
+{
+    /*
+    // A skeleton function for computing integrations with arbitrary subblocks
+    // Uncommenting the following should work with a single GPU.
+    const int3 start = (int3){STENCIL_ORDER / 2, STENCIL_ORDER / 2, STENCIL_ORDER / 2};
+    const int3 end   = (int3){STENCIL_ORDER / 2 + subgrid.n.x, STENCIL_ORDER / 2 + subgrid.n.y,
+                            STENCIL_ORDER / 2 + subgrid.n.z};
+    rkStep(devices[0], STREAM_PRIMARY, isubstep, start, end, dt);
+    */
+    return AC_FAILURE;
+}
+
+AcResult
 acBoundcondStep(void)
 {
     acSynchronize();

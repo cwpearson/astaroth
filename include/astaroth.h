@@ -341,6 +341,12 @@ AcResult acIntegrate(const AcReal& dt);
 /** Performs a single RK3 step without computing boundary conditions. */
 AcResult acIntegrateStep(const int& isubstep, const AcReal& dt);
 
+/** Performs a single RK3 step without computing boundary conditions.
+    Operates on a three-dimensional cuboid, where start and end are the
+    opposite corners. */
+AcResult acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start,
+                                   const int3& end);
+
 /** Applies boundary conditions on the GPU meshs and communicates the
  ghost zones among GPUs if necessary */
 AcResult acBoundcondStep(void);
