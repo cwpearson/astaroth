@@ -545,10 +545,12 @@ normalized(const AcReal3& vec)
 
 // Sinusoidal forcing
 // https://arxiv.org/pdf/1704.04676.pdf
+// NOTE: This method of forcing is depracated. However, it will remain in here
+// until a corresponding scheme exists in the new code. 
 __constant__ AcReal3 forcing_vec;
 __constant__ AcReal forcing_phi;
 static __device__ __forceinline__ AcReal3
-forcing(const int i, const int j, const int k)
+DEPRECATED_forcing(const int i, const int j, const int k)
 {
 #define DOMAIN_SIZE_X (DCONST_INT(AC_nx) * DCONST_REAL(AC_dsx))
 #define DOMAIN_SIZE_Y (DCONST_INT(AC_ny) * DCONST_REAL(AC_dsy))
