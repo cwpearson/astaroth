@@ -238,6 +238,7 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
         }
         printf("\n");
     }
+    acBoundcondStep(); // TODO note: this is not the most efficient way to do things
     return AC_SUCCESS;
 }
 
@@ -412,9 +413,9 @@ AcResult
 acIntegrate(const AcReal& dt)
 {
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
-        acBoundcondStep();
-        acIntegrateStep(isubstep, dt);
+        acIntegrateStep(isubstep, dt); // Note: boundaries must be initialized.
         acSwapBuffers();
+        acBoundcondStep();
     }
     return AC_SUCCESS;
 }
