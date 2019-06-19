@@ -123,7 +123,7 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
         const size_t n = AC_VTXBUF_SIZE(save_mesh.info);
 
         const char* buffername = vtxbuf_names[w];
-        char cstep[10];
+        char cstep[11];
         char bin_filename[80] = "\0";
 
         // sprintf(bin_filename, "");
