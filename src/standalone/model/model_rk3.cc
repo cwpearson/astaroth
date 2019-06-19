@@ -51,7 +51,6 @@ typedef struct {
     ModelScalarData z;
 } ModelVectorData;
 
-
 static AcMeshInfo* mesh_info = NULL;
 
 static inline int
@@ -87,14 +86,13 @@ first_derivative(const ModelScalar* pencil, const ModelScalar inv_ds)
 #elif STENCIL_ORDER == 6
     const ModelScalar coefficients[] = {0, 3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0};
 #elif STENCIL_ORDER == 8
-    const ModelScalar coefficients[] = {0, 4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0,
-                                   -1.0 / 280.0};
+    const ModelScalar coefficients[] = {0, 4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0};
 #endif
 
-    #define MID (STENCIL_ORDER / 2)
-    ModelScalar res    = 0;
+#define MID (STENCIL_ORDER / 2)
+    ModelScalar res = 0;
 
-//#pragma unroll
+    //#pragma unroll
     for (int i = 1; i <= MID; ++i)
         res += coefficients[i] * (pencil[MID + i] - pencil[MID - i]);
 
@@ -107,19 +105,18 @@ second_derivative(const ModelScalar* pencil, const ModelScalar inv_ds)
 #if STENCIL_ORDER == 2
     const ModelScalar coefficients[] = {-2., 1.};
 #elif STENCIL_ORDER == 4
-    const ModelScalar coefficients[] = {-5.0/2.0, 4.0/3.0, -1.0/12.0};
+    const ModelScalar coefficients[] = {-5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0};
 #elif STENCIL_ORDER == 6
-    const ModelScalar coefficients[] = {-49.0 / 18.0, 3.0 / 2.0, -3.0 / 20.0,
-                                   1.0 / 90.0};
+    const ModelScalar coefficients[] = {-49.0 / 18.0, 3.0 / 2.0, -3.0 / 20.0, 1.0 / 90.0};
 #elif STENCIL_ORDER == 8
-    const ModelScalar coefficients[] = {-205.0 / 72.0, 8.0 / 5.0, -1.0 / 5.0,
-                                   8.0 / 315.0, -1.0 / 560.0};
+    const ModelScalar coefficients[] = {-205.0 / 72.0, 8.0 / 5.0, -1.0 / 5.0, 8.0 / 315.0,
+                                        -1.0 / 560.0};
 #endif
 
-    #define MID (STENCIL_ORDER / 2)
-    ModelScalar res    = coefficients[0] * pencil[MID];
+#define MID (STENCIL_ORDER / 2)
+    ModelScalar res = coefficients[0] * pencil[MID];
 
-//#pragma unroll
+    //#pragma unroll
     for (int i = 1; i <= MID; ++i)
         res += coefficients[i] * (pencil[MID + i] + pencil[MID - i]);
 
@@ -128,31 +125,30 @@ second_derivative(const ModelScalar* pencil, const ModelScalar inv_ds)
 
 /** inv_ds: inverted mesh spacing f.ex. 1. / mesh.int_params[AC_dsx] */
 static inline ModelScalar
-cross_derivative(const ModelScalar* pencil_a,
-                 const ModelScalar* pencil_b, const ModelScalar inv_ds_a,
-                 const ModelScalar inv_ds_b)
+cross_derivative(const ModelScalar* pencil_a, const ModelScalar* pencil_b,
+                 const ModelScalar inv_ds_a, const ModelScalar inv_ds_b)
 {
 #if STENCIL_ORDER == 2
     const ModelScalar coefficients[] = {0, 1.0 / 4.0};
 #elif STENCIL_ORDER == 4
-    const ModelScalar coefficients[] = {0, 1.0 / 32.0, 1.0 / 64.0}; // TODO correct coefficients, these are just placeholders
+    const ModelScalar coefficients[] = {
+        0, 1.0 / 32.0, 1.0 / 64.0}; // TODO correct coefficients, these are just placeholders
 #elif STENCIL_ORDER == 6
     const ModelScalar fac            = (1. / 720.);
-    const ModelScalar coefficients[] = {0.0 * fac, 270.0 * fac, -27.0 * fac,
-                                   2.0 * fac};
+    const ModelScalar coefficients[] = {0.0 * fac, 270.0 * fac, -27.0 * fac, 2.0 * fac};
 #elif STENCIL_ORDER == 8
     const ModelScalar fac            = (1. / 20160.);
-    const ModelScalar coefficients[] = {0.0 * fac, 8064. * fac, -1008. * fac,
-                                   128. * fac, -9. * fac};
+    const ModelScalar coefficients[] = {0.0 * fac, 8064. * fac, -1008. * fac, 128. * fac,
+                                        -9. * fac};
 #endif
 
-    #define MID (STENCIL_ORDER / 2)
-    ModelScalar res    = ModelScalar(0.);
+#define MID (STENCIL_ORDER / 2)
+    ModelScalar res = ModelScalar(0.);
 
     //#pragma unroll
     for (int i = 1; i <= MID; ++i) {
-        res += coefficients[i] * (pencil_a[MID + i] + pencil_a[MID - i] -
-                                  pencil_b[MID + i] - pencil_b[MID - i]);
+        res += coefficients[i] *
+               (pencil_a[MID + i] + pencil_a[MID - i] - pencil_b[MID + i] - pencil_b[MID - i]);
     }
     return res * inv_ds_a * inv_ds_b;
 }
@@ -161,7 +157,7 @@ static inline ModelScalar
 derx(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j, k)];
 
@@ -172,7 +168,7 @@ static inline ModelScalar
 derxx(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j, k)];
 
@@ -183,45 +179,43 @@ static inline ModelScalar
 derxy(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil_a[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil_a[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2,
-                                   j + offset - STENCIL_ORDER / 2, k)];
+        pencil_a[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j + offset - STENCIL_ORDER / 2,
+                                   k)];
 
     ModelScalar pencil_b[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil_b[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2,
-                                   j + STENCIL_ORDER / 2 - offset, k)];
+        pencil_b[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j + STENCIL_ORDER / 2 - offset,
+                                   k)];
 
-    return cross_derivative(pencil_a, pencil_b, get(AC_inv_dsx),
-                            get(AC_inv_dsy));
+    return cross_derivative(pencil_a, pencil_b, get(AC_inv_dsx), get(AC_inv_dsy));
 }
 
 static inline ModelScalar
 derxz(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil_a[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil_a[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j,
                                    k + offset - STENCIL_ORDER / 2)];
 
     ModelScalar pencil_b[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil_b[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j,
                                    k + STENCIL_ORDER / 2 - offset)];
 
-    return cross_derivative(pencil_a, pencil_b, get(AC_inv_dsx),
-                            get(AC_inv_dsz));
+    return cross_derivative(pencil_a, pencil_b, get(AC_inv_dsx), get(AC_inv_dsz));
 }
 
 static inline ModelScalar
 dery(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil[offset] = arr[IDX(i, j + offset - STENCIL_ORDER / 2, k)];
 
@@ -232,7 +226,7 @@ static inline ModelScalar
 deryy(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil[offset] = arr[IDX(i, j + offset - STENCIL_ORDER / 2, k)];
 
@@ -243,26 +237,25 @@ static inline ModelScalar
 deryz(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil_a[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil_a[offset] = arr[IDX(i, j + offset - STENCIL_ORDER / 2,
                                    k + offset - STENCIL_ORDER / 2)];
 
     ModelScalar pencil_b[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil_b[offset] = arr[IDX(i, j + offset - STENCIL_ORDER / 2,
                                    k + STENCIL_ORDER / 2 - offset)];
 
-    return cross_derivative(pencil_a, pencil_b, get(AC_inv_dsy),
-                            get(AC_inv_dsz));
+    return cross_derivative(pencil_a, pencil_b, get(AC_inv_dsy), get(AC_inv_dsz));
 }
 
 static inline ModelScalar
 derz(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil[offset] = arr[IDX(i, j, k + offset - STENCIL_ORDER / 2)];
 
@@ -273,7 +266,7 @@ static inline ModelScalar
 derzz(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelScalar pencil[STENCIL_ORDER + 1];
-//#pragma unroll
+    //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
         pencil[offset] = arr[IDX(i, j, k + offset - STENCIL_ORDER / 2)];
 
@@ -281,23 +274,19 @@ derzz(const int i, const int j, const int k, const ModelScalar* arr)
 }
 
 static inline ModelScalar
-compute_value(const int i, const int j, const int k,
-              const ModelScalar* arr)
+compute_value(const int i, const int j, const int k, const ModelScalar* arr)
 {
     return arr[IDX(i, j, k)];
 }
 
 static inline ModelVector
-compute_gradient(const int i, const int j, const int k,
-                 const ModelScalar* arr)
+compute_gradient(const int i, const int j, const int k, const ModelScalar* arr)
 {
-    return (ModelVector){derx(i, j, k, arr), dery(i, j, k, arr),
-                     derz(i, j, k, arr)};
+    return (ModelVector){derx(i, j, k, arr), dery(i, j, k, arr), derz(i, j, k, arr)};
 }
 
 static inline ModelMatrix
-compute_second_deriv(const int i, const int j, const int k,
-                     const ModelScalar* arr)
+compute_second_deriv(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelMatrix hessian;
 
@@ -309,21 +298,19 @@ compute_second_deriv(const int i, const int j, const int k,
 }
 
 static inline ModelMatrix
-compute_hessian(const int i, const int j, const int k,
-                const ModelScalar* arr)
+compute_hessian(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelMatrix hessian;
 
     hessian.row[0] = (ModelVector){derxx(i, j, k, arr), derxy(i, j, k, arr), derxz(i, j, k, arr)};
-    hessian.row[1] = (ModelVector){hessian.row[0].y,    deryy(i, j, k, arr), deryz(i, j, k, arr)};
-    hessian.row[2] = (ModelVector){hessian.row[0].z,    hessian.row[1].z,    derzz(i, j, k, arr)};
+    hessian.row[1] = (ModelVector){hessian.row[0].y, deryy(i, j, k, arr), deryz(i, j, k, arr)};
+    hessian.row[2] = (ModelVector){hessian.row[0].z, hessian.row[1].z, derzz(i, j, k, arr)};
 
     return hessian;
 }
 
 static inline ModelScalarData
-read_data(const int i, const int j, const int k,
-          ModelScalar* buf[], const int handle)
+read_data(const int i, const int j, const int k, ModelScalar* buf[], const int handle)
 {
     ModelScalarData data;
 
@@ -338,8 +325,7 @@ read_data(const int i, const int j, const int k,
 }
 
 static inline ModelVectorData
-read_data(const int i, const int j, const int k,
-          ModelScalar* buf[], const int3& handle)
+read_data(const int i, const int j, const int k, ModelScalar* buf[], const int3& handle)
 {
     ModelVectorData data;
 
@@ -380,11 +366,18 @@ gradients(const ModelVectorData& data)
     return (ModelMatrix){gradient(data.x), gradient(data.y), gradient(data.z)};
 }
 
-static inline ModelScalar val2ue(const int i, const int j, const int k, ModelScalar* vertex) {
-  return vertex[IDX(i, j, k)];
+static inline ModelScalar
+val2ue(const int i, const int j, const int k, ModelScalar* vertex)
+{
+    return vertex[IDX(i, j, k)];
 }
-static inline ModelVector gradien2t(const int i, const int j, const int k, ModelScalar* vertex) {
-  return (ModelVector){vertex[IDX(i - 1, j, k)] + vertex[IDX(i, j, k)] + vertex[IDX(i + 1, j, k)], vertex[IDX(i, j - 1, k)] + vertex[IDX(i, j, k)] + vertex[IDX(i, j + 1, k)], vertex[IDX(i, j, k - 1)] + vertex[IDX(i, j, k)] + vertex[IDX(i, j, k + 1)]};
+static inline ModelVector
+gradien2t(const int i, const int j, const int k, ModelScalar* vertex)
+{
+    return (ModelVector){vertex[IDX(i - 1, j, k)] + vertex[IDX(i, j, k)] + vertex[IDX(i + 1, j, k)],
+                         vertex[IDX(i, j - 1, k)] + vertex[IDX(i, j, k)] + vertex[IDX(i, j + 1, k)],
+                         vertex[IDX(i, j, k - 1)] + vertex[IDX(i, j, k)] +
+                             vertex[IDX(i, j, k + 1)]};
 }
 
 /*
@@ -411,8 +404,7 @@ operator-(const ModelVector& a)
     return (ModelVector){-a.x, -a.y, -a.z};
 }
 
-static  inline ModelVector
-operator*(const ModelScalar a, const ModelVector& b)
+static inline ModelVector operator*(const ModelScalar a, const ModelVector& b)
 {
     return (ModelVector){a * b.x, a * b.y, a * b.z};
 }
@@ -480,16 +472,17 @@ static inline ModelVector
 curl(const ModelVectorData& vec)
 {
     return (ModelVector){gradient(vec.z).y - gradient(vec.y).z,
-                     gradient(vec.x).z - gradient(vec.z).x,
-                     gradient(vec.y).x - gradient(vec.x).y};
+                         gradient(vec.x).z - gradient(vec.z).x,
+                         gradient(vec.y).x - gradient(vec.x).y};
 }
 
 static inline ModelVector
 gradient_of_divergence(const ModelVectorData& vec)
 {
-    return (ModelVector){hessian(vec.x).row[0].x + hessian(vec.y).row[0].y + hessian(vec.z).row[0].z,
-                     hessian(vec.x).row[1].x + hessian(vec.y).row[1].y + hessian(vec.z).row[1].z,
-                     hessian(vec.x).row[2].x + hessian(vec.y).row[2].y + hessian(vec.z).row[2].z};
+    return (ModelVector){
+        hessian(vec.x).row[0].x + hessian(vec.y).row[0].y + hessian(vec.z).row[0].z,
+        hessian(vec.x).row[1].x + hessian(vec.y).row[1].y + hessian(vec.z).row[1].z,
+        hessian(vec.x).row[2].x + hessian(vec.y).row[2].y + hessian(vec.z).row[2].z};
 }
 
 // Takes uu gradients and returns S
@@ -538,7 +531,7 @@ contract(const ModelMatrix& mat)
 static inline ModelScalar
 continuity(const ModelVectorData& uu, const ModelScalarData& lnrho)
 {
-    return - dot(value(uu), gradient(lnrho)) - divergence(uu);
+    return -dot(value(uu), gradient(lnrho)) - divergence(uu);
 }
 
 static inline ModelScalar
@@ -560,8 +553,8 @@ normalized(const ModelVector& vec)
     return inv_len * vec;
 }
 
-
-// Note: LNT0 and LNRHO0 must be set very carefully: if the magnitude is different that other values in the mesh, then we will inherently lose precision
+// Note: LNT0 and LNRHO0 must be set very carefully: if the magnitude is different that other values
+// in the mesh, then we will inherently lose precision
 #define LNT0 (ModelScalar(0.0))
 #define LNRHO0 (ModelScalar(0.0))
 
@@ -571,30 +564,32 @@ normalized(const ModelVector& vec)
 static inline ModelVector
 momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
 #if LENTROPY
-, const ModelScalarData& ss, const ModelVectorData& aa
+         ,
+         const ModelScalarData& ss, const ModelVectorData& aa
 #endif
 )
 {
-    #if LENTROPY
-    const ModelMatrix S = stress_tensor(uu);
-    const ModelScalar cs2 = get(AC_cs2_sound) * expl(get(AC_gamma) * value(ss) / get(AC_cp_sound) + (get(AC_gamma) - 1) * (value(lnrho) - LNRHO0));
-    const ModelVector  j = (ModelScalar(1.) / get(AC_mu0)) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
-    const ModelVector B = curl(aa);
+#if LENTROPY
+    const ModelMatrix S   = stress_tensor(uu);
+    const ModelScalar cs2 = get(AC_cs2_sound) * expl(get(AC_gamma) * value(ss) / get(AC_cp_sound) +
+                                                     (get(AC_gamma) - 1) * (value(lnrho) - LNRHO0));
+    const ModelVector j   = (ModelScalar(1.) / get(AC_mu0)) *
+                          (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
+    const ModelVector B       = curl(aa);
     const ModelScalar inv_rho = ModelScalar(1.) / expl(value(lnrho));
 
-    const ModelVector mom = - mul(gradients(uu), value(uu)) 
-                                                       - cs2 * ((ModelScalar(1.) / get(AC_cp_sound)) * gradient(ss) + gradient(lnrho))
-                                                       + inv_rho * cross(j, B)
-                                                       + get(AC_nu_visc) * (
-                                                            laplace_vec(uu) 
-                                                        + ModelScalar(1. / 3.) * gradient_of_divergence(uu) 
-                                                        + ModelScalar(2.) * mul(S, gradient(lnrho))
-                                                        )
-                                                        + get(AC_zeta) * gradient_of_divergence(uu);
+    const ModelVector mom = -mul(gradients(uu), value(uu)) -
+                            cs2 * ((ModelScalar(1.) / get(AC_cp_sound)) * gradient(ss) +
+                                   gradient(lnrho)) +
+                            inv_rho * cross(j, B) +
+                            get(AC_nu_visc) * (laplace_vec(uu) +
+                                               ModelScalar(1. / 3.) * gradient_of_divergence(uu) +
+                                               ModelScalar(2.) * mul(S, gradient(lnrho))) +
+                            get(AC_zeta) * gradient_of_divergence(uu);
     return mom;
-    #endif
+#endif
 
-    #if 0
+#if 0
     const ModelMatrix S = stress_tensor(uu);
 
     //#if LENTROPY
@@ -621,7 +616,7 @@ momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
               (laplace_vec(uu) + ModelScalar(1. / 3.) * gradient_of_divergence(uu) +
                ModelScalar(2.) * mul(S, gradient(lnrho))) + get(AC_zeta) * gradient_of_divergence(uu);
     //#endif
-    #endif
+#endif
     return mom;
 }
 
@@ -646,11 +641,10 @@ induction(const ModelVectorData& uu, const ModelVectorData& aa)
 static inline ModelScalar
 lnT(const ModelScalarData& ss, const ModelScalarData& lnrho)
 {
-    const ModelScalar lnT = LNT0 + get(AC_gamma) * value(ss) / get(AC_cp_sound)
-                     + (get(AC_gamma) - ModelScalar(1.)) * (value(lnrho) - LNRHO0);
+    const ModelScalar lnT = LNT0 + get(AC_gamma) * value(ss) / get(AC_cp_sound) +
+                            (get(AC_gamma) - ModelScalar(1.)) * (value(lnrho) - LNRHO0);
     return lnT;
 }
-
 
 // Nabla dot (K nabla T) / (rho T)
 static inline ModelScalar
@@ -658,33 +652,32 @@ heat_conduction(const ModelScalarData& ss, const ModelScalarData& lnrho)
 {
     const ModelScalar inv_cp_sound = ModelScalar(1.) / get(AC_cp_sound);
 
-    const ModelVector grad_ln_chi = - gradient(lnrho);
+    const ModelVector grad_ln_chi = -gradient(lnrho);
 
-    const ModelScalar first_term = get(AC_gamma) * inv_cp_sound * laplace(ss)
-                           + (get(AC_gamma) - ModelScalar(1.)) * laplace(lnrho);
-    const ModelVector second_term = get(AC_gamma) * inv_cp_sound * gradient(ss)
-                             + (get(AC_gamma) - ModelScalar(1.)) * gradient(lnrho);
-    const ModelVector third_term = get(AC_gamma) * (inv_cp_sound * gradient(ss)
-                                        + gradient(lnrho)) + grad_ln_chi;
+    const ModelScalar first_term = get(AC_gamma) * inv_cp_sound * laplace(ss) +
+                                   (get(AC_gamma) - ModelScalar(1.)) * laplace(lnrho);
+    const ModelVector second_term = get(AC_gamma) * inv_cp_sound * gradient(ss) +
+                                    (get(AC_gamma) - ModelScalar(1.)) * gradient(lnrho);
+    const ModelVector third_term = get(AC_gamma) * (inv_cp_sound * gradient(ss) + gradient(lnrho)) +
+                                   grad_ln_chi;
 
     const ModelScalar chi = AC_THERMAL_CONDUCTIVITY / (expl(value(lnrho)) * get(AC_cp_sound));
     return get(AC_cp_sound) * chi * (first_term + dot(second_term, third_term));
 }
 
 static inline ModelScalar
-entropy(const ModelScalarData& ss, const ModelVectorData& uu, const ModelScalarData& lnrho, const ModelVectorData& aa)
+entropy(const ModelScalarData& ss, const ModelVectorData& uu, const ModelScalarData& lnrho,
+        const ModelVectorData& aa)
 {
-    const ModelMatrix S = stress_tensor(uu);
+    const ModelMatrix S      = stress_tensor(uu);
     const ModelScalar inv_pT = ModelScalar(1.) / (expl(value(lnrho)) * expl(lnT(ss, lnrho)));
-    const ModelVector  j = (ModelScalar(1.) / get(AC_mu0)) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
-    const ModelScalar RHS = H_CONST - C_CONST
-                                                + get(AC_eta) * get(AC_mu0) * dot(j, j) 
-                                                + ModelScalar(2.) * expl(value(lnrho)) * get(AC_nu_visc) * contract(S)
-                                                + get(AC_zeta) * expl(value(lnrho)) * divergence(uu) * divergence(uu);
+    const ModelVector j      = (ModelScalar(1.) / get(AC_mu0)) *
+                          (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
+    const ModelScalar RHS = H_CONST - C_CONST + get(AC_eta) * get(AC_mu0) * dot(j, j) +
+                            ModelScalar(2.) * expl(value(lnrho)) * get(AC_nu_visc) * contract(S) +
+                            get(AC_zeta) * expl(value(lnrho)) * divergence(uu) * divergence(uu);
 
-    return - dot(value(uu), gradient(ss))
-                  + inv_pT * RHS
-                  + heat_conduction(ss, lnrho);
+    return -dot(value(uu), gradient(ss)) + inv_pT * RHS + heat_conduction(ss, lnrho);
     /*
     const ModelMatrix S = stress_tensor(uu);
 
@@ -703,65 +696,110 @@ entropy(const ModelScalarData& ss, const ModelVectorData& uu, const ModelScalarD
     */
 }
 
+static bool
+is_valid(const ModelScalar a)
+{
+    return !isnan(a) && !isinf(a);
+}
+
+static bool
+is_valid(const ModelVector& a)
+{
+    return is_valid(a.x) && is_valid(a.y) && is_valid(a.z);
+}
+
+static inline ModelVector
+forcing(int3 globalVertexIdx)
+{
+    // source (origin)
+    ModelVector a = ModelScalar(.5) * (ModelVector){get(AC_nx) * get(AC_dsx),
+                                                    get(AC_ny) * get(AC_dsy),
+                                                    get(AC_nz) * get(AC_dsz)};
+    // sink (current index)
+    ModelVector b = (ModelVector){(globalVertexIdx.x - get(AC_nx_min)) * get(AC_dsx),
+                                  (globalVertexIdx.y - get(AC_ny_min)) * get(AC_dsy),
+                                  (globalVertexIdx.z - get(AC_nz_min)) * get(AC_dsz)};
+
+    ModelScalar magnitude = .1;
+    // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
+    ModelVector c = magnitude * cross(normalized(b - a), (ModelVector){0, 0, 1}); // Vortex
+    if (is_valid(c)) {
+        return c;
+    }
+    else {
+        return (ModelVector){0, 0, 0};
+    }
+}
+
 static void
-solve_alpha_step(const int step_number, const ModelScalar dt,
-                 const int i, const int j, const int k,
+solve_alpha_step(const int step_number, const ModelScalar dt, const int i, const int j, const int k,
                  ModelMesh& in, ModelMesh* out)
 {
     const int idx = AC_VTXBUF_IDX(i, j, k, in.info);
 
     const ModelScalarData lnrho = read_data(i, j, k, in.vertex_buffer, VTXBUF_LNRHO);
-    const ModelVectorData uu = read_data(i, j, k, in.vertex_buffer, (int3){VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ});
+    const ModelVectorData uu    = read_data(i, j, k, in.vertex_buffer,
+                                         (int3){VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ});
 
     ModelScalar rate_of_change[NUM_VTXBUF_HANDLES] = {0};
-    rate_of_change[VTXBUF_LNRHO] = continuity(uu, lnrho);
+    rate_of_change[VTXBUF_LNRHO]                   = continuity(uu, lnrho);
 
-    #if LINDUCTION
-        const ModelVectorData aa = read_data(i, j, k, in.vertex_buffer, (int3){VTXBUF_AX, VTXBUF_AY, VTXBUF_AZ});
-        const ModelVector aa_res = induction(uu, aa);
-        rate_of_change[VTXBUF_AX] = aa_res.x;
-        rate_of_change[VTXBUF_AY] = aa_res.y;
-        rate_of_change[VTXBUF_AZ] = aa_res.z;
-    #endif
-    #if LENTROPY
-        const ModelScalarData ss = read_data(i, j, k, in.vertex_buffer, VTXBUF_ENTROPY);
-        const ModelVector uu_res = momentum(uu, lnrho, ss, aa);
-        rate_of_change[VTXBUF_UUX] = uu_res.x;
-        rate_of_change[VTXBUF_UUY] = uu_res.y;
-        rate_of_change[VTXBUF_UUZ] = uu_res.z;
-        rate_of_change[VTXBUF_ENTROPY] = entropy(ss, uu, lnrho, aa);
-    #else
-        const ModelVector uu_res = momentum(uu, lnrho);
-        rate_of_change[VTXBUF_UUX] = uu_res.x;
-        rate_of_change[VTXBUF_UUY] = uu_res.y;
-        rate_of_change[VTXBUF_UUZ] = uu_res.z;
-    #endif
-
-
+#if LINDUCTION
+    const ModelVectorData aa  = read_data(i, j, k, in.vertex_buffer,
+                                         (int3){VTXBUF_AX, VTXBUF_AY, VTXBUF_AZ});
+    const ModelVector aa_res  = induction(uu, aa);
+    rate_of_change[VTXBUF_AX] = aa_res.x;
+    rate_of_change[VTXBUF_AY] = aa_res.y;
+    rate_of_change[VTXBUF_AZ] = aa_res.z;
+#endif
+#if LENTROPY
+    const ModelScalarData ss       = read_data(i, j, k, in.vertex_buffer, VTXBUF_ENTROPY);
+    const ModelVector uu_res       = momentum(uu, lnrho, ss, aa);
+    rate_of_change[VTXBUF_UUX]     = uu_res.x;
+    rate_of_change[VTXBUF_UUY]     = uu_res.y;
+    rate_of_change[VTXBUF_UUZ]     = uu_res.z;
+    rate_of_change[VTXBUF_ENTROPY] = entropy(ss, uu, lnrho, aa);
+#else
+    const ModelVector uu_res   = momentum(uu, lnrho);
+    rate_of_change[VTXBUF_UUX] = uu_res.x;
+    rate_of_change[VTXBUF_UUY] = uu_res.y;
+    rate_of_change[VTXBUF_UUZ] = uu_res.z;
+#endif
 
     // Williamson (1980) NOTE: older version of astaroth used inhomogenous
     const ModelScalar alpha[] = {ModelScalar(.0), ModelScalar(-5. / 9.), ModelScalar(-153. / 128.)};
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
         if (step_number == 0) {
             out->vertex_buffer[w][idx] = rate_of_change[w] * dt;
-        } else {
-            out->vertex_buffer[w][idx] = alpha[step_number] * out->vertex_buffer[w][idx]
-                                       + rate_of_change[w] * dt;
+        }
+        else {
+            out->vertex_buffer[w][idx] = alpha[step_number] * out->vertex_buffer[w][idx] +
+                                         rate_of_change[w] * dt;
         }
     }
 }
 
 static void
-solve_beta_step(const int step_number, const int i, const int j, const int k,
-                   const ModelMesh& in, ModelMesh* out)
+solve_beta_step(const int step_number, const int i, const int j, const int k, const ModelMesh& in,
+                ModelMesh* out)
 {
     const int idx = AC_VTXBUF_IDX(i, j, k, in.info);
 
     // Williamson (1980) NOTE: older version of astaroth used inhomogenous
-    const ModelScalar beta[]  = {ModelScalar(1. / 3.), ModelScalar(15. / 16.), ModelScalar(8. / 15.)};
+    const ModelScalar beta[] = {ModelScalar(1. / 3.), ModelScalar(15. / 16.),
+                                ModelScalar(8. / 15.)};
 
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
         out->vertex_buffer[w][idx] += beta[step_number] * in.vertex_buffer[w][idx];
+
+#if LFORCING
+    if (step_number == 2) {
+        ModelVector force = forcing((int3){i, j, k});
+        out->vertex_buffer[VTXBUF_UUX][idx] += force.x;
+        out->vertex_buffer[VTXBUF_UUY][idx] += force.y;
+        out->vertex_buffer[VTXBUF_UUZ][idx] += force.z;
+    }
+#endif
 }
 
 void
@@ -771,23 +809,23 @@ model_rk3_step(const int step_number, const ModelScalar dt, ModelMesh* mesh)
 
     ModelMesh* tmp = modelmesh_create(mesh->info);
 
-	boundconds(mesh->info, mesh);
-	#pragma omp parallel for
-	for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
-	    for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
-		for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
-		    solve_alpha_step(step_number, dt, i, j, k, *mesh, tmp);
-		}
-	    }
-	}
-	#pragma omp parallel for
-	for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
-	    for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
-		for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
-		    solve_beta_step(step_number, i, j, k, *tmp, mesh);
-		}
-	    }
-	}
+    boundconds(mesh->info, mesh);
+#pragma omp parallel for
+    for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
+        for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
+            for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
+                solve_alpha_step(step_number, dt, i, j, k, *mesh, tmp);
+            }
+        }
+    }
+#pragma omp parallel for
+    for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
+        for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
+            for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
+                solve_beta_step(step_number, i, j, k, *tmp, mesh);
+            }
+        }
+    }
 
     modelmesh_destroy(tmp);
     mesh_info = NULL;
@@ -802,7 +840,7 @@ model_rk3(const ModelScalar dt, ModelMesh* mesh)
 
     for (int step_number = 0; step_number < 3; ++step_number) {
         boundconds(mesh->info, mesh);
-        #pragma omp parallel for
+#pragma omp parallel for
         for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
             for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
                 for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
@@ -810,7 +848,7 @@ model_rk3(const ModelScalar dt, ModelMesh* mesh)
                 }
             }
         }
-        #pragma omp parallel for
+#pragma omp parallel for
         for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
             for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
                 for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
@@ -823,222 +861,3 @@ model_rk3(const ModelScalar dt, ModelMesh* mesh)
     modelmesh_destroy(tmp);
     mesh_info = NULL;
 }
-#if 0
-static MODEL_REAL
-continuity(const int& i, const int& j, const int& k, const ModelMesh& mesh)
-{
-    return -vec_dot_nabla_scal(
-               i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_UUX],
-               mesh.vertex_buffer[VTXBUF_UUY], mesh.vertex_buffer[VTXBUF_UUZ],
-               mesh.vertex_buffer[VTXBUF_LNRHO]) -
-           div_vec(i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_UUX],
-                   mesh.vertex_buffer[VTXBUF_UUY],
-                   mesh.vertex_buffer[VTXBUF_UUZ]);
-
-    // return laplace_scal(i, j, k, mesh.info,
-    // mesh.vertex_buffer[VTXBUF_LNRHO])*mesh.info.real_params[AC_nu_visc];
-}
-
-static void
-momentum(const int& i, const int& j, const int& k, const ModelMesh& mesh,
-         MODEL_REAL* mom_x, MODEL_REAL* mom_y, MODEL_REAL* mom_z)
-{
-    // Vec dot nabla uu
-    const MODEL_REAL vec_dot_nabla_uux = vec_dot_nabla_scal(
-        i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_UUX],
-        mesh.vertex_buffer[VTXBUF_UUY], mesh.vertex_buffer[VTXBUF_UUZ],
-        mesh.vertex_buffer[VTXBUF_UUX]);
-    const MODEL_REAL vec_dot_nabla_uuy = vec_dot_nabla_scal(
-        i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_UUX],
-        mesh.vertex_buffer[VTXBUF_UUY], mesh.vertex_buffer[VTXBUF_UUZ],
-        mesh.vertex_buffer[VTXBUF_UUY]);
-    const MODEL_REAL vec_dot_nabla_uuz = vec_dot_nabla_scal(
-        i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_UUX],
-        mesh.vertex_buffer[VTXBUF_UUY], mesh.vertex_buffer[VTXBUF_UUZ],
-        mesh.vertex_buffer[VTXBUF_UUZ]);
-    // Gradient
-    MODEL_REAL ddx_lnrho, ddy_lnrho, ddz_lnrho;
-    grad(i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_LNRHO], &ddx_lnrho,
-         &ddy_lnrho, &ddz_lnrho);
-
-    // Viscosity
-    MODEL_REAL visc_x, visc_y, visc_z;
-    nu_const(i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_UUX],
-             mesh.vertex_buffer[VTXBUF_UUY], mesh.vertex_buffer[VTXBUF_UUZ],
-             mesh.vertex_buffer[VTXBUF_LNRHO], &visc_x, &visc_y, &visc_z);
-
-    *mom_x = -vec_dot_nabla_uux -
-             mesh.info.real_params[AC_cs2_sound] * ddx_lnrho + visc_x;
-    *mom_y = -vec_dot_nabla_uuy -
-             mesh.info.real_params[AC_cs2_sound] * ddy_lnrho + visc_y;
-    *mom_z = -vec_dot_nabla_uuz -
-             mesh.info.real_params[AC_cs2_sound] * ddz_lnrho + visc_z;
-
-
-    #if  LENTROPY
-
-    #endif
-}
-
-#if LINDUCTION
-static void
-induction(const int& i, const int& j, const int& k, const ModelMesh& mesh,
-          MODEL_REAL* ind_x, MODEL_REAL* ind_y, MODEL_REAL* ind_z)
-{
-    /*
-     *ind_x = mesh.vertex_buffer[VTXBUF_AX][AC_VTXBUF_IDX(i, j, k, mesh.info)];
-     *ind_y = mesh.vertex_buffer[VTXBUF_AY][AC_VTXBUF_IDX(i, j, k, mesh.info)];
-     *ind_z = mesh.vertex_buffer[VTXBUF_AZ][AC_VTXBUF_IDX(i, j, k, mesh.info)];
-     */
-    const MODEL_REAL ddx_Az = der_scal<AXIS_X>(i, j, k, mesh.info,
-                                           mesh.vertex_buffer[VTXBUF_AZ]);
-    const MODEL_REAL ddx_Ay = der_scal<AXIS_X>(i, j, k, mesh.info,
-                                           mesh.vertex_buffer[VTXBUF_AY]);
-    const MODEL_REAL ddy_Ax = der_scal<AXIS_Y>(i, j, k, mesh.info,
-                                           mesh.vertex_buffer[VTXBUF_AX]);
-    const MODEL_REAL ddy_Az = der_scal<AXIS_Y>(i, j, k, mesh.info,
-                                           mesh.vertex_buffer[VTXBUF_AZ]);
-    const MODEL_REAL ddz_Ay = der_scal<AXIS_Z>(i, j, k, mesh.info,
-                                           mesh.vertex_buffer[VTXBUF_AY]);
-    const MODEL_REAL ddz_Ax = der_scal<AXIS_Z>(i, j, k, mesh.info,
-                                           mesh.vertex_buffer[VTXBUF_AX]);
-
-    const MODEL_REAL Bx = ddy_Az - ddz_Ay;
-    const MODEL_REAL By = ddz_Ax - ddx_Az;
-    const MODEL_REAL Bz = ddx_Ay - ddy_Ax;
-
-    MODEL_REAL lx, ly, lz;
-    laplace_vec(i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_AX],
-                mesh.vertex_buffer[VTXBUF_AY], mesh.vertex_buffer[VTXBUF_AZ],
-                &lx, &ly, &lz);
-
-    MODEL_REAL gx, gy, gz;
-    grad_div_vec(i, j, k, mesh.info, mesh.vertex_buffer[VTXBUF_AX],
-                 mesh.vertex_buffer[VTXBUF_AY], mesh.vertex_buffer[VTXBUF_AZ],
-                 &gx, &gy, &gz);
-
-    const int idx = AC_VTXBUF_IDX(i, j, k, mesh.info);
-    *ind_x        = mesh.vertex_buffer[VTXBUF_UUY][idx] * Bz -
-             mesh.vertex_buffer[VTXBUF_UUZ][idx] * By -
-             mesh.info.real_params[AC_eta] * (-lx + gx);
-    *ind_y = mesh.vertex_buffer[VTXBUF_UUZ][idx] * Bx -
-             mesh.vertex_buffer[VTXBUF_UUX][idx] * Bz -
-             mesh.info.real_params[AC_eta] * (-ly + gy);
-    *ind_z = mesh.vertex_buffer[VTXBUF_UUX][idx] * By -
-             mesh.vertex_buffer[VTXBUF_UUY][idx] * Bx -
-             mesh.info.real_params[AC_eta] * (-lz + gz);
-}
-#endif
-
-#if LINDUCTION
-static inline void
-entropy(const int& i, const int& j, const int& k, const ModelMesh& mesh,
-        MODEL_REAL* entropy)
-{
-    // Unused
-    (void)i;
-    (void)j;
-    (void)k;
-    (void)mesh;
-    (void)entropy;
-}
-#endif
-
-void
-model_rk3(const MODEL_REAL& dt, ModelMesh* mesh)
-{
-#define INT_PARAM(X) (mesh->info.int_params[X])
-
-    ModelMesh* tmp = modelmesh_create(mesh->info);
-
-    // Williamson (1980) NOTE: older version of astaroth used inhomogenous
-    const ModelScalar alphas[] = {.0l, -5.l / 9.l, -153.l / 128.l};
-    const ModelScalar betas[]  = {1.l / 3.l, 15.l / 16.l, 8.l / 15.l};
-
-    for (int step_number = 0; step_number < 3; ++step_number) {
-        const MODEL_REAL alpha = MODEL_REAL(alphas[step_number]);
-        const MODEL_REAL beta  = MODEL_REAL(betas[step_number]);
-
-        boundconds(mesh->info, mesh);
-//#pragma omp parallel for
-        for (int k = INT_PARAM(AC_nz_min); k < INT_PARAM(AC_nz_max); ++k) {
-            for (int j = INT_PARAM(AC_ny_min); j < INT_PARAM(AC_ny_max); ++j) {
-                for (int i = INT_PARAM(AC_nx_min); i < INT_PARAM(AC_nx_max);
-                     ++i) {
-                    const int idx = AC_VTXBUF_IDX(i, j, k, mesh->info);
-
-                    if (step_number == 0) {
-                        for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
-                            tmp->vertex_buffer[w][idx] = 0;
-                    }
-
-                    tmp->vertex_buffer
-                        [VTXBUF_LNRHO]
-                        [idx] = alpha * tmp->vertex_buffer[VTXBUF_LNRHO][idx] +
-                                continuity(i, j, k, *mesh) * dt;
-
-                    MODEL_REAL mom_x, mom_y, mom_z;
-                    momentum(i, j, k, *mesh, &mom_x, &mom_y, &mom_z);
-                    tmp->vertex_buffer[VTXBUF_UUX]
-                                      [idx] = alpha *
-                                                  tmp->vertex_buffer[VTXBUF_UUX]
-                                                                    [idx] +
-                                              mom_x * dt;
-                    tmp->vertex_buffer[VTXBUF_UUY]
-                                      [idx] = alpha *
-                                                  tmp->vertex_buffer[VTXBUF_UUY]
-                                                                    [idx] +
-                                              mom_y * dt;
-                    tmp->vertex_buffer[VTXBUF_UUZ]
-                                      [idx] = alpha *
-                                                  tmp->vertex_buffer[VTXBUF_UUZ]
-                                                                    [idx] +
-                                              mom_z * dt;
-
-#if LINDUCTION
-                    MODEL_REAL indx, indy, indz;
-                    induction(i, j, k, *mesh, &indx, &indy, &indz);
-                    tmp->vertex_buffer[VTXBUF_AX]
-                                      [idx] = alpha *
-                                                  tmp->vertex_buffer[VTXBUF_AX]
-                                                                    [idx] +
-                                              indx * dt;
-                    tmp->vertex_buffer[VTXBUF_AY]
-                                      [idx] = alpha *
-                                                  tmp->vertex_buffer[VTXBUF_AY]
-                                                                    [idx] +
-                                              indy * dt;
-                    tmp->vertex_buffer[VTXBUF_AZ]
-                                      [idx] = alpha *
-                                                  tmp->vertex_buffer[VTXBUF_AZ]
-                                                                    [idx] +
-                                              indz * dt;
-#endif
-
-#if LENTROPY
-    //MODEL_REAL s
-#endif
-                }
-            }
-        }
-//#pragma omp parallel for
-        for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
-            for (int k = INT_PARAM(AC_nz_min); k < INT_PARAM(AC_nz_max); ++k) {
-                for (int j = INT_PARAM(AC_ny_min); j < INT_PARAM(AC_ny_max);
-                     ++j) {
-                    for (int i = INT_PARAM(AC_nx_min); i < INT_PARAM(AC_nx_max);
-                         ++i) {
-                        const int idx = AC_VTXBUF_IDX(i, j, k, mesh->info);
-                        mesh->vertex_buffer[VertexBufferHandle(
-                            w)][idx] += beta *
-                                        tmp->vertex_buffer[VertexBufferHandle(
-                                            w)][idx];
-                    }
-                }
-            }
-        }
-    }
-
-#undef INT_PARAM
-}
-#endif
