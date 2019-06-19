@@ -196,7 +196,7 @@ forcing(int3 globalVertexIdx)
                         (globalVertexIdx.y - ny_min) * dsy,
                         (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
 
-    Scalar magnitude = .1;
+    Scalar magnitude = 0.05;
     // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
     Vector c = magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex
     if (is_valid(c)) { return c; }
@@ -248,7 +248,7 @@ solve(Scalar dt) {
 
     #if LFORCING
     if (step_number == 2) {
-        out_uu = out_uu + forcing(globalVertexIdx);
+        out_uu = out_uu + dt * forcing(globalVertexIdx);
     }
     #endif
 }

@@ -720,7 +720,7 @@ forcing(int3 globalVertexIdx)
                                   (globalVertexIdx.y - get(AC_ny_min)) * get(AC_dsy),
                                   (globalVertexIdx.z - get(AC_nz_min)) * get(AC_dsz)};
 
-    ModelScalar magnitude = .1;
+    ModelScalar magnitude = 0.05;
     // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
     ModelVector c = magnitude * cross(normalized(b - a), (ModelVector){0, 0, 1}); // Vortex
     if (is_valid(c)) {
@@ -780,8 +780,8 @@ solve_alpha_step(const int step_number, const ModelScalar dt, const int i, const
 }
 
 static void
-solve_beta_step(const int step_number, const int i, const int j, const int k, const ModelMesh& in,
-                ModelMesh* out)
+solve_beta_step(const int step_number, const ModelScalar dt, const int i, const int j, const int k,
+                const ModelMesh& in, ModelMesh* out)
 {
     const int idx = AC_VTXBUF_IDX(i, j, k, in.info);
 
@@ -795,9 +795,9 @@ solve_beta_step(const int step_number, const int i, const int j, const int k, co
 #if LFORCING
     if (step_number == 2) {
         ModelVector force = forcing((int3){i, j, k});
-        out->vertex_buffer[VTXBUF_UUX][idx] += force.x;
-        out->vertex_buffer[VTXBUF_UUY][idx] += force.y;
-        out->vertex_buffer[VTXBUF_UUZ][idx] += force.z;
+        out->vertex_buffer[VTXBUF_UUX][idx] += force.x * dt;
+        out->vertex_buffer[VTXBUF_UUY][idx] += force.y * dt;
+        out->vertex_buffer[VTXBUF_UUZ][idx] += force.z * dt;
     }
 #endif
 }
@@ -822,7 +822,7 @@ model_rk3_step(const int step_number, const ModelScalar dt, ModelMesh* mesh)
     for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
         for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
             for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
-                solve_beta_step(step_number, i, j, k, *tmp, mesh);
+                solve_beta_step(step_number, dt, i, j, k, *tmp, mesh);
             }
         }
     }
@@ -852,7 +852,7 @@ model_rk3(const ModelScalar dt, ModelMesh* mesh)
         for (int k = get(AC_nz_min); k < get(AC_nz_max); ++k) {
             for (int j = get(AC_ny_min); j < get(AC_ny_max); ++j) {
                 for (int i = get(AC_nx_min); i < get(AC_nx_max); ++i) {
-                    solve_beta_step(step_number, i, j, k, *tmp, mesh);
+                    solve_beta_step(step_number, dt, i, j, k, *tmp, mesh);
                 }
             }
         }
