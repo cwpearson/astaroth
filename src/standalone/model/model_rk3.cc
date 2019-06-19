@@ -616,8 +616,9 @@ momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
               (laplace_vec(uu) + ModelScalar(1. / 3.) * gradient_of_divergence(uu) +
                ModelScalar(2.) * mul(S, gradient(lnrho))) + get(AC_zeta) * gradient_of_divergence(uu);
     //#endif
-#endif
     return mom;
+#endif
+    return (ModelVector){NAN, NAN, NAN}; // TODO HYDRO ONLY MODEL SOLUTION
 }
 
 static inline ModelVector
