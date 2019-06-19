@@ -282,6 +282,8 @@ static int scope_start = 0;
  * =============================================================================
  */
 
+static int compound_statement_nests = 0;
+
 static void
 traverse(const ASTNode* node)
 {
@@ -296,6 +298,9 @@ traverse(const ASTNode* node)
     if (!inside_declaration && translate(node->prefix))
         printf("%s", translate(node->prefix));
 
+    if (node->type == NODE_COMPOUND_STATEMENT)
+        ++compound_statement_nests;
+
     // BOILERPLATE START////////////////////////////////////////////////////////
     if (node->type == NODE_TYPE_QUALIFIER && node->token == KERNEL)
         inside_kernel = true;
@@ -309,7 +314,7 @@ traverse(const ASTNode* node)
     // indices)
     const char* kernel_builtin_variables_boilerplate = "GEN_KERNEL_BUILTIN_VARIABLES_"
                                                        "BOILERPLATE();";
-    if (inside_kernel && node->type == NODE_COMPOUND_STATEMENT) {
+    if (inside_kernel && node->type == NODE_COMPOUND_STATEMENT && compound_statement_nests == 1) {
         printf("%s ", kernel_builtin_variables_boilerplate);
 
         for (int i = 0; i < num_symbols; ++i) {
@@ -399,7 +404,7 @@ traverse(const ASTNode* node)
         printf(")"); // Closing bracket of IDX()
 
     // Generate writeback boilerplate for OUT fields
-    if (inside_kernel && node->type == NODE_COMPOUND_STATEMENT) {
+    if (inside_kernel && node->type == NODE_COMPOUND_STATEMENT && compound_statement_nests == 1) {
         for (int i = 0; i < num_symbols; ++i) {
             if (symbol_table[i].type_qualifier == OUT) {
                 printf("WRITE_OUT(%s%s, %s);\n", inout_name_prefix, symbol_table[i].identifier,
@@ -453,6 +458,9 @@ traverse(const ASTNode* node)
             printf("%s ", translate(node->rhs->postfix));
         }
     }
+
+    if (node->type == NODE_COMPOUND_STATEMENT)
+        --compound_statement_nests;
 
     if (node->type == NODE_FUNCTION_PARAMETER_DECLARATION)
         inside_function_parameter_declaration = false;
