@@ -202,6 +202,7 @@ run_simulation(void)
     load_config(&mesh_info);
 
     AcMesh* mesh = acmesh_create(mesh_info);
+    //TODO: This need to be possible to define in astaroth.conf 
     acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
 
     acInit(mesh_info);

@@ -32,7 +32,7 @@ Edit `config/astaroth.conf` to change the numerical setup.
 
 1. `source sourceme.sh` to add relevant directories to the `PATH`
 1. `ac_mkbuilddir.sh -b my_build_dir/` to set up a custom build directory. There are also other options available. See `ac_mkbuilddir.sh -h` for more. 
-1. `$AC_HOME/scripts/compile_acc.sh` to generate kernels from the Domain Specific Language 
+1. `compile_acc.sh` to generate kernels from the Domain Specific Language 
 1. `cd my_build_dir/` 
 1. `make -j`
 1. `./ac_run <options>`
