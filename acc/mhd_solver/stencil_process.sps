@@ -2,7 +2,7 @@
 #define LENTROPY (1)
 #define LTEMPERATURE (0)
 #define LGRAVITY (0)
-#define LFORCING (0)
+#define LFORCING (1)
 
 
 // Declare uniforms (i.e. device constants)
@@ -185,27 +185,24 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
 }
 #endif
 
+#if LFORCING
 Vector
 forcing(int3 globalVertexIdx)
 {
-    #if LFORCING
-        Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
-                                         globalGrid.n.y * dsy,
-                                         globalGrid.n.z * dsz}; // source (origin)
-        Vector b = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                            (globalVertexIdx.y - ny_min) * dsy,
-                            (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
+    Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
+                                     globalGrid.n.y * dsy,
+                                     globalGrid.n.z * dsz}; // source (origin)
+    Vector b = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                        (globalVertexIdx.y - ny_min) * dsy,
+                        (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
 
-        Scalar magnitude = 0.1;
-        // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
-        Vector c = magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex
-        if (is_valid(c)) { return c; }
-        else             { return (Vector){0, 0, 0}; }
-
-    #else
-        return (Vector){0, 0, 0};
-    #endif // LFORCING
+    Scalar magnitude = .1;
+    // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
+    Vector c = magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex
+    if (is_valid(c)) { return c; }
+    else             { return (Vector){0, 0, 0}; }
 }
+#endif // LFORCING
 
 // Declare input and output arrays using locations specified in the
 // array enum in astaroth.h
@@ -240,12 +237,18 @@ solve(Scalar dt) {
     #endif
 
     #if LENTROPY
-        out_uu = rk3(out_uu, uu, momentum(uu, lnrho, ss, aa) + forcing(globalVertexIdx), dt);
+        out_uu  = rk3(out_uu, uu, momentum(uu, lnrho, ss, aa), dt);
         out_ss  = rk3(out_ss, ss, entropy(ss, uu, lnrho, aa), dt);
     #elif LTEMPERATURE
-        out_uu =rk3(out_uu, uu, momentum(uu, lnrho, tt), dt);
+        out_uu = rk3(out_uu, uu, momentum(uu, lnrho, tt), dt);
         out_tt = rk3(out_tt, tt, heat_transfer(uu, lnrho, tt), dt);
     #else
         out_uu = rk3(out_uu, uu, momentum(uu, lnrho), dt);
+    #endif
+
+    #if LFORCING
+    if (step_number == 2) {
+        out_uu = out_uu + forcing(globalVertexIdx);
+    }
     #endif
 }
