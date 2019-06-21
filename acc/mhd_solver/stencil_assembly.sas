@@ -25,7 +25,7 @@ der6x_upwd(in Scalar vertex),
 }
 
 Preprocessed Scalar
-der6x_upwd(in Scalar vertex), 
+der6y_upwd(in Scalar vertex), 
 {
     return (Scalar){(1.0/60.0)*inv_ds* (
                     - 20.0* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
@@ -36,7 +36,7 @@ der6x_upwd(in Scalar vertex),
 }
 
 Preprocessed Scalar
-der6x_upwd(in Scalar vertex), 
+der6z_upwd(in Scalar vertex), 
 {
     return (Scalar){(1.0/60.0)*inv_ds* (
                     - 20.0* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
@@ -44,17 +44,6 @@ der6x_upwd(in Scalar vertex),
                     -  6.0*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+2] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-2])
                     +       vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+3] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-3];
                     )}
-}
-
-Preprocessed Scalar
-der6_upwd(in Scalar vertex)
-{
-    der6 =  
-         
-         
-         
-
-    return der6;
 }
 
 Preprocessed Matrix

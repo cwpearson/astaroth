@@ -3,6 +3,7 @@
 #define LTEMPERATURE (0)
 #define LGRAVITY (0)
 #define LFORCING (1)
+#define LUPWD (0)
 
 
 // Declare uniforms (i.e. device constants)
@@ -27,6 +28,14 @@ uniform int ny;
 uniform int nz;
 
 
+Scalar
+upwd_der6(in Vector uu, in Scalar lnrho)
+{
+    return (Scalar){uu.x*der6x_upwd(lnrho) + uu.y*der6y_upwd(lnrho) + uu.z*der6z_upwd(lnrho)}
+}
+
+
+
 Vector
 value(in Vector uu)
 {
@@ -41,7 +50,12 @@ gradients(in Vector uu)
 
 Scalar
 continuity(in Vector uu, in Scalar lnrho) {
-    return -dot(value(uu), gradient(lnrho)) - divergence(uu);
+    return -dot(value(uu), gradient(lnrho)) 
+#if LUPWD
+           //This is a corrective hyperdiffusion term for upwinding. 
+           + upwd_der6(uu, lnrho)
+#ENDIF
+           - divergence(uu);
 }
 
 #if LENTROPY
