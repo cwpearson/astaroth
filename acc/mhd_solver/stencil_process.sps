@@ -39,9 +39,9 @@ value(in Vector uu)
 Scalar
 upwd_der6(in Vector uu, in Scalar lnrho)
 {
-    Scalar uux = value(uu).x;
-    Scalar uuy = value(uu).y;
-    Scalar uuz = value(uu).z;
+    Scalar uux = fabs(value(uu).x);
+    Scalar uuy = fabs(value(uu).y);
+    Scalar uuz = fabs(value(uu).z);
     return (Scalar){uux*der6x_upwd(lnrho) + uuy*der6y_upwd(lnrho) + uuz*der6z_upwd(lnrho)};
 }
 #endif
