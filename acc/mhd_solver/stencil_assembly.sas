@@ -14,36 +14,39 @@ gradient(in Scalar vertex)
 }
 
 Preprocessed Scalar
-der6x_upwd(in Scalar vertex), 
+der6x_upwd(in Scalar vertex) 
 {
-    return (Scalar){(1.0/60.0)*inv_ds* (
-                    - 20.0* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
-                    + 15.0*(vertex[vertexIdx.x, vertexIdx.y+1, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-1, vertexIdx.z]) 
-                    -  6.0*(vertex[vertexIdx.x, vertexIdx.y+2, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-2, vertexIdx.z])
-                    +       vertex[vertexIdx.x, vertexIdx.y+3, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-3, vertexIdx.z];
-                    )}
+    Scalar inv_ds = DCONST_REAL(AC_inv_dsx);
+
+    return (Scalar){  Scalar(1.0/60.0)*inv_ds* (
+                    - Scalar(20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
+                    + Scalar(15.0)*(vertex[vertexIdx.x, vertexIdx.y+1, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-1, vertexIdx.z]) 
+                    - Scalar( 6.0)*(vertex[vertexIdx.x, vertexIdx.y+2, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-2, vertexIdx.z])
+                    +       vertex[vertexIdx.x, vertexIdx.y+3, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-3, vertexIdx.z])};
 }
 
 Preprocessed Scalar
-der6y_upwd(in Scalar vertex), 
+der6y_upwd(in Scalar vertex) 
 {
-    return (Scalar){(1.0/60.0)*inv_ds* (
-                    - 20.0* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
-                    + 15.0*(vertex[vertexIdx.x, vertexIdx.y+1, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-1, vertexIdx.z]) 
-                    -  6.0*(vertex[vertexIdx.x, vertexIdx.y+2, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-2, vertexIdx.z])
-                    +       vertex[vertexIdx.x, vertexIdx.y+3, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-3, vertexIdx.z];
-                    )}
+    Scalar inv_ds = DCONST_REAL(AC_inv_dsy);
+
+    return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
+                    -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
+                    +Scalar( 15.0)*(vertex[vertexIdx.x, vertexIdx.y+1, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-1, vertexIdx.z]) 
+                    -Scalar(  6.0)*(vertex[vertexIdx.x, vertexIdx.y+2, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-2, vertexIdx.z])
+                    +       vertex[vertexIdx.x, vertexIdx.y+3, vertexIdx.z] + vertex[vertexIdx.x, vertexIdx.y-3, vertexIdx.z])};
 }
 
 Preprocessed Scalar
-der6z_upwd(in Scalar vertex), 
+der6z_upwd(in Scalar vertex) 
 {
-    return (Scalar){(1.0/60.0)*inv_ds* (
-                    - 20.0* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
-                    + 15.0*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+1] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-1]) 
-                    -  6.0*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+2] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-2])
-                    +       vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+3] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-3];
-                    )}
+    Scalar inv_ds = DCONST_REAL(AC_inv_dsz);
+
+    return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
+                    -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z] 
+                    +Scalar( 15.0)*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+1] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-1]) 
+                    -Scalar(  6.0)*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+2] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-2])
+                    +       vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+3] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-3])};
 }
 
 Preprocessed Matrix
