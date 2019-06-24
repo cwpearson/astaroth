@@ -3,7 +3,7 @@
 #define LTEMPERATURE (0)
 #define LGRAVITY (0)
 #define LFORCING (1)
-#define LUPWD (1)
+#define LUPWD (0)
 
 
 // Declare uniforms (i.e. device constants)

@@ -1,4 +1,7 @@
 
+#define LUPWD (0)
+
+
 Preprocessed Scalar
 value(in Scalar vertex)
 {
@@ -12,6 +15,8 @@ gradient(in Scalar vertex)
                     dery(vertexIdx, vertex),
                     derz(vertexIdx, vertex)};
 }
+
+#if LUPWD
 
 Preprocessed Scalar
 der6x_upwd(in Scalar vertex) 
@@ -48,6 +53,8 @@ der6z_upwd(in Scalar vertex)
                     -Scalar(  6.0)*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+2] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-2])
                     +       vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+3] + vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-3])};
 }
+
+#endif
 
 Preprocessed Matrix
 hessian(in Scalar vertex)

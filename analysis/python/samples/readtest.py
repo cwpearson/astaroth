@@ -169,8 +169,8 @@ if '1d' in sys.argv:
 if 'sl' in sys.argv:
     #maxfiles = 200002
     #stride = 10000
-    maxfiles = 5001
-    stride = 100
+    maxfiles = 50001
+    stride = 500
     for i in range(0, maxfiles, stride):
         mesh = ad.read.Mesh(i, fdir=meshdir) 
         print(" %i / %i" % (i, maxfiles))
@@ -178,13 +178,13 @@ if 'sl' in sys.argv:
             uu_tot = np.sqrt(mesh.uu[0]**2.0 + mesh.uu[1]**2.0 + mesh.uu[2]**2.0)
 
             if 'lim' in sys.argv:
-                vis.slices.plot_3(mesh, mesh.lnrho,         title = r'$\ln \rho$', bitmap = True, fname = 'lnrho', colrange=[-0.02, 0.0])
-                vis.slices.plot_3(mesh, np.exp(mesh.lnrho), title = r'$\rho$', bitmap = True, fname = 'rho', colrange=[0.97, 1.0])
-                vis.slices.plot_3(mesh, mesh.uu[0],         title = r'$u_x$', bitmap = True, fname = 'uux', colrange=[-0.002, 0.002])
-                vis.slices.plot_3(mesh, mesh.uu[1],         title = r'$u_y$', bitmap = True, fname = 'uuy', colrange=[-1.0e-20, 1.0e-20])
-                vis.slices.plot_3(mesh, mesh.uu[2],         title = r'$u_z$', bitmap = True, fname = 'uuz', colrange=[-0.002, 0.002])
-                vis.slices.plot_3(mesh, np.exp(mesh.lnrho), title = r'$N_\mathrm{col}$', bitmap = True, fname = 'colden', slicetype = 'sum', colrange=[0.0, 100.0])
-                vis.slices.plot_3(mesh, uu_tot,             title = r'$|u|$', bitmap = True, fname = 'uutot', colrange=[0.00, 0.004])
+                vis.slices.plot_3(mesh, mesh.lnrho,         title = r'$\ln \rho$', bitmap = True, fname = 'lnrho', colrange=[0.7, 1.15])
+                vis.slices.plot_3(mesh, np.exp(mesh.lnrho), title = r'$\rho$', bitmap = True, fname = 'rho', colrange=[2.0, 4.0])
+                vis.slices.plot_3(mesh, mesh.uu[0],         title = r'$u_x$', bitmap = True, fname = 'uux', colrange=[-1.00, 1.00])
+                vis.slices.plot_3(mesh, mesh.uu[1],         title = r'$u_y$', bitmap = True, fname = 'uuy', colrange=[-1.00, 1.00])
+                vis.slices.plot_3(mesh, mesh.uu[2],         title = r'$u_z$', bitmap = True, fname = 'uuz', colrange=[-1.00, 1.00])
+                vis.slices.plot_3(mesh, np.exp(mesh.lnrho), title = r'$N_\mathrm{col}$', bitmap = True, fname = 'colden', slicetype = 'sum', colrange=[330.0, 395.0])
+                vis.slices.plot_3(mesh, uu_tot,             title = r'$|u|$', bitmap = True, fname = 'uutot', colrange=[0.00, 1.2])
             else: 
                 vis.slices.plot_3(mesh, mesh.lnrho,         title = r'$\ln \rho$', bitmap = True, fname = 'lnrho')
                 vis.slices.plot_3(mesh, np.exp(mesh.lnrho), title = r'$\rho$', bitmap = True, fname = 'rho')
