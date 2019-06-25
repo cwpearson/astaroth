@@ -75,7 +75,7 @@ printInt3(const int3 vec)
 AcResult
 acInit(const AcMeshInfo& config)
 {
-    Acresult res=acGetDevice();
+    AcResult res=acGetDevice();
     res=acInitialize(config);
     return AC_SUCCESS;
 }
@@ -288,12 +288,12 @@ acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& sta
     /*
     // A skeleton function for computing integrations with arbitrary subblocks
     // Uncommenting the following should work with a single GPU.
-    const int3 start = (int3){STENCIL_ORDER / 2, STENCIL_ORDER / 2, STENCIL_ORDER / 2};
-    const int3 end   = (int3){STENCIL_ORDER / 2 + subgrid.n.x, STENCIL_ORDER / 2 + subgrid.n.y,
-                            STENCIL_ORDER / 2 + subgrid.n.z};
-    rkStep(devices[0], STREAM_PRIMARY, isubstep, start, end, dt);
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y,
+                              NGHOST + subgrid.n.z};
     */
-    return AC_FAILURE;
+    rkStep(devices[0], STREAM_PRIMARY, isubstep, start, end, dt);
+    return AC_SUCCESS;
 }
 
 AcResult

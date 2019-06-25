@@ -198,7 +198,7 @@ extern "C" {
 
 #ifdef LDENSITY 
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_DENSITY), 
+        FUNC(VTXBUF_LNRHO), 
 #else
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC)
 #endif
