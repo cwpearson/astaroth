@@ -3,7 +3,7 @@
 #define LTEMPERATURE (0)
 #define LGRAVITY (0)
 #define LFORCING (1)
-#define LUPWD (0)
+#define LUPWD (1)
 
 
 // Declare uniforms (i.e. device constants)
@@ -204,6 +204,19 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
 #endif
 
 #if LFORCING
+
+Vector
+simple_vortex_forcing(Vector a, Vector b, Scalar magnitude)
+{
+    return magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex   
+}
+
+Vector
+simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude)
+{
+    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow   
+}
+
 Vector
 forcing(int3 globalVertexIdx)
 {
@@ -215,8 +228,11 @@ forcing(int3 globalVertexIdx)
                         (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
 
     Scalar magnitude = 0.05;
-    // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
-    Vector c = magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex
+
+    //Determine that forcing funtion type at this point. 
+    Vector c = simple_vortex_forcing(a, b, magnitude);
+    //Vector c = simple_outward_flow_forcing(a, b, magnitude);
+
     if (is_valid(c)) { return c; }
     else             { return (Vector){0, 0, 0}; }
 }
