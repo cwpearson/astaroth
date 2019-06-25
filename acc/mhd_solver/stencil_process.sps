@@ -2,8 +2,8 @@
 #define LENTROPY (1)
 #define LTEMPERATURE (0)
 #define LGRAVITY (0)
-#define LFORCING (0)
-#define LUPWD (0)
+#define LFORCING (1)
+#define LUPWD (1)
 
 
 // Declare uniforms (i.e. device constants)
@@ -203,7 +203,11 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
 }
 #endif
 
+
+
 #if LFORCING
+
+
 
 Vector
 simple_vortex_forcing(Vector a, Vector b, Scalar magnitude)
@@ -217,24 +221,52 @@ simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude)
     return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow   
 }
 
+
+// The Pencil Code hel_vec(), manual Eq. 222, inspired forcing function with adjustable helicity
+Vector
+helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vector ff_im, Scalar phi)
+{
+    Scalar cos_phi = cos(phi);
+    Scalar sin_phi = sin(phi);
+    Scalar cos_k_dox_x = cos(dot(k_force, xx));
+    Scalar sin_k_dox_x = sin(dot(k_force, xx));
+    Scalar real_comp = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
+    Scalar imag_comp = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
+
+
+    Vector force = (Vector){ ff_re.x*real_comp - ff_im.x*imag_comp,
+                             ff_re.y*real_comp - ff_im.y*imag_comp,
+                             ff_re.z*real_comp - ff_im.z*imag_comp}; 
+
+    return force;
+}
+
 Vector
 forcing(int3 globalVertexIdx)
 {
     Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
                                      globalGrid.n.y * dsy,
                                      globalGrid.n.z * dsz}; // source (origin)
-    Vector b = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+    Vector xx = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                         (globalVertexIdx.y - ny_min) * dsy,
                         (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
 
+
+    //Placeholders until determined properly
     Scalar magnitude = 0.05;
+    Vector k_force = (Vector){2.0, 0.0, 0.0};
+    Vector ff_re   = (Vector){0.0, 0.5, 0.0};
+    Vector ff_im   = (Vector){0.0, 0.8666, 0.0};
+    Scalar phase   = Scalar(0.79); 
+
 
     //Determine that forcing funtion type at this point. 
-    Vector c = simple_vortex_forcing(a, b, magnitude);
-    //Vector c = simple_outward_flow_forcing(a, b, magnitude);
+    //Vector force = simple_vortex_forcing(a, xx, magnitude);
+    //Vector force = simple_outward_flow_forcing(a, xx, magnitude);
+    Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phi);
 
-    if (is_valid(c)) { return c; }
-    else             { return (Vector){0, 0, 0}; }
+    if (is_valid(force)) { return force; }
+    else                 { return (Vector){0, 0, 0}; }
 }
 #endif // LFORCING
 
