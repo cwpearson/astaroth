@@ -247,7 +247,7 @@ run_simulation(void)
         //Generate a forcing vectors before canculating an integration step. 
         //Placeholders until determined properly
         AcReal  magnitude = 0.05;
-        AcReal  phase   = Scalar(0.79); 
+        AcReal  phase   = 0.79; 
         AcReal3 k_force = (AcReal3){2.0, 0.0, 0.0};
         AcReal3 ff_hel_re   = (AcReal3){0.0, 0.5, 0.0};
         AcReal3 ff_hel_im   = (AcReal3){0.0, 0.8666, 0.0};

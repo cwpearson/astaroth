@@ -253,11 +253,11 @@ forcing(int3 globalVertexIdx)
 
 
     //Placeholders until determined properly
-    //Scalar magnitude = 0.05;
-    //Vector k_force = (Vector){2.0, 0.0, 0.0};
-    //Vector ff_re   = (Vector){0.0, 0.5, 0.0};
-    //Vector ff_im   = (Vector){0.0, 0.8666, 0.0};
-    //Scalar phase   = Scalar(0.79); 
+    Scalar magnitude = DCONST_REAL(AC_forcing_magnitude);
+    Scalar phase     = DCONST_REAL(AC_forcing_phase);   
+    Vector k_force   = (Vector){  DCONST_REAL(AC_k_forcex),   DCONST_REAL(AC_k_forcey),   DCONST_REAL(AC_k_forcez)};
+    Vector ff_re     = (Vector){DCONST_REAL(AC_ff_hel_rex), DCONST_REAL(AC_ff_hel_rey), DCONST_REAL(AC_ff_hel_rez)};
+    Vector ff_im     = (Vector){DCONST_REAL(AC_ff_hel_imx), DCONST_REAL(AC_ff_hel_imy), DCONST_REAL(AC_ff_hel_imz)};
 
 
     //Determine that forcing funtion type at this point. 
