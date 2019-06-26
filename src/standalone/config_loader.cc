@@ -152,16 +152,11 @@ update_config(AcMeshInfo* config)
                                       config->real_params[AC_G_CONST];
     config->real_params[AC_sq2GM_star] = AcReal(sqrt(AcReal(2) * config->real_params[AC_GM_star]));
 
-    const bool print_config = true;
-#ifdef VERBOSE_PRINT
-    if (print_config) {
-        printf("###############################################################"
-               "\n");
-        printf("Config dimensions recalculated:\n");
-        print(*config);
-        printf("###############################################################"
-               "\n");
-    }
+#if VERBOSE_PRINTING
+    printf("###############################################################\n");
+    printf("Config dimensions recalculated:\n");
+    print(*config);
+    printf("###############################################################\n");
 #endif
 }
 

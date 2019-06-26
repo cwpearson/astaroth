@@ -49,6 +49,7 @@ extern "C" {
 #define AUTO_OPTIMIZE (0) // DEPRECATED TODO remove
 #define BOUNDCONDS_OPTIMIZE (0)
 #define GENERATE_BENCHMARK_DATA (0)
+#define VERBOSE_PRINTING (1)
 
 // Device info
 #define REGISTERS_PER_THREAD (255)
@@ -347,13 +348,16 @@ typedef struct {
  * Astaroth interface
  * =============================================================================
  */
+
+/** Checks whether there are any CUDA devices available. Returns AC_SUCCESS if there is 1 or more,
+    AC_FAILURE otherwise. */
+AcResult acCheckDeviceAvailability(void);
+
 /** Starting point of all GPU computation. Handles the allocation and
 initialization of *all memory needed on all GPUs in the node*. In other words,
 setups everything GPU-side so that calling any other GPU interface function
 afterwards does not result in illegal memory accesses. */
 AcResult acInit(const AcMeshInfo& mesh_info);
-AcResult acCheckDeviceAvail();
-AcResult acInitialize(const AcMeshInfo& mesh_info);
 
 /** Splits the host_mesh and distributes it among the GPUs in the node */
 AcResult acLoad(const AcMesh& host_mesh);

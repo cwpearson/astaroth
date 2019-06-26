@@ -73,18 +73,21 @@ printInt3(const int3 vec)
 }
 
 AcResult
-acInit(const AcMeshInfo& config)
+acCheckDeviceAvailability(void)
 {
-    AcResult res=acGetDevice();
-    res=acInitialize(config);
-    return AC_SUCCESS;
+    int device_count; // Separate from num_devices to avoid side effects
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&device_count));
+    if (device_count > 0) 
+        return AC_SUCCESS;
+    else
+        return AC_FAILURE;
 }
 
 AcResult
-acCheckDeviceAvail()
+acInit(const AcMeshInfo& config)
 {
-    // Check devices
-    cudaGetDeviceCount(&num_devices);
+    // Get num_devices
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&num_devices));
     if (num_devices < 1) {
         ERROR("No CUDA devices found!");
         return AC_FAILURE;
@@ -97,11 +100,6 @@ acCheckDeviceAvail()
         WARNING("MULTIGPU_ENABLED was false. Using only one device");
         num_devices = 1; // Use only one device if multi-GPU is not enabled
     }
-    return AC_SUCCESS;
-}
-AcResult
-acInitialize(const AcMeshInfo& config)
-{
     // Check that num_devices is divisible with AC_nz. This makes decomposing the
     // problem domain to multiple GPUs much easier since we do not have to worry
     // about remainders
@@ -121,14 +119,14 @@ acInitialize(const AcMeshInfo& config)
     ERRCHK_ALWAYS(subgrid.n.x >= STENCIL_ORDER);
     ERRCHK_ALWAYS(subgrid.n.y >= STENCIL_ORDER);
     ERRCHK_ALWAYS(subgrid.n.z >= STENCIL_ORDER);
-#ifndef PENCIL_ASTAROTH
+
     // clang-format off
     printf("Grid m ");   printInt3(grid.m);    printf("\n");
     printf("Grid n ");   printInt3(grid.n);    printf("\n");
     printf("Subrid m "); printInt3(subgrid.m); printf("\n");
     printf("Subrid n "); printInt3(subgrid.n); printf("\n");
     // clang-format on
-#endif
+
     // Initialize the devices
     for (int i = 0; i < num_devices; ++i) {
         createDevice(i, subgrid_config, &devices[i]);
