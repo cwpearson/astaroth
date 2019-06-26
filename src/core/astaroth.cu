@@ -36,7 +36,7 @@ const char* realparam_names[] = {AC_FOR_REAL_PARAM_TYPES(AC_GEN_STR)};
 const char* vtxbuf_names[]    = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 
 static const int MAX_NUM_DEVICES       = 32;
-static int num_devices                 = 1;
+static int num_devices                 = 0;
 static Device devices[MAX_NUM_DEVICES] = {};
 
 static Grid
