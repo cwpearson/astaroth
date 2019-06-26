@@ -153,6 +153,7 @@ update_config(AcMeshInfo* config)
     config->real_params[AC_sq2GM_star] = AcReal(sqrt(AcReal(2) * config->real_params[AC_GM_star]));
 
     const bool print_config = true;
+#ifndef PENCIL_ASTAROTH
     if (print_config) {
         printf("###############################################################"
                "\n");
@@ -161,6 +162,7 @@ update_config(AcMeshInfo* config)
         printf("###############################################################"
                "\n");
     }
+#endif
 }
 
 /**
