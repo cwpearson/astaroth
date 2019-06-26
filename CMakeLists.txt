@@ -48,8 +48,8 @@ message(STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER})
 message(STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER_ID})
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.4)
-        message(FATAL_ERROR "GCC version 5.4 or higher required")    
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0) # Because of GCC bug 48891
+        message(FATAL_ERROR "GCC version 6.0 or higher required")    
     endif()
 endif()
 
