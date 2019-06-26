@@ -11,6 +11,6 @@
   #else
     #define AC_DOUBLE_PRECISION 0
   #endif
-  #define USER_PROVIDED
+  #define USER_PROVIDED_DEFINES
 #endif
 
