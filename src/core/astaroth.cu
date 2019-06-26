@@ -493,3 +493,30 @@ acSynchronize(void)
 
     return AC_SUCCESS;
 }
+
+//Tool for loadin forcing vector information into the device memory
+AcResult
+acForcingVec(const AcReal magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re, 
+             const AcReal3 ff_hel_im, const AcReal phase)
+{
+
+    loadDeviceConstant(device[i], AC_forcing_magnitude, AC_forcing_magnitude);
+    loadDeviceConstant(device[i], AC_forcing_phase,     AC_forcing_phase    );
+
+    loadDeviceConstant(device[i], AC_k_forcex, k_force.x);
+    loadDeviceConstant(device[i], AC_k_forcey, k_force.y);
+    loadDeviceConstant(device[i], AC_k_forcez, k_force.z);
+
+
+    loadDeviceConstant(device[i], AC_ff_hel_rex, ff_hel_re.x);
+    loadDeviceConstant(device[i], AC_ff_hel_rey, ff_hel_re.y);
+    loadDeviceConstant(device[i], AC_ff_hel_rez, ff_hel_re.z);
+                                                         
+    loadDeviceConstant(device[i], AC_ff_hel_imx, ff_hel_im.x);
+    loadDeviceConstant(device[i], AC_ff_hel_imy, ff_hel_im.y);
+    loadDeviceConstant(device[i], AC_ff_hel_imz, ff_hel_im.z);
+
+    return AC_SUCCESS;
+}
+
+

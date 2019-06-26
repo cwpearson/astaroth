@@ -236,10 +236,24 @@ run_simulation(void)
     AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
+
+
     /* Step the simulation */
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
+
+#if LFORCING
+        //Generate a forcing vectors before canculating an integration step. 
+        //Placeholders until determined properly
+        AcReal  magnitude = 0.05;
+        AcReal  phase   = Scalar(0.79); 
+        AcReal3 k_force = (AcReal3){2.0, 0.0, 0.0};
+        AcReal3 ff_hel_re   = (AcReal3){0.0, 0.5, 0.0};
+        AcReal3 ff_hel_im   = (AcReal3){0.0, 0.8666, 0.0};
+        acForcingVec(magnitude, k_force, ff_hel_re,ff_hel_im, phase);
+#endif
+
         acIntegrate(dt);
 
         t_step += dt;

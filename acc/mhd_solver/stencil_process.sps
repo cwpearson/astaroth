@@ -253,11 +253,11 @@ forcing(int3 globalVertexIdx)
 
 
     //Placeholders until determined properly
-    Scalar magnitude = 0.05;
-    Vector k_force = (Vector){2.0, 0.0, 0.0};
-    Vector ff_re   = (Vector){0.0, 0.5, 0.0};
-    Vector ff_im   = (Vector){0.0, 0.8666, 0.0};
-    Scalar phase   = Scalar(0.79); 
+    //Scalar magnitude = 0.05;
+    //Vector k_force = (Vector){2.0, 0.0, 0.0};
+    //Vector ff_re   = (Vector){0.0, 0.5, 0.0};
+    //Vector ff_im   = (Vector){0.0, 0.8666, 0.0};
+    //Scalar phase   = Scalar(0.79); 
 
 
     //Determine that forcing funtion type at this point. 
