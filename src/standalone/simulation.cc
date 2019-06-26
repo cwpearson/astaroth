@@ -60,6 +60,44 @@ print_diagnostics(const AcMesh& mesh, const int& step, const AcReal& dt)
 }
 */
 
+//PC Manual Eq. 223 
+static inline void
+helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcReal3 k_force, const AcReal3 e_force, const AcReal relhel)
+{
+    // k dot e 
+    AcReal3 kdote;
+    kdote.x = k_force.x * e_force.x;
+    kdote.y = k_force.y * e_force.y;
+    kdote.z = k_force.z * e_force.z;
+
+    // k cross e
+    AcReal3 k_cross_e; 
+    k_cross_e.x=k_force.y*e_force.z-k_force.z*e_force.y;
+    k_cross_e.y=k_force.z*e_force.x-k_force.x*e_force.z;
+    k_cross_e.z=k_force.x*e_force.y-k_force.y*e_force.x;
+
+    // k cross k cross e
+    AcReal3 k_cross_k_cross_e; 
+    k_cross_k_cross_e.x=k_force.y*k_cross_e.z-k_force.z*k_cross_e.y;
+    k_cross_k_cross_e.y=k_force.z*k_cross_e.x-k_force.x*k_cross_e.z;
+    k_cross_k_cross_e.z=k_force.x*k_cross_e.y-k_force.y*k_cross_e.x;
+
+    // abs(k)
+    AcReal kabs = sqrt(k_force.x*k_force.x + k_force.y*k_force.y + k_force.z*k_force.z);
+
+    AcReal denominator = sqrt(AcReal(1.0) + relhel*relhel)*(kabs*kabs)
+                         *sqrt(AcReal(1.0) - (kdote.x*kdote.x + kdote.y*kdote.y + kdote.z*kdote.z)/(kabs*kabs)); 
+
+    *ff_hel_re = (AcReal3){-relhel*kabs*k_cross_e.x/denominator, 
+                           -relhel*kabs*k_cross_e.y/denominator,
+                           -relhel*kabs*k_cross_e.z/denominator};
+
+    *ff_hel_im = (AcReal3){k_cross_k_cross_e.x/denominator, 
+                           k_cross_k_cross_e.y/denominator,
+                           k_cross_k_cross_e.z/denominator};
+
+}
+
 // Write all setting info into a separate ascii file. This is done to guarantee
 // that we have the data specifi information in the thing, even though in
 // principle these things are in the astaroth.conf.
@@ -248,9 +286,13 @@ run_simulation(void)
         //Placeholders until determined properly
         AcReal  magnitude = 0.05;
         AcReal  phase   = 0.79; 
+        AcReal  relhel = 0.5;
         AcReal3 k_force = (AcReal3){2.0, 0.0, 0.0};
-        AcReal3 ff_hel_re   = (AcReal3){0.0, 0.5, 0.0};
-        AcReal3 ff_hel_im   = (AcReal3){0.0, 0.8666, 0.0};
+        AcReal3 e_force = (AcReal3){0.0, 2.0, 0.0};
+        AcReal3 ff_hel_re, ff_hel_im;
+        helical_forcing_special_vector(&ff_hel_re, &ff_hel_im, k_force, e_force, relhel);
+        //AcReal3 ff_hel_re   = (AcReal3){0.0, 0.5, 0.0};
+        //AcReal3 ff_hel_im   = (AcReal3){0.0, 0.8666, 0.0};
         acForcingVec(magnitude, k_force, ff_hel_re,ff_hel_im, phase);
 #endif
 
