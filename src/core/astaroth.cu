@@ -75,6 +75,14 @@ printInt3(const int3 vec)
 AcResult
 acInit(const AcMeshInfo& config)
 {
+    Acresult res=acGetDevice();
+    res=acInitialize(config);
+    return AC_SUCCESS;
+}
+
+AcResult
+acCheckDeviceAvail()
+{
     // Check devices
     cudaGetDeviceCount(&num_devices);
     if (num_devices < 1) {
@@ -89,6 +97,11 @@ acInit(const AcMeshInfo& config)
         WARNING("MULTIGPU_ENABLED was false. Using only one device");
         num_devices = 1; // Use only one device if multi-GPU is not enabled
     }
+    return AC_SUCCESS;
+}
+AcResult
+acInitialize(const AcMeshInfo& config)
+{
     // Check that num_devices is divisible with AC_nz. This makes decomposing the
     // problem domain to multiple GPUs much easier since we do not have to worry
     // about remainders
@@ -108,14 +121,14 @@ acInit(const AcMeshInfo& config)
     ERRCHK_ALWAYS(subgrid.n.x >= STENCIL_ORDER);
     ERRCHK_ALWAYS(subgrid.n.y >= STENCIL_ORDER);
     ERRCHK_ALWAYS(subgrid.n.z >= STENCIL_ORDER);
-
+#ifndef PENCIL_ASTAROTH
     // clang-format off
     printf("Grid m ");   printInt3(grid.m);    printf("\n");
     printf("Grid n ");   printInt3(grid.n);    printf("\n");
     printf("Subrid m "); printInt3(subgrid.m); printf("\n");
     printf("Subrid n "); printInt3(subgrid.n); printf("\n");
     // clang-format on
-
+#endif
     // Initialize the devices
     for (int i = 0; i < num_devices; ++i) {
         createDevice(i, subgrid_config, &devices[i]);
@@ -259,9 +272,9 @@ acStore(AcMesh* host_mesh)
 AcResult
 acIntegrateStep(const int& isubstep, const AcReal& dt)
 {
-    const int3 start = (int3){STENCIL_ORDER / 2, STENCIL_ORDER / 2, STENCIL_ORDER / 2};
-    const int3 end   = (int3){STENCIL_ORDER / 2 + subgrid.n.x, STENCIL_ORDER / 2 + subgrid.n.y,
-                            STENCIL_ORDER / 2 + subgrid.n.z};
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y,
+                              NGHOST + subgrid.n.z};
     for (int i = 0; i < num_devices; ++i) {
         rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
     }
@@ -294,7 +307,7 @@ acBoundcondStep(void)
     else {
         // Local boundary conditions
         for (int i = 0; i < num_devices; ++i) {
-            const int3 d0 = (int3){0, 0, STENCIL_ORDER / 2}; // DECOMPOSITION OFFSET HERE
+            const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
             boundcondStep(devices[i], STREAM_PRIMARY, d0, d1);
         }
@@ -393,7 +406,7 @@ acBoundcondStep(void)
         */
         // Exchange halos
         for (int i = 0; i < num_devices; ++i) {
-            const int num_vertices = subgrid.m.x * subgrid.m.y * STENCIL_ORDER / 2;
+            const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
             // ...|ooooxxx|... -> xxx|ooooooo|...
             {
                 const int3 src = (int3){0, 0, subgrid.n.z};
@@ -403,8 +416,8 @@ acBoundcondStep(void)
             }
             // ...|ooooooo|xxx <- ...|xxxoooo|...
             {
-                const int3 src = (int3){0, 0, STENCIL_ORDER / 2};
-                const int3 dst = (int3){0, 0, STENCIL_ORDER / 2 + subgrid.n.z};
+                const int3 src = (int3){0, 0, NGHOST};
+                const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
                 copyMeshDeviceToDevice(devices[(i + 1) % num_devices], STREAM_PRIMARY, src,
                                        devices[i], dst, num_vertices);
             }
