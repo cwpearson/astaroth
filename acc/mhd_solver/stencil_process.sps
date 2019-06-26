@@ -263,7 +263,7 @@ forcing(int3 globalVertexIdx)
     //Determine that forcing funtion type at this point. 
     //Vector force = simple_vortex_forcing(a, xx, magnitude);
     //Vector force = simple_outward_flow_forcing(a, xx, magnitude);
-    Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phi);
+    Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
 
     if (is_valid(force)) { return force; }
     else                 { return (Vector){0, 0, 0}; }
