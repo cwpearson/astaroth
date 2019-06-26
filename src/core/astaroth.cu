@@ -39,17 +39,6 @@ static const int MAX_NUM_DEVICES       = 32;
 static int num_devices                 = 0;
 static Device devices[MAX_NUM_DEVICES] = {};
 
-static Grid
-createGrid(const AcMeshInfo& config)
-{
-    Grid grid;
-
-    grid.m = (int3){config.int_params[AC_mx], config.int_params[AC_my], config.int_params[AC_mz]};
-    grid.n = (int3){config.int_params[AC_nx], config.int_params[AC_ny], config.int_params[AC_nz]};
-
-    return grid;
-}
-
 static Grid grid; // A grid consists of num_devices subgrids
 static Grid subgrid;
 
@@ -70,6 +59,17 @@ void
 printInt3(const int3 vec)
 {
     printf("(%d, %d, %d)", vec.x, vec.y, vec.z);
+}
+
+static Grid
+createGrid(const AcMeshInfo& config)
+{
+    Grid grid;
+
+    grid.m = (int3){config.int_params[AC_mx], config.int_params[AC_my], config.int_params[AC_mz]};
+    grid.n = (int3){config.int_params[AC_nx], config.int_params[AC_ny], config.int_params[AC_nz]};
+
+    return grid;
 }
 
 AcResult
