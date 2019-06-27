@@ -60,6 +60,16 @@ print_diagnostics(const AcMesh& mesh, const int& step, const AcReal& dt)
 }
 */
 
+//The is a wrapper for genering random numbers with a chosen system. 
+static inline AcReal
+get_random_number_01()
+{
+    //TODO: Implement better randon number generator http://www.cplusplus.com/reference/random/
+    return AcReal(rand())/AcReal(RAND_MAX);
+}
+
+
+
 static inline AcReal3
 cross(const AcReal3& a, const AcReal3& b)
 {
@@ -113,7 +123,7 @@ helical_forcing_e_generator(AcReal3* e_force, const AcReal3 k_force)
     k_cross_e = vec_norm(k_cross_e);
     AcReal3 k_cross_k_cross_e = cross(k_force, k_cross_e);
     k_cross_k_cross_e = vec_norm(k_cross_k_cross_e);  
-    AcReal  phi = 2.9; //TODO RANDOMIZE [0, 2pi]
+    AcReal  phi = AcReal(2.0)*AcReal(M_PI)*get_random_number_01();
     AcReal3 ee_tmp1 = vec_multi_scal(cos(phi),k_cross_e);
     AcReal3 ee_tmp2 = vec_multi_scal(sin(phi), k_cross_k_cross_e);
 
@@ -336,6 +346,9 @@ run_simulation(void)
     AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
+
+    /* initialize random seed: */
+    srand (312256655);
 
 
     /* Step the simulation */
