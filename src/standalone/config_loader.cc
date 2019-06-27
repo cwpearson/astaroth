@@ -152,7 +152,7 @@ update_config(AcMeshInfo* config)
                                       config->real_params[AC_G_CONST];
     config->real_params[AC_sq2GM_star] = AcReal(sqrt(AcReal(2) * config->real_params[AC_GM_star]));
 
-#if VERBOSE_PRINTING
+#if VERBOSE_PRINTING // Defined in astaroth.h
     printf("###############################################################\n");
     printf("Config dimensions recalculated:\n");
     print(*config);
