@@ -67,16 +67,18 @@ extern "C" {
 // logical switches
 #include "user.h"
 
+// clang-format off
 #ifndef USER_PROVIDED_DEFINES
-#define STENCIL_ORDER (6)
-#define NGHOST (STENCIL_ORDER / 2)
-#define LDENSITY (1)
-#define LHYDRO (1)
-#define LINDUCTION (1) // %JP: TO BE RENAMED TO LMAGNETIC TODO
-#define LENTROPY (1)
-#define LTEMPERATURE (0)
-#define LFORCING (1)
+    #define STENCIL_ORDER (6)
+    #define NGHOST (STENCIL_ORDER / 2)
+    #define LDENSITY (1)
+    #define LHYDRO (1)
+    #define LINDUCTION (1) // %JP: TO BE RENAMED TO LMAGNETIC TODO
+    #define LENTROPY (1)
+    #define LTEMPERATURE (0)
+    #define LFORCING (1)
 #endif
+// clang-format on
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
 
@@ -208,22 +210,19 @@ extern "C" {
 #define AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC)
 #endif
 
+//MR: Temperature must not have an additional variable slot, but should sit on the
+//    same as entropy.
+#if LTEMPERATURE
+    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)\
+          FUNC(VTXBUF_TEMPERATURE),
+#else
+    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)
+#endif
+
 #define AC_FOR_VTXBUF_HANDLES(FUNC) AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC) \
-
-//MR: Temperature must not have an additional variable slot, but should sit on the
-//    same as entropy.
-#ifndef USER_PROVIDED
-  #if LTEMPERATURE
-    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)\
-          FUNC(VTXBUF_TEMPERATURE),
-  #else
-    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)
-  #endif
-#endif
-
 // clang-format on
 
 /*
@@ -231,19 +230,21 @@ extern "C" {
  * Single/double precision switch
  * =============================================================================
  */
+// clang-format off
 #if AC_DOUBLE_PRECISION == 1
-typedef double AcReal;
-typedef double3 AcReal3;
-#define AC_REAL_MAX (DBL_MAX)
-#define AC_REAL_MIN (DBL_MIN)
-#define AC_REAL_EPSILON (DBL_EPSILON)
+    typedef double AcReal;
+    typedef double3 AcReal3;
+    #define AC_REAL_MAX (DBL_MAX)
+    #define AC_REAL_MIN (DBL_MIN)
+    #define AC_REAL_EPSILON (DBL_EPSILON)
 #else
-typedef float AcReal;
-typedef float3 AcReal3;
-#define AC_REAL_MAX (FLT_MAX)
-#define AC_REAL_MIN (FLT_MIN)
-#define AC_REAL_EPSILON (FLT_EPSILON)
+    typedef float AcReal;
+    typedef float3 AcReal3;
+    #define AC_REAL_MAX (FLT_MAX)
+    #define AC_REAL_MIN (FLT_MIN)
+    #define AC_REAL_EPSILON (FLT_EPSILON)
 #endif
+// clang-format on
 
 typedef struct {
     AcReal3 row[3];
