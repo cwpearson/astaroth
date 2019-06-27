@@ -77,7 +77,7 @@ acCheckDeviceAvailability(void)
 {
     int device_count; // Separate from num_devices to avoid side effects
     ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&device_count));
-    if (device_count > 0) 
+    if (device_count > 0)
         return AC_SUCCESS;
     else
         return AC_FAILURE;
@@ -120,12 +120,14 @@ acInit(const AcMeshInfo& config)
     ERRCHK_ALWAYS(subgrid.n.y >= STENCIL_ORDER);
     ERRCHK_ALWAYS(subgrid.n.z >= STENCIL_ORDER);
 
+#if VERBOSE_PRINTING
     // clang-format off
     printf("Grid m ");   printInt3(grid.m);    printf("\n");
     printf("Grid n ");   printInt3(grid.n);    printf("\n");
     printf("Subrid m "); printInt3(subgrid.m); printf("\n");
     printf("Subrid n "); printInt3(subgrid.n); printf("\n");
     // clang-format on
+#endif
 
     // Initialize the devices
     for (int i = 0; i < num_devices; ++i) {
@@ -271,8 +273,7 @@ AcResult
 acIntegrateStep(const int& isubstep, const AcReal& dt)
 {
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y,
-                              NGHOST + subgrid.n.z};
+    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y, NGHOST + subgrid.n.z};
     for (int i = 0; i < num_devices; ++i) {
         rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
     }
