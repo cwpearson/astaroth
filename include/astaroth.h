@@ -72,7 +72,7 @@ extern "C" {
 #define NGHOST (STENCIL_ORDER / 2)
 #define LDENSITY (1)
 #define LHYDRO (1)
-#define LINDUCTION (1)
+#define LINDUCTION (1) // %JP: TO BE RENAMED TO LMAGNETIC TODO
 #define LENTROPY (1)
 #define LTEMPERATURE (0)
 #define LFORCING (1)
