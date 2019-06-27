@@ -36,19 +36,8 @@ const char* realparam_names[] = {AC_FOR_REAL_PARAM_TYPES(AC_GEN_STR)};
 const char* vtxbuf_names[]    = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 
 static const int MAX_NUM_DEVICES       = 32;
-static int num_devices                 = 1;
+static int num_devices                 = 0;
 static Device devices[MAX_NUM_DEVICES] = {};
-
-static Grid
-createGrid(const AcMeshInfo& config)
-{
-    Grid grid;
-
-    grid.m = (int3){config.int_params[AC_mx], config.int_params[AC_my], config.int_params[AC_mz]};
-    grid.n = (int3){config.int_params[AC_nx], config.int_params[AC_ny], config.int_params[AC_nz]};
-
-    return grid;
-}
 
 static Grid grid; // A grid consists of num_devices subgrids
 static Grid subgrid;
@@ -72,11 +61,33 @@ printInt3(const int3 vec)
     printf("(%d, %d, %d)", vec.x, vec.y, vec.z);
 }
 
+static Grid
+createGrid(const AcMeshInfo& config)
+{
+    Grid grid;
+
+    grid.m = (int3){config.int_params[AC_mx], config.int_params[AC_my], config.int_params[AC_mz]};
+    grid.n = (int3){config.int_params[AC_nx], config.int_params[AC_ny], config.int_params[AC_nz]};
+
+    return grid;
+}
+
+AcResult
+acCheckDeviceAvailability(void)
+{
+    int device_count; // Separate from num_devices to avoid side effects
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&device_count));
+    if (device_count > 0) 
+        return AC_SUCCESS;
+    else
+        return AC_FAILURE;
+}
+
 AcResult
 acInit(const AcMeshInfo& config)
 {
-    // Check devices
-    cudaGetDeviceCount(&num_devices);
+    // Get num_devices
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&num_devices));
     if (num_devices < 1) {
         ERROR("No CUDA devices found!");
         return AC_FAILURE;
@@ -259,9 +270,9 @@ acStore(AcMesh* host_mesh)
 AcResult
 acIntegrateStep(const int& isubstep, const AcReal& dt)
 {
-    const int3 start = (int3){STENCIL_ORDER / 2, STENCIL_ORDER / 2, STENCIL_ORDER / 2};
-    const int3 end   = (int3){STENCIL_ORDER / 2 + subgrid.n.x, STENCIL_ORDER / 2 + subgrid.n.y,
-                            STENCIL_ORDER / 2 + subgrid.n.z};
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y,
+                              NGHOST + subgrid.n.z};
     for (int i = 0; i < num_devices; ++i) {
         rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
     }
@@ -275,12 +286,12 @@ acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& sta
     /*
     // A skeleton function for computing integrations with arbitrary subblocks
     // Uncommenting the following should work with a single GPU.
-    const int3 start = (int3){STENCIL_ORDER / 2, STENCIL_ORDER / 2, STENCIL_ORDER / 2};
-    const int3 end   = (int3){STENCIL_ORDER / 2 + subgrid.n.x, STENCIL_ORDER / 2 + subgrid.n.y,
-                            STENCIL_ORDER / 2 + subgrid.n.z};
-    rkStep(devices[0], STREAM_PRIMARY, isubstep, start, end, dt);
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y,
+                              NGHOST + subgrid.n.z};
     */
-    return AC_FAILURE;
+    rkStep(devices[0], STREAM_PRIMARY, isubstep, start, end, dt);
+    return AC_SUCCESS;
 }
 
 AcResult
@@ -294,7 +305,7 @@ acBoundcondStep(void)
     else {
         // Local boundary conditions
         for (int i = 0; i < num_devices; ++i) {
-            const int3 d0 = (int3){0, 0, STENCIL_ORDER / 2}; // DECOMPOSITION OFFSET HERE
+            const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
             boundcondStep(devices[i], STREAM_PRIMARY, d0, d1);
         }
@@ -393,7 +404,7 @@ acBoundcondStep(void)
         */
         // Exchange halos
         for (int i = 0; i < num_devices; ++i) {
-            const int num_vertices = subgrid.m.x * subgrid.m.y * STENCIL_ORDER / 2;
+            const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
             // ...|ooooxxx|... -> xxx|ooooooo|...
             {
                 const int3 src = (int3){0, 0, subgrid.n.z};
@@ -403,8 +414,8 @@ acBoundcondStep(void)
             }
             // ...|ooooooo|xxx <- ...|xxxoooo|...
             {
-                const int3 src = (int3){0, 0, STENCIL_ORDER / 2};
-                const int3 dst = (int3){0, 0, STENCIL_ORDER / 2 + subgrid.n.z};
+                const int3 src = (int3){0, 0, NGHOST};
+                const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
                 copyMeshDeviceToDevice(devices[(i + 1) % num_devices], STREAM_PRIMARY, src,
                                        devices[i], dst, num_vertices);
             }

@@ -4,13 +4,7 @@
 
 #----------------------Find CUDA-----------------------------------------------#
 
-find_package(CUDA)
-if (NOT CUDA_FOUND)
-    # find_package(CUDA REQUIRED) gives a confusing error message if it fails,
-    # therefore we print the reason here explicitly
-    message(FATAL_ERROR "CUDA not found")
-endif()
-
+find_package(CUDA 9 REQUIRED)
 
 #----------------------CUDA settings-------------------------------------------#
 
