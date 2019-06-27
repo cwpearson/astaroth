@@ -60,6 +60,68 @@ print_diagnostics(const AcMesh& mesh, const int& step, const AcReal& dt)
 }
 */
 
+static inline AcReal3
+cross(const AcReal3& a, const AcReal3& b)
+{
+    AcReal3 c;
+
+    c.x = a.y * b.z - a.z * b.y;
+    c.y = a.z * b.x - a.x * b.z;
+    c.z = a.x * b.y - a.y * b.x;
+
+    return c;
+}
+
+static inline AcReal
+dot(const AcReal3& a, const AcReal3& b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+static inline AcReal3
+vec_norm(const AcReal3& a)
+{
+    AcReal3 c;
+    AcReal norm = dot(a, a);
+
+    c.x = a.x/sqrt(norm);
+    c.y = a.y/sqrt(norm);
+    c.z = a.z/sqrt(norm);
+
+    return c;
+}
+
+static inline AcReal3
+vec_multi_scal(const AcReal scal, const AcReal3& a)
+{
+    AcReal3 c;
+
+    c.x = a.x*scal;
+    c.y = a.y*scal;
+    c.z = a.z*scal;
+
+    return c;
+}
+
+//Generate the unit perpendicular unit vector e required for helical forcing
+//Addapted from Pencil code forcing.f90 hel_vec() subroutine. 
+static inline void
+helical_forcing_e_generator(AcReal3* e_force, const AcReal3 k_force)
+{
+
+    AcReal3 k_cross_e = cross(k_force, *e_force);
+    k_cross_e = vec_norm(k_cross_e);
+    AcReal3 k_cross_k_cross_e = cross(k_force, k_cross_e);
+    k_cross_k_cross_e = vec_norm(k_cross_k_cross_e);  
+    AcReal  phi = 2.9; //TODO RANDOMIZE [0, 2pi]
+    AcReal3 ee_tmp1 = vec_multi_scal(cos(phi),k_cross_e);
+    AcReal3 ee_tmp2 = vec_multi_scal(sin(phi), k_cross_k_cross_e);
+
+    *e_force = (AcReal3){ee_tmp1.x + ee_tmp2.x,
+                         ee_tmp1.y + ee_tmp2.y,
+                         ee_tmp1.z + ee_tmp2.z};
+}
+
 //PC Manual Eq. 223 
 static inline void
 helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcReal3 k_force, const AcReal3 e_force, const AcReal relhel)
@@ -287,12 +349,11 @@ run_simulation(void)
         AcReal  magnitude = 0.05;
         AcReal  phase   = 0.79; 
         AcReal  relhel = 0.5;
-        AcReal3 k_force = (AcReal3){2.0, 0.0, 0.0};
-        AcReal3 e_force = (AcReal3){0.0, 2.0, 0.0};
+        AcReal3 k_force = (AcReal3){0.0, 2.0, 0.0};
+        AcReal3 e_force = (AcReal3){0.0, 0.0, 1.0};
         AcReal3 ff_hel_re, ff_hel_im;
+        helical_forcing_e_generator(&e_force, k_force);
         helical_forcing_special_vector(&ff_hel_re, &ff_hel_im, k_force, e_force, relhel);
-        //AcReal3 ff_hel_re   = (AcReal3){0.0, 0.5, 0.0};
-        //AcReal3 ff_hel_im   = (AcReal3){0.0, 0.8666, 0.0};
         acForcingVec(magnitude, k_force, ff_hel_re,ff_hel_im, phase);
 #endif
 
