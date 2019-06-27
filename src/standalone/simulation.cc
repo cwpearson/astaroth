@@ -113,6 +113,28 @@ vec_multi_scal(const AcReal scal, const AcReal3& a)
     return c;
 }
 
+// Generate forcing wave vector k_force
+static inline AcReal3
+helical_forcing_k_generator(const AcReal kmax, const AcReal kmin)
+{
+    AcReal phi, theta, kk; //Spherical direction coordinates
+    AcReal3 k_force;   //forcing wave vector
+
+    AcReal delta_k = kmax - kmin;
+
+    // Generate vector in spherical coordinates
+    phi   = AcReal(2.0)*AcReal(M_PI)*get_random_number_01();
+    theta =             AcReal(M_PI)*get_random_number_01();
+    kk = delta_k*get_random_number_01() + kmin;
+
+    // Cast into Cartesian form
+    k_force = (AcReal3){kk*sin(theta)*cos(phi),
+                        kk*sin(theta)*sin(phi),
+                        kk*cos(theta)         };
+
+    return k_force;
+}
+
 //Generate the unit perpendicular unit vector e required for helical forcing
 //Addapted from Pencil code forcing.f90 hel_vec() subroutine. 
 static inline void
@@ -350,7 +372,6 @@ run_simulation(void)
     /* initialize random seed: */
     srand (312256655);
 
-
     /* Step the simulation */
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
@@ -360,12 +381,27 @@ run_simulation(void)
         //Generate a forcing vectors before canculating an integration step. 
         //Placeholders until determined properly
         AcReal  magnitude = 0.05;
-        AcReal  phase   = 0.79; 
         AcReal  relhel = 0.5;
-        AcReal3 k_force = (AcReal3){0.0, 2.0, 0.0};
-        AcReal3 e_force = (AcReal3){0.0, 0.0, 1.0};
-        AcReal3 ff_hel_re, ff_hel_im;
+        AcReal  kmin = 1.3;
+        AcReal  kmax = 1.7;
+    
+        // Generate forcing wave vector k_force
+        AcReal3 k_force;// = (AcReal3){0.0, 2.0, 0.0};
+        k_force = helical_forcing_k_generator(kmax, kmin);
+
+        //Randomize the phase
+        AcReal phase = AcReal(2.0)*AcReal(M_PI)*get_random_number_01();
+
+        // Generate e for k. Needed for the sake of isotrophy. 
+        AcReal3 e_force;
+        if ((k_force.y == 0.0) && (k_force.z == 0.0)) {
+            e_force = (AcReal3){0.0, 1.0, 0.0};
+        } else {
+            e_force = (AcReal3){1.0, 0.0, 0.0};
+        }
         helical_forcing_e_generator(&e_force, k_force);
+
+        AcReal3 ff_hel_re, ff_hel_im;
         helical_forcing_special_vector(&ff_hel_re, &ff_hel_im, k_force, e_force, relhel);
         acForcingVec(magnitude, k_force, ff_hel_re,ff_hel_im, phase);
 #endif
