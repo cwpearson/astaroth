@@ -397,35 +397,3 @@ AcResult acSynchronize(void);
 #ifdef __cplusplus
 }
 #endif
-
-/*
- * =============================================================================
- * Notes
- * =============================================================================
- */
-/*
-typedef enum {
-    VTX_BUF_LNRHO,
-    VTX_BUF_UUX,
-    VTX_BUF_UUY,
-    VTX_BUF_UUZ,
-    NUM_VERTEX_BUFFER_HANDLES
-} VertexBufferHandle
-
-// LNRHO etc
-typedef struct {
-    AcReal* data;
-} VertexBuffer;
-
-// Host
-typedef struct {
-    VertexBuffer vertex_buffers[NUM_VERTEX_BUFFER_HANDLES];
-    MeshInfo info;
-} Mesh;
-
-// Device
-typedef struct {
-    VertexBuffer in[NUM_VERTEX_BUFFER_HANDLES];
-    VertexBuffer out[NUM_VERTEX_BUFFER_HANDLES];
-} VertexBufferArray;
-*/
