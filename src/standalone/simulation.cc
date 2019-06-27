@@ -386,7 +386,7 @@ run_simulation(void)
         AcReal  kmax = 1.7;
     
         // Generate forcing wave vector k_force
-        AcReal3 k_force;// = (AcReal3){0.0, 2.0, 0.0};
+        AcReal3 k_force;
         k_force = helical_forcing_k_generator(kmax, kmin);
 
         //Randomize the phase
