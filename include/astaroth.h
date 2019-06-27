@@ -68,15 +68,15 @@ extern "C" {
 #include "user.h"
 
 #ifndef USER_PROVIDED_DEFINES
-  #define STENCIL_ORDER (6)
-  #define NGHOST (STENCIL_ORDER/2)
-  #define LHYDRO (1)
-  #define LDENSITY (1)
-  #define LFORCING (1)
-  #define LINDUCTION (1)
-  #define LENTROPY (1)
-  #define LTEMPERATURE (0)
-  #define LMAGNETIC LINDUCTION
+#define STENCIL_ORDER (6)
+#define NGHOST (STENCIL_ORDER / 2)
+#define LHYDRO (1)
+#define LDENSITY (1)
+#define LFORCING (1)
+#define LINDUCTION (1)
+#define LENTROPY (1)
+#define LTEMPERATURE (0)
+#define LMAGNETIC LINDUCTION
 #endif
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
@@ -177,23 +177,23 @@ extern "C" {
  * =============================================================================
  */
 // clang-format off
-#ifdef LHYDRO 
+#ifdef LHYDRO
 #define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_UUX), \
         FUNC(VTXBUF_UUY), \
-        FUNC(VTXBUF_UUZ), 
+        FUNC(VTXBUF_UUZ),
 #else
 #define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LDENSITY 
+#ifdef LDENSITY
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_LNRHO), 
+        FUNC(VTXBUF_LNRHO),
 #else
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LENTROPY 
+#ifdef LENTROPY
 #define AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_ENTROPY),
 #else
@@ -214,7 +214,7 @@ extern "C" {
                                     AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC) \
 
-//MR: Temperature must not have an additional variable slot, but should sit on the 
+//MR: Temperature must not have an additional variable slot, but should sit on the
 //    same as entropy.
 #ifndef USER_PROVIDED
   #if LTEMPERATURE
@@ -280,7 +280,7 @@ typedef enum { RTYPE_MAX, RTYPE_MIN, RTYPE_RMS, RTYPE_RMS_EXP, NUM_REDUCTION_TYP
 typedef enum { AC_FOR_INT_PARAM_TYPES(AC_GEN_ID), NUM_INT_PARAM_TYPES } AcIntParam;
 
 typedef enum { AC_FOR_REAL_PARAM_TYPES(AC_GEN_ID), NUM_REAL_PARAM_TYPES } AcRealParam;
-//typedef enum { AC_FOR_VEC_PARAM_TYPES(AC_GEN_ID), NUM_VEC_PARAM_TYPES } AcVecParam;
+// typedef enum { AC_FOR_VEC_PARAM_TYPES(AC_GEN_ID), NUM_VEC_PARAM_TYPES } AcVecParam;
 
 extern const char* intparam_names[];  // Defined in astaroth.cu
 extern const char* realparam_names[]; // Defined in astaroth.cu
@@ -288,7 +288,7 @@ extern const char* realparam_names[]; // Defined in astaroth.cu
 typedef struct {
     int int_params[NUM_INT_PARAM_TYPES];
     AcReal real_params[NUM_REAL_PARAM_TYPES];
-    //AcReal* vec_params[NUM_VEC_PARAM_TYPES];
+    // AcReal* vec_params[NUM_VEC_PARAM_TYPES];
 } AcMeshInfo;
 
 /*
