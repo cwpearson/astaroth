@@ -222,32 +222,35 @@ simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude)
 }
 
 
-// The Pencil Code hel_vec(), manual Eq. 222, inspired forcing function with adjustable helicity
+// The Pencil Code forcing_hel_noshear(), manual Eq. 222, inspired forcing function with adjustable helicity
 Vector
 helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vector ff_im, Scalar phi)
 {
+
+    xx.x = xx.x*(2.0*M_PI/(dsx*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
+    xx.y = xx.y*(2.0*M_PI/(dsy*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
+    xx.z = xx.z*(2.0*M_PI/(dsz*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
+
     Scalar cos_phi = cos(phi);
     Scalar sin_phi = sin(phi);
-    Scalar cos_k_dox_x = cos(dot(k_force, xx));
-    Scalar sin_k_dox_x = sin(dot(k_force, xx));
-    Scalar real_comp = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
-    Scalar imag_comp = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
+    Scalar cos_k_dox_x     = cos(dot(k_force, xx));
+    Scalar sin_k_dox_x     = sin(dot(k_force, xx));
+    // Phase affect only the x-component
+    Scalar real_comp       = cos_k_dox_x;
+    Scalar imag_comp       = sin_k_dox_x;
+    Scalar real_comp_phase = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
+    Scalar imag_comp_phase = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
 
 
-    Vector force = (Vector){ ff_re.x*real_comp - ff_im.x*imag_comp,
+    Vector force = (Vector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
                              ff_re.y*real_comp - ff_im.y*imag_comp,
                              ff_re.z*real_comp - ff_im.z*imag_comp}; 
 
     return force;
 }
 
-#if LENTROPY
-Vector
-forcing(int3 globalVertexIdx, Scalar dt, in Scalar lnrho, in Scalar ss)
-#else
 Vector
 forcing(int3 globalVertexIdx, Scalar dt)
-#endif
 {
     Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
                                      globalGrid.n.y * dsy,
@@ -255,11 +258,7 @@ forcing(int3 globalVertexIdx, Scalar dt)
     Vector xx = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                         (globalVertexIdx.y - ny_min) * dsy,
                         (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
-#if LENTROPY
-    const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - LNRHO0));
-#else
     const Scalar cs2 = cs2_sound;
-#endif
     const Scalar cs = sqrt(cs2);
 
     //Placeholders until determined properly
@@ -275,12 +274,13 @@ forcing(int3 globalVertexIdx, Scalar dt)
     //Vector force = simple_outward_flow_forcing(a, xx, magnitude);
     Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
 
-    //Scaling N = magnitude*cs*sqrt(k*cs/dt)
+    //Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
     const Scalar kk = sqrt(k_force.x*k_force.x + k_force.y*k_force.y + k_force.z*k_force.z);
-    const Scalar NN = cs*sqrt((kk*cs)/dt);
-    force.x = NN*force.x;
-    force.y = NN*force.y;
-    force.z = NN*force.z;
+    const Scalar NN = cs*sqrt(kk*cs); // kk should be the average k!!!
+    //MV: Like in the Pencil Code. I don't understandf the logic here. 
+    force.x = sqrt(dt)*NN*force.x;
+    force.y = force.y;
+    force.z = force.z;
 
     if (is_valid(force)) { return force; }
     else                 { return (Vector){0, 0, 0}; }
@@ -331,11 +331,7 @@ solve(Scalar dt) {
 
     #if LFORCING
     if (step_number == 2) {
-        #if LENTROPY
-        out_uu = out_uu + forcing(globalVertexIdx, dt, lnrho, ss);
-        #else
         out_uu = out_uu + forcing(globalVertexIdx, dt);
-        #endif
     }
     #endif
 }

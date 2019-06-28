@@ -179,17 +179,26 @@ helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcR
     // abs(k)
     AcReal kabs = sqrt(k_force.x*k_force.x + k_force.y*k_force.y + k_force.z*k_force.z);
 
-    AcReal denominator = sqrt(AcReal(1.0) + relhel*relhel)*(kabs*kabs)
-                         *sqrt(AcReal(1.0) - (kdote.x*kdote.x + kdote.y*kdote.y + kdote.z*kdote.z)/(kabs*kabs)); 
+    AcReal denominator = sqrt(AcReal(1.0) + relhel*relhel)*kabs
+                         *sqrt(kabs*kabs - (kdote.x*kdote.x + kdote.y*kdote.y + kdote.z*kdote.z)); 
 
-    *ff_hel_re = (AcReal3){-relhel*kabs*k_cross_e.x/denominator, 
-                           -relhel*kabs*k_cross_e.y/denominator,
-                           -relhel*kabs*k_cross_e.z/denominator};
+    //MV: I suspect there is a typo in the Pencil Code manual!
+    //*ff_hel_re = (AcReal3){-relhel*kabs*k_cross_e.x/denominator, 
+    //                       -relhel*kabs*k_cross_e.y/denominator,
+    //                       -relhel*kabs*k_cross_e.z/denominator};
 
-    *ff_hel_im = (AcReal3){k_cross_k_cross_e.x/denominator, 
-                           k_cross_k_cross_e.y/denominator,
-                           k_cross_k_cross_e.z/denominator};
+    //*ff_hel_im = (AcReal3){k_cross_k_cross_e.x/denominator, 
+    //                       k_cross_k_cross_e.y/denominator,
+    //                       k_cross_k_cross_e.z/denominator};
 
+    // See PC forcing.f90 rel_hel()
+    *ff_hel_re = (AcReal3){kabs*k_cross_e.x/denominator, 
+                           kabs*k_cross_e.y,
+                           kabs*k_cross_e.z};
+
+    *ff_hel_im = (AcReal3){relhel*k_cross_k_cross_e.x/denominator, 
+                           relhel*k_cross_k_cross_e.y,
+                           relhel*k_cross_k_cross_e.z};
 }
 
 // Write all setting info into a separate ascii file. This is done to guarantee
@@ -382,8 +391,8 @@ run_simulation(void)
         //Placeholders until determined properly
         AcReal  magnitude = 0.05;
         AcReal  relhel = 0.5;
-        AcReal  kmin = 1.3;
-        AcReal  kmax = 1.7;
+        AcReal  kmin = 0.9999;
+        AcReal  kmax = 1.0001;
     
         // Generate forcing wave vector k_force
         AcReal3 k_force;
