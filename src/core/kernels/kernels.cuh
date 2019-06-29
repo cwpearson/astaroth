@@ -426,7 +426,7 @@ cross(const AcReal3& a, const AcReal3& b)
 }
 
 static __host__ __device__ __forceinline__ bool
-is_valid(const AcReal a)
+is_valid(const AcReal& a)
 {
     return !isnan(a) && !isinf(a);
 }
@@ -546,7 +546,7 @@ normalized(const AcReal3& vec)
 // Sinusoidal forcing
 // https://arxiv.org/pdf/1704.04676.pdf
 // NOTE: This method of forcing is depracated. However, it will remain in here
-// until a corresponding scheme exists in the new code. 
+// until a corresponding scheme exists in the new code.
 __constant__ AcReal3 forcing_vec;
 __constant__ AcReal forcing_phi;
 static __device__ __forceinline__ AcReal3
