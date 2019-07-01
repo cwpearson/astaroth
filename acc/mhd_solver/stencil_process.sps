@@ -100,23 +100,21 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar tt) {
 #else
 Vector
 momentum(in Vector uu, in Scalar lnrho) {
-  Vector mom;
-
-  const Matrix S = stress_tensor(uu);
-
-    // Isothermal: we have constant speed of sound
-
-  mom = -mul(gradients(uu), value(uu)) -
-    cs2_sound * gradient(lnrho) +
-    nu_visc *
-    (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
-      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
-
-  #if LGRAVITY
-  mom = mom - (Vector){0, 0, -10.0};
-  #endif
-
-  return mom;
+    // !!!!!!!!!!!!!!!!%JP: NOTE TODO IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!
+    // NOT CHECKED FOR CORRECTNESS: USE AT YOUR OWN RISK
+    const Matrix S = stress_tensor(uu);
+    const Scalar cs2 = cs2_sound * exp((gamma - 1) * (value(lnrho) - LNRHO0));
+    // Regex replace CPU constants with get\(AC_([a-zA-Z_0-9]*)\)
+    // \1
+    const Vector mom = - mul(gradients(uu), value(uu))
+                                                       - cs2 * gradient(lnrho)
+                                                       + nu_visc * (
+                                                            laplace_vec(uu)
+                                                        + Scalar(1. / 3.) * gradient_of_divergence(uu)
+                                                        + Scalar(2.) * mul(S, gradient(lnrho))
+                                                        )
+                                                        + zeta * gradient_of_divergence(uu);
+    return mom;
 }
 #endif
 

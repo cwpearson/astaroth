@@ -587,38 +587,19 @@ momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
                                                ModelScalar(2.) * mul(S, gradient(lnrho))) +
                             get(AC_zeta) * gradient_of_divergence(uu);
     return mom;
-#endif
+#else
+    // !!!!!!!!!!!!!!!!%JP: NOTE TODO IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!
+    // NOT CHECKED FOR CORRECTNESS: USE AT YOUR OWN RISK
+    const ModelMatrix S   = stress_tensor(uu);
+    const ModelScalar cs2 = get(AC_cs2_sound) * expl((get(AC_gamma) - 1) * (value(lnrho) - LNRHO0));
 
-#if 0
-    const ModelMatrix S = stress_tensor(uu);
-
-    //#if LENTROPY
-    //const ModelScalar lnrho0 = 1; // TODO correct lnrho0
-    const ModelScalar cs02 = get(AC_cs2_sound); // TODO better naming
-    const ModelScalar cs2 = cs02;// * expl(get(AC_gamma) * value(ss) / get(AC_cp_sound) + (get(AC_gamma)-ModelScalar(1.l)) * (value(lnrho) - lnrho0));
-
-    mom = -mul(gradients(uu), value(uu)) -
-    cs2 * ((ModelScalar(1.) / get(AC_cp_sound)) * gradient(ss) + gradient(lnrho)) +
-    get(AC_nu_visc) *
-    (laplace_vec(uu) + ModelScalar(1.l / 3.l) * gradient_of_divergence(uu) +
-      ModelScalar(2.l) * mul(S, gradient(lnrho))) + get(AC_zeta) * gradient_of_divergence(uu);
-
-    const ModelVector grad_div = gradient_of_divergence(aa);
-    const ModelVector lap = laplace_vec(aa);
-    const ModelVector j = (ModelScalar(1.l) / get(AC_mu0)) * (grad_div - lap);
-    const ModelVector B = curl(aa);
-    mom = mom + (ModelScalar(1.l) / expl(value(lnrho))) * cross(j, B);
-    //#else // Basic hydro
-        const ModelScalar cs02 = get(AC_cs2_sound);
-        mom = -mul(gradients(uu), value(uu)) -
-          cs02 * gradient(lnrho) +
-          get(AC_nu_visc) *
-              (laplace_vec(uu) + ModelScalar(1. / 3.) * gradient_of_divergence(uu) +
-               ModelScalar(2.) * mul(S, gradient(lnrho))) + get(AC_zeta) * gradient_of_divergence(uu);
-    //#endif
+    const ModelVector mom = -mul(gradients(uu), value(uu)) - cs2 * gradient(lnrho) +
+                            get(AC_nu_visc) * (laplace_vec(uu) +
+                                               ModelScalar(1. / 3.) * gradient_of_divergence(uu) +
+                                               ModelScalar(2.) * mul(S, gradient(lnrho))) +
+                            get(AC_zeta) * gradient_of_divergence(uu);
     return mom;
 #endif
-    return (ModelVector){NAN, NAN, NAN}; // TODO HYDRO ONLY MODEL SOLUTION
 }
 
 static inline ModelVector
