@@ -171,14 +171,14 @@ extern "C" {
  * =============================================================================
  */
 // clang-format off
-#ifdef LDENSITY
+#if LDENSITY
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_LNRHO),
 #else
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LHYDRO
+#if LHYDRO
 #define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_UUX), \
         FUNC(VTXBUF_UUY), \
@@ -187,7 +187,7 @@ extern "C" {
 #define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LMAGNETIC
+#if LMAGNETIC
 #define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_AX), \
         FUNC(VTXBUF_AY), \
@@ -196,7 +196,7 @@ extern "C" {
 #define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LENTROPY
+#if LENTROPY
 #define AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_ENTROPY),
 #else
