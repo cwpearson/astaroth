@@ -1,11 +1,3 @@
-#define LMAGNETIC (1)
-#define LENTROPY (1)
-#define LTEMPERATURE (0)
-#define LGRAVITY (0)
-#define LFORCING (1)
-#define LUPWD (0)
-
-
 // Declare uniforms (i.e. device constants)
 uniform Scalar cs2_sound;
 uniform Scalar nu_visc;
@@ -54,9 +46,9 @@ gradients(in Vector uu)
 
 Scalar
 continuity(in Vector uu, in Scalar lnrho) {
-    return -dot(value(uu), gradient(lnrho)) 
+    return -dot(value(uu), gradient(lnrho))
 #if LUPWD
-           //This is a corrective hyperdiffusion term for upwinding. 
+           //This is a corrective hyperdiffusion term for upwinding.
            + upwd_der6(uu, lnrho)
 #endif
            - divergence(uu);
@@ -208,13 +200,13 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
 Vector
 simple_vortex_forcing(Vector a, Vector b, Scalar magnitude)
 {
-    return magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex   
+    return magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex
 }
 
 Vector
 simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude)
 {
-    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow   
+    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
 }
 
 Vector
@@ -229,7 +221,7 @@ forcing(int3 globalVertexIdx)
 
     Scalar magnitude = 0.05;
 
-    //Determine that forcing funtion type at this point. 
+    //Determine that forcing funtion type at this point.
     Vector c = simple_vortex_forcing(a, b, magnitude);
     //Vector c = simple_outward_flow_forcing(a, b, magnitude);
 
