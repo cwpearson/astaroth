@@ -165,6 +165,7 @@ extern "C" {
         FUNC(AC_k_forcex),\
         FUNC(AC_k_forcey),\
         FUNC(AC_k_forcez),\
+        FUNC(AC_kaver),\
         FUNC(AC_ff_hel_rex),\
         FUNC(AC_ff_hel_rey),\
         FUNC(AC_ff_hel_rez),\
@@ -408,8 +409,8 @@ AcResult acSynchronize(void);
 
 /** Tool for loading forcing vector information into the device memory
  */
-AcResult acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re, 
-                      const AcReal3 ff_hel_im, const AcReal forcing_phase);
+AcResult acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re,
+                      const AcReal3 ff_hel_im, const AcReal forcing_phase, const AcReal kaver);
  
 /* End extern "C" */
 #ifdef __cplusplus

@@ -132,6 +132,13 @@ helical_forcing_k_generator(const AcReal kmax, const AcReal kmin)
                         kk*sin(theta)*sin(phi),
                         kk*cos(theta)         };
 
+    //printf("k_force.x %f, k_force.y %f, k_force.z %f \n", k_force.x, k_force.y, k_force.z);
+
+    //Round the numbers. In that way k(x/y/z) will get complete waves. 
+    k_force.x = round(k_force.x); k_force.y = round(k_force.y); k_force.z = round(k_force.z);
+
+    //printf("After rounding --> k_force.x %f, k_force.y %f, k_force.z %f \n", k_force.x, k_force.y, k_force.z);
+
     return k_force;
 }
 
@@ -156,7 +163,8 @@ helical_forcing_e_generator(AcReal3* e_force, const AcReal3 k_force)
 
 //PC Manual Eq. 223 
 static inline void
-helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcReal3 k_force, const AcReal3 e_force, const AcReal relhel)
+helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcReal3 k_force, 
+                               const AcReal3 e_force, const AcReal relhel)
 {
     // k dot e 
     AcReal3 kdote;
@@ -191,7 +199,7 @@ helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcR
     //                       k_cross_k_cross_e.y/denominator,
     //                       k_cross_k_cross_e.z/denominator};
 
-    // See PC forcing.f90 rel_hel()
+    // See PC forcing.f90 forcing_hel_both()
     *ff_hel_re = (AcReal3){kabs*k_cross_e.x/denominator, 
                            kabs*k_cross_e.y,
                            kabs*k_cross_e.z};
@@ -377,6 +385,13 @@ run_simulation(void)
     AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
+    //Placeholders until determined properly
+    AcReal  magnitude = 0.05;
+    AcReal  relhel = 0.5;
+    AcReal  kmin = 0.8;
+    AcReal  kmax = 1.2;
+
+    AcReal kaver = (kmax - kmin)/AcReal(2.0);
 
     /* initialize random seed: */
     srand (312256655);
@@ -387,13 +402,8 @@ run_simulation(void)
         const AcReal dt   = host_timestep(umax, mesh_info);
 
 #if LFORCING
-        //Generate a forcing vectors before canculating an integration step. 
-        //Placeholders until determined properly
-        AcReal  magnitude = 0.05;
-        AcReal  relhel = 0.5;
-        AcReal  kmin = 0.9999;
-        AcReal  kmax = 1.0001;
-    
+        //Generate a forcing vector before canculating an integration step. 
+   
         // Generate forcing wave vector k_force
         AcReal3 k_force;
         k_force = helical_forcing_k_generator(kmax, kmin);
@@ -412,7 +422,7 @@ run_simulation(void)
 
         AcReal3 ff_hel_re, ff_hel_im;
         helical_forcing_special_vector(&ff_hel_re, &ff_hel_im, k_force, e_force, relhel);
-        acForcingVec(magnitude, k_force, ff_hel_re,ff_hel_im, phase);
+        acForcingVec(magnitude, k_force, ff_hel_re, ff_hel_im, phase, kaver);
 #endif
 
         acIntegrate(dt);
