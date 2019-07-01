@@ -386,8 +386,8 @@ run_simulation(void)
     AcReal bin_crit_t = bin_save_t;
 
     //Placeholders until determined properly
-    AcReal  magnitude = 0.05;
-    AcReal  relhel = 0.5;
+    AcReal  magnitude = 1e-5;
+    AcReal  relhel = 0.0;
     AcReal  kmin = 0.8;
     AcReal  kmax = 1.2;
 

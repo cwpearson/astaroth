@@ -236,15 +236,15 @@ helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vecto
     Scalar cos_k_dox_x     = cos(dot(k_force, xx));
     Scalar sin_k_dox_x     = sin(dot(k_force, xx));
     // Phase affect only the x-component
-    Scalar real_comp       = cos_k_dox_x;
-    Scalar imag_comp       = sin_k_dox_x;
+    //Scalar real_comp       = cos_k_dox_x;
+    //Scalar imag_comp       = sin_k_dox_x;
     Scalar real_comp_phase = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
     Scalar imag_comp_phase = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
 
 
     Vector force = (Vector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
-                             ff_re.y*real_comp - ff_im.y*imag_comp,
-                             ff_re.z*real_comp - ff_im.z*imag_comp}; 
+                             ff_re.y*real_comp_phase - ff_im.y*imag_comp_phase,
+                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase}; 
 
     return force;
 }
@@ -278,8 +278,8 @@ forcing(int3 globalVertexIdx, Scalar dt)
     const Scalar NN = cs*sqrt(DCONST_REAL(AC_kaver)*cs); 
     //MV: Like in the Pencil Code. I don't understandf the logic here. 
     force.x = sqrt(dt)*NN*force.x;
-    force.y = force.y;
-    force.z = force.z;
+    force.y = sqrt(dt)*NN*force.y;
+    force.z = sqrt(dt)*NN*force.z;
 
     if (is_valid(force)) { return force; }
     else                 { return (Vector){0, 0, 0}; }

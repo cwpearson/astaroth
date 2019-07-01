@@ -50,7 +50,8 @@ host_timestep(const AcReal& umax, const AcMeshInfo& mesh_info)
     // New, closer to the actual Courant timestep
     // See Pencil Code user manual p. 38 (timestep section)
     const long double uu_dt   = cdt * dsmin / (fabsl(umax) + sqrtl(cs2_sound + 0.0l));
-    const long double visc_dt = cdtv * dsmin * dsmin / max(max(nu_visc, eta), max(gamma, chi)) + 1; // TODO NOTE: comment the +1 out to get scientifically accurate results
+    const long double visc_dt = cdtv * dsmin * dsmin / max(max(nu_visc, eta), max(gamma, chi));// + 1; // TODO NOTE: comment the +1 out to get scientifically accurate results
+    //MV: White the +1? It was messing up my computations! 
 
     const long double dt = min(uu_dt, visc_dt);
     return AcReal(timescale) * AcReal(dt);
