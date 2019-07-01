@@ -21,4 +21,4 @@ else
     exit
 fi
 
-${ACC_DIR}/preprocess.sh $1 | ${ACC_DIR}/build/acc ${COMPILE_FLAGS} > ${CUH_FILENAME}
+${ACC_DIR}/preprocess.sh $2 $1 | ${ACC_DIR}/build/acc ${COMPILE_FLAGS} > ${CUH_FILENAME}

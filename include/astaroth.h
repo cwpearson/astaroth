@@ -69,14 +69,7 @@ extern "C" {
 
 // clang-format off
 #ifndef USER_PROVIDED_DEFINES
-    #define STENCIL_ORDER (6)
-    #define NGHOST (STENCIL_ORDER / 2)
-    #define LDENSITY (1)
-    #define LHYDRO (1)
-    #define LMAGNETIC (1)
-    #define LENTROPY (1)
-    #define LTEMPERATURE (0)
-    #define LFORCING (1)
+    #include "acc/mhd_solver/stencil_defines.h" // TODO: this should be in a standard location
 #endif
 // clang-format on
 
