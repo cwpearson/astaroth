@@ -82,7 +82,7 @@ TODO
 
 0. Resolve the conflicts and test that the code compiles and still works by running `./ac_run -t`
 
-0. If everything is OK, commit your final changes to the feature branch and merge it to master `git commit && git checkout master && git merge <your feature branch>`
+0. If everything is OK, commit your final changes to the feature branch and merge it to master `git commit && git checkout master && git merge <your feature branch> && git push`
 
 0. Unless you really have to keep your feature branch around for historical/other reasons, remove it from remote by calling `git push origin --delete <your feature branch>`
 
