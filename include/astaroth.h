@@ -73,7 +73,7 @@ extern "C" {
     #define NGHOST (STENCIL_ORDER / 2)
     #define LDENSITY (1)
     #define LHYDRO (1)
-    #define LINDUCTION (1) // %JP: TO BE RENAMED TO LMAGNETIC TODO
+    #define LMAGNETIC (1)
     #define LENTROPY (1)
     #define LTEMPERATURE (0)
     #define LFORCING (1)
@@ -194,13 +194,13 @@ extern "C" {
 #define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LINDUCTION
-#define AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC) \
+#ifdef LMAGNETIC
+#define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_AX), \
         FUNC(VTXBUF_AY), \
         FUNC(VTXBUF_AZ),
 #else
-#define AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC)
+#define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC)
 #endif
 
 #ifdef LENTROPY
@@ -222,7 +222,7 @@ extern "C" {
 #define AC_FOR_VTXBUF_HANDLES(FUNC) AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
-                                    AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC) \
+                                    AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC) \
 // clang-format on
 
 /*

@@ -745,7 +745,7 @@ solve_alpha_step(const int step_number, const ModelScalar dt, const int i, const
     ModelScalar rate_of_change[NUM_VTXBUF_HANDLES] = {0};
     rate_of_change[VTXBUF_LNRHO]                   = continuity(uu, lnrho);
 
-#if LINDUCTION
+#if LMAGNETIC
     const ModelVectorData aa  = read_data(i, j, k, in.vertex_buffer,
                                          (int3){VTXBUF_AX, VTXBUF_AY, VTXBUF_AZ});
     const ModelVector aa_res  = induction(uu, aa);

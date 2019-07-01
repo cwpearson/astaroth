@@ -122,7 +122,7 @@ out Scalar out_lnrho = VTXBUF_LNRHO;
 in Vector uu = (int3) {VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ};
 out Vector out_uu = (int3) {VTXBUF_UUX,VTXBUF_UUY,VTXBUF_UUZ};
 
-#if LINDUCTION
+#if LMAGNETIC
 in Vector aa = (int3) {VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ};
 out Vector out_aa = (int3) {VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ};
 #endif
@@ -131,7 +131,7 @@ Kernel void
 solve(Scalar dt) {
   WRITE(out_lnrho, RK3(out_lnrho, lnrho, continuity(uu, lnrho), dt));
 
-  #if LINDUCTION
+  #if LMAGNETIC
   WRITE(out_aa,    RK3(out_aa, aa, induction(uu, aa), dt));
   #endif
 
