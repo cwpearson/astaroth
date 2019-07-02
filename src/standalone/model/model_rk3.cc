@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2018, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
 
     This file is part of Astaroth.
 
@@ -710,6 +710,8 @@ is_valid(const ModelVector& a)
 }
 
 
+#if 0
+//FORCING NOT SUPPORTED FOR AUTOTEST
 
 static inline ModelVector
 simple_vortex_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
@@ -784,6 +786,7 @@ forcing(int3 globalVertexIdx, ModelScalar dt)
     if (is_valid(force)) { return force; }
     else                 { return (ModelVector){0, 0, 0}; }
 }
+#endif
 
 static void
 solve_alpha_step(const int step_number, const ModelScalar dt, const int i, const int j, const int k,

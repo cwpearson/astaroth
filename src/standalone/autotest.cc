@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2014-2018, Johannes Pekkilae, Miikka Vaeisalae.
+   Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
 
    This file is part of Astaroth.
 
@@ -32,6 +32,7 @@
 #include "core/math_utils.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
+#include "model/host_forcing.h"
 #include "model/model_boundconds.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
@@ -699,6 +700,11 @@ run_autotest(void)
                                                              VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
                 const AcReal dt   = host_timestep(umax, config);
 
+#if LFORCING
+  
+                //CURRENTLY AUTOTEST NOT SUPPORTED WITH FORCING!!!
+
+#endif
 
 
                 // Host integration step

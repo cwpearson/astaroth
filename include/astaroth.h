@@ -76,7 +76,7 @@ extern "C" {
     #define LMAGNETIC (1)
     #define LENTROPY (1)
     #define LTEMPERATURE (0)
-    #define LFORCING (1)
+    #define LFORCING (0)
 #endif
 // clang-format on
 
