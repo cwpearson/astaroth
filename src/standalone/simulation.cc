@@ -166,6 +166,7 @@ static inline void
 helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcReal3 k_force, 
                                const AcReal3 e_force, const AcReal relhel)
 {
+
     // k dot e 
     AcReal3 kdote;
     kdote.x = k_force.x * e_force.x;
@@ -385,11 +386,11 @@ run_simulation(void)
     AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
-    //Placeholders until determined properly
-    AcReal  magnitude = 1e-5;
-    AcReal  relhel = 0.0;
-    AcReal  kmin = 0.8;
-    AcReal  kmax = 1.2;
+    //Forcing properties
+    AcReal relhel    = mesh_info.real_params[AC_relhel]; 
+    AcReal magnitude = mesh_info.real_params[AC_forcing_magnitude];
+    AcReal kmin      = mesh_info.real_params[AC_kmin];
+    AcReal kmax      = mesh_info.real_params[AC_kmax];
 
     AcReal kaver = (kmax - kmin)/AcReal(2.0);
 

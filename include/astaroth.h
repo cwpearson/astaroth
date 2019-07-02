@@ -142,7 +142,6 @@ extern "C" {
         FUNC(AC_cs_sound), \
         FUNC(AC_eta), \
         FUNC(AC_mu0), \
-        FUNC(AC_relhel), \
         FUNC(AC_cp_sound), \
         FUNC(AC_gamma), \
         FUNC(AC_cv_sound), \
@@ -160,6 +159,9 @@ extern "C" {
         FUNC(AC_lnrho_out),\
 	/* Forcing parameters. User configured. */\
         FUNC(AC_forcing_magnitude),\
+        FUNC(AC_relhel), \
+        FUNC(AC_kmin), \
+        FUNC(AC_kmax), \
 	/* Forcing parameters. Set by the generator. */\
         FUNC(AC_forcing_phase),\
         FUNC(AC_k_forcex),\
