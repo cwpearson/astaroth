@@ -42,6 +42,10 @@ __constant__ Grid globalGrid;
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
 #include "kernels/kernels.cuh"
 
+#if PACKED_DATA_TRANSFERS // Defined in device.cuh
+// #include "kernels/pack_unpack.cuh"
+#endif
+
 struct device_s {
     int id;
     AcMeshInfo local_config;
@@ -53,6 +57,11 @@ struct device_s {
     VertexBufferArray vba;
     AcReal* reduce_scratchpad;
     AcReal* reduce_result;
+
+#if PACKED_DATA_TRANSFERS
+// Declare memory for buffers needed for packed data transfers here
+// AcReal* data_packing_buffer;
+#endif
 };
 
 AcResult
@@ -154,6 +163,10 @@ createDevice(const int id, const AcMeshInfo device_config, Device* device_handle
         cudaMalloc(&device->reduce_scratchpad, AC_VTXBUF_COMPDOMAIN_SIZE_BYTES(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->reduce_result, sizeof(AcReal)));
 
+#if PACKED_DATA_TRANSFERS
+// Allocate data required for packed transfers here (cudaMalloc)
+#endif
+
     // Device constants
     ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_mesh_info, &device_config, sizeof(device_config), 0,
                                           cudaMemcpyHostToDevice));
@@ -183,6 +196,10 @@ destroyDevice(Device device)
     }
     cudaFree(device->reduce_scratchpad);
     cudaFree(device->reduce_result);
+
+#if PACKED_DATA_TRANSFERS
+// Free data required for packed tranfers here (cudaFree)
+#endif
 
     // Concurrency
     for (int i = 0; i < NUM_STREAM_TYPES; ++i)
@@ -373,3 +390,7 @@ loadGlobalGrid(const Device device, const Grid grid)
         cudaMemcpyToSymbol(globalGrid, &grid, sizeof(grid), 0, cudaMemcpyHostToDevice));
     return AC_SUCCESS;
 }
+
+#if PACKED_DATA_TRANSFERS
+// Functions for calling packed data transfers
+#endif

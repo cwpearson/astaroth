@@ -98,3 +98,8 @@ AcResult loadDeviceConstant(const Device device, const AcRealParam param, const 
 
 /** */
 AcResult loadGlobalGrid(const Device device, const Grid grid);
+
+// #define PACKED_DATA_TRANSFERS (1) %JP: placeholder for optimized ghost zone packing and transfers
+#if PACKED_DATA_TRANSFERS
+// Declarations used for packed data transfers
+#endif

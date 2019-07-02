@@ -67,17 +67,18 @@ extern "C" {
 // logical switches
 #include "user.h"
 
+// clang-format off
 #ifndef USER_PROVIDED_DEFINES
-  #define STENCIL_ORDER (6)
-  #define NGHOST (STENCIL_ORDER/2)
-  #define LHYDRO (1)
-  #define LDENSITY (1)
-  #define LFORCING (1)
-  #define LINDUCTION (1)
-  #define LENTROPY (1)
-  #define LTEMPERATURE (0)
-  #define LMAGNETIC LINDUCTION
+    #define STENCIL_ORDER (6)
+    #define NGHOST (STENCIL_ORDER / 2)
+    #define LDENSITY (1)
+    #define LHYDRO (1)
+    #define LMAGNETIC (1)
+    #define LENTROPY (1)
+    #define LTEMPERATURE (0)
+    #define LFORCING (1)
 #endif
+// clang-format on
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
 
@@ -193,54 +194,51 @@ extern "C" {
  * =============================================================================
  */
 // clang-format off
-#ifdef LHYDRO 
-#define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_UUX), \
-        FUNC(VTXBUF_UUY), \
-        FUNC(VTXBUF_UUZ), 
-#else
-#define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC)
-#endif
-
-#ifdef LDENSITY 
+#ifdef LDENSITY
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_LNRHO), 
+        FUNC(VTXBUF_LNRHO),
 #else
 #define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LENTROPY 
+#ifdef LHYDRO
+#define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
+        FUNC(VTXBUF_UUX), \
+        FUNC(VTXBUF_UUY), \
+        FUNC(VTXBUF_UUZ),
+#else
+#define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC)
+#endif
+
+#ifdef LMAGNETIC
+#define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC) \
+        FUNC(VTXBUF_AX), \
+        FUNC(VTXBUF_AY), \
+        FUNC(VTXBUF_AZ),
+#else
+#define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC)
+#endif
+
+#ifdef LENTROPY
 #define AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
         FUNC(VTXBUF_ENTROPY),
 #else
 #define AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC)
 #endif
 
-#ifdef LMAGNETIC
-#define AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_AX), \
-        FUNC(VTXBUF_AY), \
-        FUNC(VTXBUF_AZ),
+//MR: Temperature must not have an additional variable slot, but should sit on the
+//    same as entropy.
+#if LTEMPERATURE
+    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)\
+          FUNC(VTXBUF_TEMPERATURE),
 #else
-#define AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC)
+    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)
 #endif
 
 #define AC_FOR_VTXBUF_HANDLES(FUNC) AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
                                     AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
-                                    AC_FOR_INDUCTION_VTXBUF_HANDLES(FUNC) \
-
-//MR: Temperature must not have an additional variable slot, but should sit on the 
-//    same as entropy.
-#ifndef USER_PROVIDED
-  #if LTEMPERATURE
-    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)\
-          FUNC(VTXBUF_TEMPERATURE),
-  #else
-    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)
-  #endif
-#endif
-
+                                    AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC) \
 // clang-format on
 
 /*
@@ -248,19 +246,21 @@ extern "C" {
  * Single/double precision switch
  * =============================================================================
  */
+// clang-format off
 #if AC_DOUBLE_PRECISION == 1
-typedef double AcReal;
-typedef double3 AcReal3;
-#define AC_REAL_MAX (DBL_MAX)
-#define AC_REAL_MIN (DBL_MIN)
-#define AC_REAL_EPSILON (DBL_EPSILON)
+    typedef double AcReal;
+    typedef double3 AcReal3;
+    #define AC_REAL_MAX (DBL_MAX)
+    #define AC_REAL_MIN (DBL_MIN)
+    #define AC_REAL_EPSILON (DBL_EPSILON)
 #else
-typedef float AcReal;
-typedef float3 AcReal3;
-#define AC_REAL_MAX (FLT_MAX)
-#define AC_REAL_MIN (FLT_MIN)
-#define AC_REAL_EPSILON (FLT_EPSILON)
+    typedef float AcReal;
+    typedef float3 AcReal3;
+    #define AC_REAL_MAX (FLT_MAX)
+    #define AC_REAL_MIN (FLT_MIN)
+    #define AC_REAL_EPSILON (FLT_EPSILON)
 #endif
+// clang-format on
 
 typedef struct {
     AcReal3 row[3];
@@ -296,7 +296,7 @@ typedef enum { RTYPE_MAX, RTYPE_MIN, RTYPE_RMS, RTYPE_RMS_EXP, NUM_REDUCTION_TYP
 typedef enum { AC_FOR_INT_PARAM_TYPES(AC_GEN_ID), NUM_INT_PARAM_TYPES } AcIntParam;
 
 typedef enum { AC_FOR_REAL_PARAM_TYPES(AC_GEN_ID), NUM_REAL_PARAM_TYPES } AcRealParam;
-//typedef enum { AC_FOR_VEC_PARAM_TYPES(AC_GEN_ID), NUM_VEC_PARAM_TYPES } AcVecParam;
+// typedef enum { AC_FOR_VEC_PARAM_TYPES(AC_GEN_ID), NUM_VEC_PARAM_TYPES } AcVecParam;
 
 extern const char* intparam_names[];  // Defined in astaroth.cu
 extern const char* realparam_names[]; // Defined in astaroth.cu
@@ -304,7 +304,7 @@ extern const char* realparam_names[]; // Defined in astaroth.cu
 typedef struct {
     int int_params[NUM_INT_PARAM_TYPES];
     AcReal real_params[NUM_REAL_PARAM_TYPES];
-    //AcReal* vec_params[NUM_VEC_PARAM_TYPES];
+    // AcReal* vec_params[NUM_VEC_PARAM_TYPES];
 } AcMeshInfo;
 
 /*
@@ -418,35 +418,3 @@ AcResult acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, con
 #ifdef __cplusplus
 }
 #endif
-
-/*
- * =============================================================================
- * Notes
- * =============================================================================
- */
-/*
-typedef enum {
-    VTX_BUF_LNRHO,
-    VTX_BUF_UUX,
-    VTX_BUF_UUY,
-    VTX_BUF_UUZ,
-    NUM_VERTEX_BUFFER_HANDLES
-} VertexBufferHandle
-
-// LNRHO etc
-typedef struct {
-    AcReal* data;
-} VertexBuffer;
-
-// Host
-typedef struct {
-    VertexBuffer vertex_buffers[NUM_VERTEX_BUFFER_HANDLES];
-    MeshInfo info;
-} Mesh;
-
-// Device
-typedef struct {
-    VertexBuffer in[NUM_VERTEX_BUFFER_HANDLES];
-    VertexBuffer out[NUM_VERTEX_BUFFER_HANDLES];
-} VertexBufferArray;
-*/

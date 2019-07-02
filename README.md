@@ -2,13 +2,13 @@
 
 # Astaroth - A Multi-GPU library for generic stencil computations
 
-Astaroth is a single-node multi-GPU library for multiphysics and other problems, which involve stencil computations in a discrete mesh. It's licenced under the terms of the GNU General Public Licence, version 3, or later (see [LICENCE.txt](https://bitbucket.org/miikkavaisala/astaroth-code/src/master/astaroth_2.0/LICENCE.txt)). Astaroth ships with a domain-specific language, that can be used to translate high-level representation of the stencil computations into a heavily inlined GPU pipeline.
+Astaroth is a single-node multi-GPU library for multiphysics and other problems, which involve stencil computations in a discrete mesh. It's licenced under the terms of the GNU General Public Licence, version 3, or later (see [LICENCE.txt](https://bitbucket.org/miikkavaisala/astaroth-code/src/master/astaroth_2.0/LICENCE.txt)). Astaroth ships with a domain-specific language that can be used to translate high-level representations of various stencil operations into efficient CUDA kernels.
 
 ## System requirements
 
 NVIDIA GPU with >= 3.0 compute capability. See https://en.wikipedia.org/wiki/CUDA#GPUs_supported.
 
-## Building (3rd party libraries)
+## Building (3rd party libraries for real-time visualization)
 
 1. `cd 3rdparty`
 1. `./setup_dependencies.sh` Note: this may take some time.
@@ -60,6 +60,43 @@ Run `doxygen doxyfile` in astaroth_2.0 directory. The generated files can be fou
 If you have clang-format, you may run `scripts/fix_style.sh`. This script will recursively fix style of all the source files down from the current working directory. The script will ask for a confirmation before making any changes. 
 
 ## Directory structure
+TODO
+
+## Contributing
+
+0. **Do not break existing functionality.** Do not modify the interface functions declared in astaroth.h and device.cuh in any way. Bug fixes are exceptions. If you need new functionality, create a new function.
+
+0. **Do not rename or redefine variables or constants declared in astaroth.h** without consulting everyone involved with the project.
+
+0. **Ensure that the code compiles and the automated tests pass** by running `./ac_run -t` before pushing changes to master. If you want to implement a feature that consists of multiple commits, see Managing feature branches below.
+
+### Managing feature branches 
+
+0. Ensure that you're on the latest version of master. `git checkout master && git pull`
+
+0. Create a feature branch with `git checkout -b <feature_name_year-month-date>`, f.ex. `git checkout -b forcingtests_2019-01-01`
+
+0. Do your commits in that branch until your new feature works
+
+0. Merge master with your feature branch `git merge master`
+
+0. Resolve the conflicts and test that the code compiles and still works by running `./ac_run -t`
+
+0. If everything is OK, commit your final changes to the feature branch and merge it to master `git commit && git checkout master && git merge <your feature branch> && git push`
+
+0. Unless you really have to keep your feature branch around for historical/other reasons, remove it from remote by calling `git push origin --delete <your feature branch>`
+
+A flowchart is available at [doc/commitflowchart.png](https://bitbucket.org/jpekkila/astaroth/src/2d91df19dcb3/doc/commitflowchart.png?at=master).
+
+### About branches in general
+
+* Unused branches should not kept around after merging them into master in order to avoid cluttering the repository. 
+
+* `git branch -a --merged` shows a list of branches that have been merged to master and are likely not needed any more.
+
+* `git push origin --delete <feature branch>` deletes a remote branch while `git branch -d <feature branch>` deletes a local branch
+
+* If you think that you have messed up and lost work, run `git reflog` which lists the latests commits. All work that has been committed should be accessible with the hashes listed by this command with `git checkout <reflog hash>`.
 
 ## Coding style.
 
