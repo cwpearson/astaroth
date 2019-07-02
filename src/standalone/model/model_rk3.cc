@@ -709,27 +709,80 @@ is_valid(const ModelVector& a)
     return is_valid(a.x) && is_valid(a.y) && is_valid(a.z);
 }
 
-static inline ModelVector
-forcing(int3 globalVertexIdx)
-{
-    // source (origin)
-    ModelVector a = ModelScalar(.5) * (ModelVector){get(AC_nx) * get(AC_dsx),
-                                                    get(AC_ny) * get(AC_dsy),
-                                                    get(AC_nz) * get(AC_dsz)};
-    // sink (current index)
-    ModelVector b = (ModelVector){(globalVertexIdx.x - get(AC_nx_min)) * get(AC_dsx),
-                                  (globalVertexIdx.y - get(AC_ny_min)) * get(AC_dsy),
-                                  (globalVertexIdx.z - get(AC_nz_min)) * get(AC_dsz)};
 
-    ModelScalar magnitude = 0.05;
-    // Vector c = magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
-    ModelVector c = magnitude * cross(normalized(b - a), (ModelVector){0, 0, 1}); // Vortex
-    if (is_valid(c)) {
-        return c;
-    }
-    else {
-        return (ModelVector){0, 0, 0};
-    }
+
+static inline ModelVector
+simple_vortex_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
+{
+    return magnitude * cross(normalized(b - a), (ModelVector){0, 0, 1}); // Vortex   
+}
+
+static inline ModelVector
+simple_outward_flow_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
+{
+    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow   
+}
+
+
+// The Pencil Code forcing_hel_noshear(), manual Eq. 222, inspired forcing function with adjustable helicity
+static inline ModelVector
+helical_forcing(ModelScalar magnitude, ModelVector k_force, ModelVector xx, ModelVector ff_re, ModelVector ff_im, ModelScalar phi)
+{
+
+    xx.x = xx.x*(2.0*M_PI/(get(AC_dsx)*(get(AC_ny_max) - get(AC_ny_min))));
+    xx.y = xx.y*(2.0*M_PI/(get(AC_dsy)*(get(AC_ny_max) - get(AC_ny_min))));
+    xx.z = xx.z*(2.0*M_PI/(get(AC_dsz)*(get(AC_ny_max) - get(AC_ny_min))));
+
+    ModelScalar cos_phi = cos(phi);
+    ModelScalar sin_phi = sin(phi);
+    ModelScalar cos_k_dox_x     = cos(dot(k_force, xx));
+    ModelScalar sin_k_dox_x     = sin(dot(k_force, xx));
+    // Phase affect only the x-component
+    ModelScalar real_comp_phase = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
+    ModelScalar imag_comp_phase = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
+
+
+    ModelVector force = (ModelVector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
+                             ff_re.y*real_comp_phase - ff_im.y*imag_comp_phase,
+                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase}; 
+
+    return force;
+}
+
+static inline ModelVector
+forcing(int3 globalVertexIdx, ModelScalar dt)
+{
+    ModelVector a = ModelScalar(.5) * (ModelVector){ get(AC_nx) * get(AC_dsx),
+                                     get(AC_ny) * get(AC_dsy),
+                                     get(AC_nz) * get(AC_dsz)}; // source (origin)
+    ModelVector xx = (ModelVector){(globalVertexIdx.x - get(AC_nx_min)) * get(AC_dsx),
+                        (globalVertexIdx.y - get(AC_ny_min) * get(AC_dsy)),
+                        (globalVertexIdx.z - get(AC_nz_min) * get(AC_dsz))}; // sink (current index)
+    const ModelScalar cs2 = get(AC_cs2_sound);
+    const ModelScalar cs = sqrt(cs2);
+
+    //Placeholders until determined properly
+    ModelScalar magnitude = get(AC_forcing_magnitude);
+    ModelScalar phase     = get(AC_forcing_phase);   
+    ModelVector k_force   = (ModelVector){  get(AC_k_forcex),   get(AC_k_forcey),   get(AC_k_forcez)};
+    ModelVector ff_re     = (ModelVector){get(AC_ff_hel_rex), get(AC_ff_hel_rey), get(AC_ff_hel_rez)};
+    ModelVector ff_im     = (ModelVector){get(AC_ff_hel_imx), get(AC_ff_hel_imy), get(AC_ff_hel_imz)};
+
+
+    //Determine that forcing funtion type at this point. 
+    //ModelVector force = simple_vortex_forcing(a, xx, magnitude);
+    //ModelVector force = simple_outward_flow_forcing(a, xx, magnitude);
+    ModelVector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
+
+    //Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
+    const ModelScalar NN = cs*sqrt(get(AC_kaver)*cs); 
+    //MV: Like in the Pencil Code. I don't understandf the logic here. 
+    force.x = sqrt(dt)*NN*force.x;
+    force.y = sqrt(dt)*NN*force.y;
+    force.z = sqrt(dt)*NN*force.z;
+
+    if (is_valid(force)) { return force; }
+    else                 { return (ModelVector){0, 0, 0}; }
 }
 
 static void
@@ -795,10 +848,10 @@ solve_beta_step(const int step_number, const ModelScalar dt, const int i, const 
 
 #if LFORCING
     if (step_number == 2) {
-        ModelVector force = forcing((int3){i, j, k});
-        out->vertex_buffer[VTXBUF_UUX][idx] += force.x * dt;
-        out->vertex_buffer[VTXBUF_UUY][idx] += force.y * dt;
-        out->vertex_buffer[VTXBUF_UUZ][idx] += force.z * dt;
+        ModelVector force = forcing((int3){i, j, k}, dt);
+        out->vertex_buffer[VTXBUF_UUX][idx] += force.x ;
+        out->vertex_buffer[VTXBUF_UUY][idx] += force.y ;
+        out->vertex_buffer[VTXBUF_UUZ][idx] += force.z ;
     }
 #endif
 }

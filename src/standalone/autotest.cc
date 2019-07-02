@@ -699,6 +699,8 @@ run_autotest(void)
                                                              VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
                 const AcReal dt   = host_timestep(umax, config);
 
+
+
                 // Host integration step
                 model_rk3(dt, model_mesh);
                 boundconds(config, model_mesh);
