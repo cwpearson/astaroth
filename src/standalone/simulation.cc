@@ -29,6 +29,7 @@
 #include "config_loader.h"
 #include "core/errchk.h"
 #include "core/math_utils.h"
+#include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
 #include "model/model_reduce.h"
@@ -202,7 +203,7 @@ run_simulation(void)
     load_config(&mesh_info);
 
     AcMesh* mesh = acmesh_create(mesh_info);
-    //TODO: This need to be possible to define in astaroth.conf 
+    // TODO: This need to be possible to define in astaroth.conf
     acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
 
     acInit(mesh_info);
@@ -229,17 +230,54 @@ run_simulation(void)
     acStore(mesh);
     save_mesh(*mesh, 0, t_step);
 
-    const int max_steps  = mesh_info.int_params[AC_max_steps];
-    const int save_steps = mesh_info.int_params[AC_save_steps];
+    const int max_steps      = mesh_info.int_params[AC_max_steps];
+    const int save_steps     = mesh_info.int_params[AC_save_steps];
     const int bin_save_steps = mesh_info.int_params[AC_bin_steps]; // TODO Get from mesh_info
 
     AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
+    // Forcing properties
+    // AcReal relhel    = mesh_info.real_params[AC_relhel]; // JP: gcc warning: unused
+    // AcReal magnitude = mesh_info.real_params[AC_forcing_magnitude]; // JP: gcc warning: unused
+    // AcReal kmin = mesh_info.real_params[AC_kmin]; // JP: gcc warning: unused
+    // AcReal kmax = mesh_info.real_params[AC_kmax]; // JP: gcc warning: unused
+
+    // AcReal kaver = (kmax - kmin) / AcReal(2.0); // JP: gcc warning: unused
+
+    /* initialize random seed: */
+    srand(312256655);
+
     /* Step the simulation */
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
+
+#if LFORCING
+        // Generate a forcing vector before canculating an integration step.
+
+        // Generate forcing wave vector k_force
+        AcReal3 k_force;
+        k_force = helical_forcing_k_generator(kmax, kmin);
+
+        // Randomize the phase
+        AcReal phase = AcReal(2.0) * AcReal(M_PI) * get_random_number_01();
+
+        // Generate e for k. Needed for the sake of isotrophy.
+        AcReal3 e_force;
+        if ((k_force.y == 0.0) && (k_force.z == 0.0)) {
+            e_force = (AcReal3){0.0, 1.0, 0.0};
+        }
+        else {
+            e_force = (AcReal3){1.0, 0.0, 0.0};
+        }
+        helical_forcing_e_generator(&e_force, k_force);
+
+        AcReal3 ff_hel_re, ff_hel_im;
+        helical_forcing_special_vector(&ff_hel_re, &ff_hel_im, k_force, e_force, relhel);
+        acForcingVec(magnitude, k_force, ff_hel_re, ff_hel_im, phase, kaver);
+#endif
+
         acIntegrate(dt);
 
         t_step += dt;

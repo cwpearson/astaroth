@@ -505,3 +505,44 @@ acSynchronize(void)
 
     return AC_SUCCESS;
 }
+
+AcResult
+acLoadDeviceConstant(const AcRealParam param, const AcReal value)
+{
+    for (int i = 0; i < num_devices; ++i) {
+        loadDeviceConstant(devices[i], param, value);
+    }
+    return AC_SUCCESS;
+}
+
+// Tool for loading forcing vector information into the device memory
+// %JP: Added a generic function for loading device constants (acLoadDeviceConstant).
+// This acForcingVec should go outside the core library since it references user-defined
+// parameters such as AC_forcing_magnitude which may not be defined in all projects.
+// host_forcing.cc is probably a good place for this.
+AcResult
+acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re,
+             const AcReal3 ff_hel_im, const AcReal forcing_phase, const AcReal kaver)
+{
+
+    for (int i = 0; i < num_devices; ++i) {
+        loadDeviceConstant(devices[i], AC_forcing_magnitude, forcing_magnitude);
+        loadDeviceConstant(devices[i], AC_forcing_phase, forcing_phase);
+
+        loadDeviceConstant(devices[i], AC_k_forcex, k_force.x);
+        loadDeviceConstant(devices[i], AC_k_forcey, k_force.y);
+        loadDeviceConstant(devices[i], AC_k_forcez, k_force.z);
+
+        loadDeviceConstant(devices[i], AC_ff_hel_rex, ff_hel_re.x);
+        loadDeviceConstant(devices[i], AC_ff_hel_rey, ff_hel_re.y);
+        loadDeviceConstant(devices[i], AC_ff_hel_rez, ff_hel_re.z);
+
+        loadDeviceConstant(devices[i], AC_ff_hel_imx, ff_hel_im.x);
+        loadDeviceConstant(devices[i], AC_ff_hel_imy, ff_hel_im.y);
+        loadDeviceConstant(devices[i], AC_ff_hel_imz, ff_hel_im.z);
+
+        loadDeviceConstant(devices[i], AC_kaver, kaver);
+    }
+
+    return AC_SUCCESS;
+}

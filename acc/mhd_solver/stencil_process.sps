@@ -12,6 +12,9 @@ uniform Scalar dsx;
 uniform Scalar dsy;
 uniform Scalar dsz;
 
+uniform Scalar lnT0;
+uniform Scalar lnrho0;
+
 uniform int nx_min;
 uniform int ny_min;
 uniform int nz_min;
@@ -58,9 +61,10 @@ continuity(in Vector uu, in Scalar lnrho) {
 Vector
 momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
     const Matrix S = stress_tensor(uu);
-    const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - LNRHO0));
+    const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - lnrho0));
     const Vector  j = (Scalar(1.) / mu0) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
     const Vector B = curl(aa);
+    //TODO: DOES INTHERMAL VERSTION INCLUDE THE MAGNETIC FIELD?
     const Scalar inv_rho = Scalar(1.) / exp(value(lnrho));
 
     // Regex replace CPU constants with get\(AC_([a-zA-Z_0-9]*)\)
@@ -100,21 +104,23 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar tt) {
 #else
 Vector
 momentum(in Vector uu, in Scalar lnrho) {
-    // !!!!!!!!!!!!!!!!%JP: NOTE TODO IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!
-    // NOT CHECKED FOR CORRECTNESS: USE AT YOUR OWN RISK
-    const Matrix S = stress_tensor(uu);
-    const Scalar cs2 = cs2_sound * exp((gamma - 1) * (value(lnrho) - LNRHO0));
-    // Regex replace CPU constants with get\(AC_([a-zA-Z_0-9]*)\)
-    // \1
-    const Vector mom = - mul(gradients(uu), value(uu))
-                                                       - cs2 * gradient(lnrho)
-                                                       + nu_visc * (
-                                                            laplace_vec(uu)
-                                                        + Scalar(1. / 3.) * gradient_of_divergence(uu)
-                                                        + Scalar(2.) * mul(S, gradient(lnrho))
-                                                        )
-                                                        + zeta * gradient_of_divergence(uu);
-    return mom;
+  Vector mom;
+
+  const Matrix S = stress_tensor(uu);
+
+    // Isothermal: we have constant speed of sound
+
+  mom = -mul(gradients(uu), value(uu)) -
+    cs2_sound * gradient(lnrho) +
+    nu_visc *
+    (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
+      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
+
+  #if LGRAVITY
+  mom = mom - (Vector){0, 0, -10.0};
+  #endif
+
+  return mom;
 }
 #endif
 
@@ -139,8 +145,8 @@ induction(in Vector uu, in Vector aa) {
 #if LENTROPY
 Scalar
 lnT( in Scalar ss, in Scalar lnrho) {
-  const Scalar lnT = LNT0 + gamma * value(ss) / cp_sound +
-    (gamma - Scalar(1.)) * (value(lnrho) - LNRHO0);
+  const Scalar lnT = lnT0 + gamma * value(ss) / cp_sound +
+    (gamma - Scalar(1.)) * (value(lnrho) - lnrho0);
   return lnT;
 }
 
@@ -193,7 +199,11 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
 }
 #endif
 
+
+
 #if LFORCING
+
+
 
 Vector
 simple_vortex_forcing(Vector a, Vector b, Scalar magnitude)
@@ -207,24 +217,68 @@ simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude)
     return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
 }
 
+
+// The Pencil Code forcing_hel_noshear(), manual Eq. 222, inspired forcing function with adjustable helicity
 Vector
-forcing(int3 globalVertexIdx)
+helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vector ff_im, Scalar phi)
+{
+
+    xx.x = xx.x*(2.0*M_PI/(dsx*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
+    xx.y = xx.y*(2.0*M_PI/(dsy*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
+    xx.z = xx.z*(2.0*M_PI/(dsz*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
+
+    Scalar cos_phi = cos(phi);
+    Scalar sin_phi = sin(phi);
+    Scalar cos_k_dox_x     = cos(dot(k_force, xx));
+    Scalar sin_k_dox_x     = sin(dot(k_force, xx));
+    // Phase affect only the x-component
+    //Scalar real_comp       = cos_k_dox_x;
+    //Scalar imag_comp       = sin_k_dox_x;
+    Scalar real_comp_phase = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
+    Scalar imag_comp_phase = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
+
+
+    Vector force = (Vector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
+                             ff_re.y*real_comp_phase - ff_im.y*imag_comp_phase,
+                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase};
+
+    return force;
+}
+
+Vector
+forcing(int3 globalVertexIdx, Scalar dt)
 {
     Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
                                      globalGrid.n.y * dsy,
                                      globalGrid.n.z * dsz}; // source (origin)
-    Vector b = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+    Vector xx = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                         (globalVertexIdx.y - ny_min) * dsy,
                         (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
+    const Scalar cs2 = cs2_sound;
+    const Scalar cs = sqrt(cs2);
 
-    Scalar magnitude = 0.05;
+    //Placeholders until determined properly
+    Scalar magnitude = DCONST_REAL(AC_forcing_magnitude);
+    Scalar phase     = DCONST_REAL(AC_forcing_phase);
+    Vector k_force   = (Vector){  DCONST_REAL(AC_k_forcex),   DCONST_REAL(AC_k_forcey),   DCONST_REAL(AC_k_forcez)};
+    Vector ff_re     = (Vector){DCONST_REAL(AC_ff_hel_rex), DCONST_REAL(AC_ff_hel_rey), DCONST_REAL(AC_ff_hel_rez)};
+    Vector ff_im     = (Vector){DCONST_REAL(AC_ff_hel_imx), DCONST_REAL(AC_ff_hel_imy), DCONST_REAL(AC_ff_hel_imz)};
+
 
     //Determine that forcing funtion type at this point.
-    Vector c = simple_vortex_forcing(a, b, magnitude);
-    //Vector c = simple_outward_flow_forcing(a, b, magnitude);
+    //Vector force = simple_vortex_forcing(a, xx, magnitude);
+    //Vector force = simple_outward_flow_forcing(a, xx, magnitude);
+    Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
 
-    if (is_valid(c)) { return c; }
-    else             { return (Vector){0, 0, 0}; }
+    //Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
+    const Scalar NN = cs*sqrt(DCONST_REAL(AC_kaver)*cs);
+    //MV: Like in the Pencil Code. I don't understandf the logic here.
+    force.x = sqrt(dt)*NN*force.x;
+    force.y = sqrt(dt)*NN*force.y;
+    force.z = sqrt(dt)*NN*force.z;
+
+    if (is_valid(force)) { return force; }
+    else                 { return (Vector){0, 0, 0}; }
 }
 #endif // LFORCING
 
@@ -272,7 +326,7 @@ solve(Scalar dt) {
 
     #if LFORCING
     if (step_number == 2) {
-        out_uu = out_uu + dt * forcing(globalVertexIdx);
+        out_uu = out_uu + forcing(globalVertexIdx, dt);
     }
     #endif
 }

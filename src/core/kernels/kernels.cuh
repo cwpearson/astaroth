@@ -543,39 +543,6 @@ normalized(const AcReal3& vec)
     return inv_len * vec;
 }
 
-// Sinusoidal forcing
-// https://arxiv.org/pdf/1704.04676.pdf
-// NOTE: This method of forcing is depracated. However, it will remain in here
-// until a corresponding scheme exists in the new code.
-__constant__ AcReal3 forcing_vec;
-__constant__ AcReal forcing_phi;
-static __device__ __forceinline__ AcReal3
-DEPRECATED_forcing(const int i, const int j, const int k)
-{
-#define DOMAIN_SIZE_X (DCONST_INT(AC_nx) * DCONST_REAL(AC_dsx))
-#define DOMAIN_SIZE_Y (DCONST_INT(AC_ny) * DCONST_REAL(AC_dsy))
-#define DOMAIN_SIZE_Z (DCONST_INT(AC_nz) * DCONST_REAL(AC_dsz))
-    const AcReal3 k_vec = (AcReal3){
-        (i - DCONST_INT(AC_nx_min)) * DCONST_REAL(AC_dsx) - AcReal(.5) * DOMAIN_SIZE_X,
-        (j - DCONST_INT(AC_ny_min)) * DCONST_REAL(AC_dsy) - AcReal(.5) * DOMAIN_SIZE_Y,
-        (k - DCONST_INT(AC_nz_min)) * DCONST_REAL(AC_dsz) - AcReal(.5) * DOMAIN_SIZE_Z};
-    AcReal inv_len = reciprocal_len(k_vec);
-    if (isnan(inv_len) || isinf(inv_len))
-        inv_len = 0;
-    if (inv_len > 2) // hack to make it cool
-        inv_len = 2;
-    const AcReal k_dot_x = dot(k_vec, forcing_vec);
-
-    const AcReal waves = cos(k_dot_x) * cos(forcing_phi) - sin(k_dot_x) * sin(forcing_phi);
-
-    return inv_len * inv_len * waves * forcing_vec;
-}
-
-// Note: LNT0 and LNRHO0 must be set very carefully: if the magnitude is different that other values
-// in the mesh, then we will inherently lose precision
-#define LNT0 (AcReal(0.0))
-#define LNRHO0 (AcReal(0.0))
-
 #define H_CONST (AcReal(0.0))
 #define C_CONST (AcReal(0.0))
 
@@ -739,31 +706,11 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
  * =============================================================================
  */
 
-static AcReal
-randf(void)
-{
-    return AcReal(rand()) / AcReal(RAND_MAX);
-}
-
 AcResult
 rk3_step_async(const cudaStream_t stream, const int& step_number, const int3& start,
                const int3& end, const AcReal dt, VertexBufferArray* buffer)
 {
     const dim3 tpb(32, 1, 4);
-/////////////////// Forcing
-#if LFORCING
-    const AcReal ff_scale = AcReal(.2);
-    static AcReal3 ff     = ff_scale * (AcReal3){1, 0, 0};
-    const AcReal radians  = randf() * AcReal(2 * M_PI) / 360 / 8;
-    const AcMatrix rotz   = create_rotz(radians);
-    ff                    = mul(rotz, ff);
-    cudaMemcpyToSymbolAsync(forcing_vec, &ff, sizeof(ff), 0, cudaMemcpyHostToDevice, stream);
-
-    const AcReal ff_phi = AcReal(M_PI); // AcReal(2 * M_PI) * randf();
-    cudaMemcpyToSymbolAsync(forcing_phi, &ff_phi, sizeof(ff_phi), 0, cudaMemcpyHostToDevice,
-                            stream);
-#endif // LFORCING
-    //////////////////////////
 
     const int nx = end.x - start.x;
     const int ny = end.y - start.y;

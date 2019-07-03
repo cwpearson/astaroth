@@ -136,7 +136,6 @@ extern "C" {
         FUNC(AC_cs_sound), \
         FUNC(AC_eta), \
         FUNC(AC_mu0), \
-        FUNC(AC_relhel), \
         FUNC(AC_cp_sound), \
         FUNC(AC_gamma), \
         FUNC(AC_cv_sound), \
@@ -152,6 +151,23 @@ extern "C" {
         FUNC(AC_angl_uu), \
         FUNC(AC_lnrho_edge),\
         FUNC(AC_lnrho_out),\
+	/* Forcing parameters. User configured. */\
+        FUNC(AC_forcing_magnitude),\
+        FUNC(AC_relhel), \
+        FUNC(AC_kmin), \
+        FUNC(AC_kmax), \
+	/* Forcing parameters. Set by the generator. */\
+        FUNC(AC_forcing_phase),\
+        FUNC(AC_k_forcex),\
+        FUNC(AC_k_forcey),\
+        FUNC(AC_k_forcez),\
+        FUNC(AC_kaver),\
+        FUNC(AC_ff_hel_rex),\
+        FUNC(AC_ff_hel_rey),\
+        FUNC(AC_ff_hel_rez),\
+        FUNC(AC_ff_hel_imx),\
+        FUNC(AC_ff_hel_imy),\
+        FUNC(AC_ff_hel_imz),\
         /* Additional helper params */\
         /* (deduced from other params do not set these directly!) */\
         FUNC(AC_G_CONST),\
@@ -385,6 +401,15 @@ AcResult acQuit(void);
 /** Synchronizes all devices. All calls to Astaroth are asynchronous by default
     unless otherwise stated. */
 AcResult acSynchronize(void);
+
+/** */
+AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
+
+/** Tool for loading forcing vector information into the device memory
+ */
+AcResult acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force,
+                      const AcReal3 ff_hel_re, const AcReal3 ff_hel_im, const AcReal forcing_phase,
+                      const AcReal kaver);
 
 /* End extern "C" */
 #ifdef __cplusplus
