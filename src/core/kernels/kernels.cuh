@@ -785,9 +785,11 @@ kernel_filter(const __restrict__ AcReal* src, const int3 start, const int3 end, 
                                 start.y + threadIdx.y + blockIdx.y * blockDim.y,
                                 start.z + threadIdx.z + blockIdx.z * blockDim.z};
 
-    const int nx       = end.x - start.x;
-    const int ny       = end.y - start.y;
-    const int nz       = end.z - start.z; // MV: Added this because it was undefined
+    const int nx = end.x - start.x;
+    const int ny = end.y - start.y;
+    const int nz = end.z - start.z;
+    (void)nz; // Suppressed unused variable warning when not compiling with debug flags
+
     const int3 dst_idx = (int3){threadIdx.x + blockIdx.x * blockDim.x,
                                 threadIdx.y + blockIdx.y * blockDim.y,
                                 threadIdx.z + blockIdx.z * blockDim.z};
@@ -809,9 +811,11 @@ kernel_filter_vec(const __restrict__ AcReal* src0, const __restrict__ AcReal* sr
                                 start.y + threadIdx.y + blockIdx.y * blockDim.y,
                                 start.z + threadIdx.z + blockIdx.z * blockDim.z};
 
-    const int nx       = end.x - start.x;
-    const int ny       = end.y - start.y;
-    const int nz       = end.z - start.z; // MV: Added this because it was undefined
+    const int nx = end.x - start.x;
+    const int ny = end.y - start.y;
+    const int nz = end.z - start.z;
+    (void)nz; // Suppressed unused variable warning when not compiling with debug flags
+
     const int3 dst_idx = (int3){threadIdx.x + blockIdx.x * blockDim.x,
                                 threadIdx.y + blockIdx.y * blockDim.y,
                                 threadIdx.z + blockIdx.z * blockDim.z};
