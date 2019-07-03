@@ -129,7 +129,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}\
                              -O0 -g")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion")
+    set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror")# -Wdouble-promotion -Wfloat-conversion")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror-all -Wsign-conversion")
 else()
