@@ -94,9 +94,9 @@ helical_forcing_k_generator(const AcReal kmax, const AcReal kmin)
     kk    = delta_k * get_random_number_01() + kmin;
 
     // Cast into Cartesian form
-    k_force = (AcReal3){kk * sin(theta) * cos(phi), //
-                        kk * sin(theta) * sin(phi), //
-                        kk * cos(theta)};
+    k_force = (AcReal3){AcReal(kk * sin(theta) * cos(phi)), //
+                        AcReal(kk * sin(theta) * sin(phi)), //
+                        AcReal(kk * cos(theta))};
 
     // printf("k_force.x %f, k_force.y %f, k_force.z %f \n", k_force.x, k_force.y, k_force.z);
 
