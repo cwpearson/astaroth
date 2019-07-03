@@ -53,3 +53,4 @@ echo "Process file: ${ACC_DIR}/${ACC_SPS}"
 cd ${KERNEL_DIR}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SAS} ${ACC_DIR}/${ACC_HEADER}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SPS} ${ACC_DIR}/${ACC_HEADER}
+ln -sf ${ACC_DIR}/${ACC_HEADER} ${AC_HOME}/include/stencil_defines.h

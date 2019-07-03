@@ -31,7 +31,8 @@
 #include "math_utils.h"               // sum for reductions
 #include "standalone/config_loader.h" // update_config
 
-const char* intparam_names[]  = {AC_FOR_INT_PARAM_TYPES(AC_GEN_STR)};
+const char* intparam_names[]  = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR)
+                                    AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
 const char* realparam_names[] = {AC_FOR_REAL_PARAM_TYPES(AC_GEN_STR)};
 const char* vtxbuf_names[]    = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 
@@ -213,7 +214,7 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
             // printf("\n");
             copyMeshToDevice(devices[i], STREAM_PRIMARY, host_mesh, da, da_local, copy_cells);
         }
-        printf("\n");
+        // printf("\n");
     }
     return AC_SUCCESS;
 }
@@ -249,7 +250,7 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
             // printf("\n");
             copyMeshToHost(devices[i], STREAM_PRIMARY, da_local, da, copy_cells, host_mesh);
         }
-        printf("\n");
+        // printf("\n");
     }
     acBoundcondStep(); // TODO note: this is not the most efficient way to do things
     return AC_SUCCESS;

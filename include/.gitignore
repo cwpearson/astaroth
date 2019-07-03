@@ -1,0 +1,2 @@
+# Ignore the DSL headers
+stencil_defines.h
