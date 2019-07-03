@@ -237,13 +237,15 @@ run_simulation(void)
     AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
+#if LFORCING
     // Forcing properties
-    // AcReal relhel    = mesh_info.real_params[AC_relhel]; // JP: gcc warning: unused
-    // AcReal magnitude = mesh_info.real_params[AC_forcing_magnitude]; // JP: gcc warning: unused
-    // AcReal kmin = mesh_info.real_params[AC_kmin]; // JP: gcc warning: unused
-    // AcReal kmax = mesh_info.real_params[AC_kmax]; // JP: gcc warning: unused
+    AcReal relhel    = mesh_info.real_params[AC_relhel];
+    AcReal magnitude = mesh_info.real_params[AC_forcing_magnitude];
+    AcReal kmin      = mesh_info.real_params[AC_kmin];
+    AcReal kmax      = mesh_info.real_params[AC_kmax];
 
-    // AcReal kaver = (kmax - kmin) / AcReal(2.0); // JP: gcc warning: unused
+    AcReal kaver = (kmax - kmin) / AcReal(2.0);
+#endif
 
     /* initialize random seed: */
     srand(312256655);
