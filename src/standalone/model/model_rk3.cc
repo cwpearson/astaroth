@@ -286,18 +286,6 @@ compute_gradient(const int i, const int j, const int k, const ModelScalar* arr)
 }
 
 static inline ModelMatrix
-compute_second_deriv(const int i, const int j, const int k, const ModelScalar* arr)
-{
-    ModelMatrix hessian;
-
-    hessian.row[0] = (ModelVector){derxx(i, j, k, arr), 0, 0};
-    hessian.row[1] = (ModelVector){0, deryy(i, j, k, arr), 0};
-    hessian.row[2] = (ModelVector){0, 0, derzz(i, j, k, arr)};
-
-    return hessian;
-}
-
-static inline ModelMatrix
 compute_hessian(const int i, const int j, const int k, const ModelScalar* arr)
 {
     ModelMatrix hessian;
@@ -364,20 +352,6 @@ static inline ModelMatrix
 gradients(const ModelVectorData& data)
 {
     return (ModelMatrix){gradient(data.x), gradient(data.y), gradient(data.z)};
-}
-
-static inline ModelScalar
-val2ue(const int i, const int j, const int k, ModelScalar* vertex)
-{
-    return vertex[IDX(i, j, k)];
-}
-static inline ModelVector
-gradien2t(const int i, const int j, const int k, ModelScalar* vertex)
-{
-    return (ModelVector){vertex[IDX(i - 1, j, k)] + vertex[IDX(i, j, k)] + vertex[IDX(i + 1, j, k)],
-                         vertex[IDX(i, j - 1, k)] + vertex[IDX(i, j, k)] + vertex[IDX(i, j + 1, k)],
-                         vertex[IDX(i, j, k - 1)] + vertex[IDX(i, j, k)] +
-                             vertex[IDX(i, j, k + 1)]};
 }
 
 /*
