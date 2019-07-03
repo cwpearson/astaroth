@@ -507,7 +507,7 @@ acSynchronize(void)
 }
 
 AcResult
-acloadDeviceConstant(const AcRealParam param, const AcReal value)
+acLoadDeviceConstant(const AcRealParam param, const AcReal value)
 {
     for (int i = 0; i < num_devices; ++i) {
         loadDeviceConstant(devices[i], param, value);
@@ -516,6 +516,10 @@ acloadDeviceConstant(const AcRealParam param, const AcReal value)
 }
 
 // Tool for loading forcing vector information into the device memory
+// %JP: Added a generic function for loading device constants (acLoadDeviceConstant).
+// This acForcingVec should go outside the core library since it references user-defined
+// parameters such as AC_forcing_magnitude which may not be defined in all projects.
+// host_forcing.cc is probably a good place for this.
 AcResult
 acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re,
              const AcReal3 ff_hel_im, const AcReal forcing_phase, const AcReal kaver)

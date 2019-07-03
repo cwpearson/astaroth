@@ -410,7 +410,7 @@ AcResult acQuit(void);
 AcResult acSynchronize(void);
 
 /** */
-AcResult acloadDeviceConstant(const AcRealParam param, const AcReal value);
+AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
 
 /** Tool for loading forcing vector information into the device memory
  */
