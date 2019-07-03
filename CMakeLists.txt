@@ -128,17 +128,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}\
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}\
                              -O0 -g")
 
-set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror")
-
-# Also warn about implicit conversions if the compiler supports it
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    set (CXX_FLAGS_WARNING "${CXX_FLAGS_WARNING} -Wdouble-promotion -Wfloat-conversion")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror-all -Wsign-conversion")
+else()
+    message(WARNING "Using an unknown compiler. Compilation warning flags were not set.")
 endif()
-
-# Other flags. -D_FORCE_INLINES is a workaround to some CUDA/C++ "feature"
-# which botches the compilation ("memcpy was not declared in this scope")
-# (Not required with cc >= 3.0)
-#set(CXX_FLAGS_ETC "-D_FORCE_INLINES")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}\
                     ${CXX_FLAGS_WARNING}\
