@@ -553,11 +553,6 @@ normalized(const ModelVector& vec)
     return inv_len * vec;
 }
 
-// Note: LNT0 and LNRHO0 must be set very carefully: if the magnitude is different that other values
-// in the mesh, then we will inherently lose precision
-#define LNT0 (ModelScalar(0.0))
-#define LNRHO0 (ModelScalar(0.0))
-
 #define H_CONST (ModelScalar(0.0))
 #define C_CONST (ModelScalar(0.0))
 
@@ -571,9 +566,10 @@ momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
 {
 #if LENTROPY
     const ModelMatrix S   = stress_tensor(uu);
-    const ModelScalar cs2 = get(AC_cs2_sound) * expl(get(AC_gamma) * value(ss) / get(AC_cp_sound) +
-                                                     (get(AC_gamma) - 1) * (value(lnrho) - LNRHO0));
-    const ModelVector j   = (ModelScalar(1.) / get(AC_mu0)) *
+    const ModelScalar cs2 = get(AC_cs2_sound) *
+                            expl(get(AC_gamma) * value(ss) / get(AC_cp_sound) +
+                                 (get(AC_gamma) - 1) * (value(lnrho) - get(AC_lnrho0)));
+    const ModelVector j = (ModelScalar(1.) / get(AC_mu0)) *
                           (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
     const ModelVector B       = curl(aa);
     const ModelScalar inv_rho = ModelScalar(1.) / expl(value(lnrho));
@@ -593,9 +589,8 @@ momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
     const ModelMatrix S = stress_tensor(uu);
 
     //#if LENTROPY
-    //const ModelScalar lnrho0 = 1; // TODO correct lnrho0
     const ModelScalar cs02 = get(AC_cs2_sound); // TODO better naming
-    const ModelScalar cs2 = cs02;// * expl(get(AC_gamma) * value(ss) / get(AC_cp_sound) + (get(AC_gamma)-ModelScalar(1.l)) * (value(lnrho) - lnrho0));
+    const ModelScalar cs2 = cs02;// * expl(get(AC_gamma) * value(ss) / get(AC_cp_sound) + (get(AC_gamma)-ModelScalar(1.l)) * (value(lnrho) - get(AC_lnrho0)));
 
     mom = -mul(gradients(uu), value(uu)) -
     cs2 * ((ModelScalar(1.) / get(AC_cp_sound)) * gradient(ss) + gradient(lnrho)) +
@@ -642,8 +637,8 @@ induction(const ModelVectorData& uu, const ModelVectorData& aa)
 static inline ModelScalar
 lnT(const ModelScalarData& ss, const ModelScalarData& lnrho)
 {
-    const ModelScalar lnT = LNT0 + get(AC_gamma) * value(ss) / get(AC_cp_sound) +
-                            (get(AC_gamma) - ModelScalar(1.)) * (value(lnrho) - LNRHO0);
+    const ModelScalar lnT = get(AC_lnT0) + get(AC_gamma) * value(ss) / get(AC_cp_sound) +
+                            (get(AC_gamma) - ModelScalar(1.)) * (value(lnrho) - get(AC_lnrho0));
     return lnT;
 }
 

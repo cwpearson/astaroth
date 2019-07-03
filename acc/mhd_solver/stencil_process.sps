@@ -20,6 +20,9 @@ uniform Scalar dsx;
 uniform Scalar dsy;
 uniform Scalar dsz;
 
+uniform Scalar lnT0;
+uniform Scalar lnrho0;
+
 uniform int nx_min;
 uniform int ny_min;
 uniform int nz_min;
@@ -54,9 +57,9 @@ gradients(in Vector uu)
 
 Scalar
 continuity(in Vector uu, in Scalar lnrho) {
-    return -dot(value(uu), gradient(lnrho)) 
+    return -dot(value(uu), gradient(lnrho))
 #if LUPWD
-           //This is a corrective hyperdiffusion term for upwinding. 
+           //This is a corrective hyperdiffusion term for upwinding.
            + upwd_der6(uu, lnrho)
 #endif
            - divergence(uu);
@@ -66,7 +69,7 @@ continuity(in Vector uu, in Scalar lnrho) {
 Vector
 momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
     const Matrix S = stress_tensor(uu);
-    const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - LNRHO0));
+    const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - lnrho0));
     const Vector  j = (Scalar(1.) / mu0) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
     const Vector B = curl(aa);
     //TODO: DOES INTHERMAL VERSTION INCLUDE THE MAGNETIC FIELD?
@@ -150,8 +153,8 @@ induction(in Vector uu, in Vector aa) {
 #if LENTROPY
 Scalar
 lnT( in Scalar ss, in Scalar lnrho) {
-  const Scalar lnT = LNT0 + gamma * value(ss) / cp_sound +
-    (gamma - Scalar(1.)) * (value(lnrho) - LNRHO0);
+  const Scalar lnT = lnT0 + gamma * value(ss) / cp_sound +
+    (gamma - Scalar(1.)) * (value(lnrho) - lnrho0);
   return lnT;
 }
 
@@ -213,13 +216,13 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
 Vector
 simple_vortex_forcing(Vector a, Vector b, Scalar magnitude)
 {
-    return magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex   
+    return magnitude * cross(normalized(b - a), (Vector){0, 0, 1}); // Vortex
 }
 
 Vector
 simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude)
 {
-    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow   
+    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
 }
 
 
@@ -245,7 +248,7 @@ helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vecto
 
     Vector force = (Vector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
                              ff_re.y*real_comp_phase - ff_im.y*imag_comp_phase,
-                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase}; 
+                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase};
 
     return force;
 }
@@ -264,20 +267,20 @@ forcing(int3 globalVertexIdx, Scalar dt)
 
     //Placeholders until determined properly
     Scalar magnitude = DCONST_REAL(AC_forcing_magnitude);
-    Scalar phase     = DCONST_REAL(AC_forcing_phase);   
+    Scalar phase     = DCONST_REAL(AC_forcing_phase);
     Vector k_force   = (Vector){  DCONST_REAL(AC_k_forcex),   DCONST_REAL(AC_k_forcey),   DCONST_REAL(AC_k_forcez)};
     Vector ff_re     = (Vector){DCONST_REAL(AC_ff_hel_rex), DCONST_REAL(AC_ff_hel_rey), DCONST_REAL(AC_ff_hel_rez)};
     Vector ff_im     = (Vector){DCONST_REAL(AC_ff_hel_imx), DCONST_REAL(AC_ff_hel_imy), DCONST_REAL(AC_ff_hel_imz)};
 
 
-    //Determine that forcing funtion type at this point. 
+    //Determine that forcing funtion type at this point.
     //Vector force = simple_vortex_forcing(a, xx, magnitude);
     //Vector force = simple_outward_flow_forcing(a, xx, magnitude);
     Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
 
     //Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
-    const Scalar NN = cs*sqrt(DCONST_REAL(AC_kaver)*cs); 
-    //MV: Like in the Pencil Code. I don't understandf the logic here. 
+    const Scalar NN = cs*sqrt(DCONST_REAL(AC_kaver)*cs);
+    //MV: Like in the Pencil Code. I don't understandf the logic here.
     force.x = sqrt(dt)*NN*force.x;
     force.y = sqrt(dt)*NN*force.y;
     force.z = sqrt(dt)*NN*force.z;

@@ -543,11 +543,6 @@ normalized(const AcReal3& vec)
     return inv_len * vec;
 }
 
-// Note: LNT0 and LNRHO0 must be set very carefully: if the magnitude is different that other values
-// in the mesh, then we will inherently lose precision
-#define LNT0 (AcReal(0.0))
-#define LNRHO0 (AcReal(0.0))
-
 #define H_CONST (AcReal(0.0))
 #define C_CONST (AcReal(0.0))
 
