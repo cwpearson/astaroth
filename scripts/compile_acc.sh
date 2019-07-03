@@ -26,8 +26,14 @@ do
 		-h|--help)
 			echo "You can set a custom files for DSL under the path $AC_HOME/"
 			echo "Example:"
-			echo "compile_acc.sh -a custom_setup/custom_assembly.sas -p custom_setup/custom_process.sps"
+			echo "compile_acc.sh -a custom_setup/custom_assembly.sas -p custom_setup/custom_process.sps --header custom_setup/custom_header.h"
 			exit 0
+			;;
+		--header)
+			shift
+                        ACC_HEADER=${1}
+			shift
+                        echo "CUSTOM Header file!"
 			;;
 		-a|--assembly)
 			shift
@@ -53,4 +59,6 @@ echo "Process file: ${ACC_DIR}/${ACC_SPS}"
 cd ${KERNEL_DIR}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SAS} ${ACC_DIR}/${ACC_HEADER}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SPS} ${ACC_DIR}/${ACC_HEADER}
+
+echo "Linking: " ${ACC_DIR}/${ACC_HEADER} " -> " ${AC_HOME}/include/stencil_defines.h
 ln -sf ${ACC_DIR}/${ACC_HEADER} ${AC_HOME}/include/stencil_defines.h
