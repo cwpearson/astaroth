@@ -697,18 +697,17 @@ entropy(const ModelScalarData& ss, const ModelVectorData& uu, const ModelScalarD
     */
 }
 
-static bool
+static inline bool
 is_valid(const ModelScalar a)
 {
     return !isnan(a) && !isinf(a);
 }
 
-static bool
+static inline bool
 is_valid(const ModelVector& a)
 {
     return is_valid(a.x) && is_valid(a.y) && is_valid(a.z);
 }
-
 
 #if 0
 //FORCING NOT SUPPORTED FOR AUTOTEST
@@ -716,13 +715,13 @@ is_valid(const ModelVector& a)
 static inline ModelVector
 simple_vortex_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
 {
-    return magnitude * cross(normalized(b - a), (ModelVector){0, 0, 1}); // Vortex   
+    return magnitude * cross(normalized(b - a), (ModelVector){0, 0, 1}); // Vortex
 }
 
 static inline ModelVector
 simple_outward_flow_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
 {
-    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow   
+    return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
 }
 
 
@@ -746,7 +745,7 @@ helical_forcing(ModelScalar magnitude, ModelVector k_force, ModelVector xx, Mode
 
     ModelVector force = (ModelVector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
                              ff_re.y*real_comp_phase - ff_im.y*imag_comp_phase,
-                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase}; 
+                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase};
 
     return force;
 }
@@ -765,20 +764,20 @@ forcing(int3 globalVertexIdx, ModelScalar dt)
 
     //Placeholders until determined properly
     ModelScalar magnitude = get(AC_forcing_magnitude);
-    ModelScalar phase     = get(AC_forcing_phase);   
+    ModelScalar phase     = get(AC_forcing_phase);
     ModelVector k_force   = (ModelVector){  get(AC_k_forcex),   get(AC_k_forcey),   get(AC_k_forcez)};
     ModelVector ff_re     = (ModelVector){get(AC_ff_hel_rex), get(AC_ff_hel_rey), get(AC_ff_hel_rez)};
     ModelVector ff_im     = (ModelVector){get(AC_ff_hel_imx), get(AC_ff_hel_imy), get(AC_ff_hel_imz)};
 
 
-    //Determine that forcing funtion type at this point. 
+    //Determine that forcing funtion type at this point.
     //ModelVector force = simple_vortex_forcing(a, xx, magnitude);
     //ModelVector force = simple_outward_flow_forcing(a, xx, magnitude);
     ModelVector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
 
     //Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
-    const ModelScalar NN = cs*sqrt(get(AC_kaver)*cs); 
-    //MV: Like in the Pencil Code. I don't understandf the logic here. 
+    const ModelScalar NN = cs*sqrt(get(AC_kaver)*cs);
+    //MV: Like in the Pencil Code. I don't understandf the logic here.
     force.x = sqrt(dt)*NN*force.x;
     force.y = sqrt(dt)*NN*force.y;
     force.z = sqrt(dt)*NN*force.z;
@@ -849,12 +848,13 @@ solve_beta_step(const int step_number, const ModelScalar dt, const int i, const 
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
         out->vertex_buffer[w][idx] += beta[step_number] * in.vertex_buffer[w][idx];
 
+    (void)dt; // Suppress unused variable warning if forcing not used
 #if LFORCING
     if (step_number == 2) {
         ModelVector force = forcing((int3){i, j, k}, dt);
-        out->vertex_buffer[VTXBUF_UUX][idx] += force.x ;
-        out->vertex_buffer[VTXBUF_UUY][idx] += force.y ;
-        out->vertex_buffer[VTXBUF_UUZ][idx] += force.z ;
+        out->vertex_buffer[VTXBUF_UUX][idx] += force.x;
+        out->vertex_buffer[VTXBUF_UUY][idx] += force.y;
+        out->vertex_buffer[VTXBUF_UUZ][idx] += force.z;
     }
 #endif
 }
