@@ -69,6 +69,7 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
     const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - LNRHO0));
     const Vector  j = (Scalar(1.) / mu0) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
     const Vector B = curl(aa);
+    //TODO: DOES INTHERMAL VERSTION INCLUDE THE MAGNETIC FIELD?
     const Scalar inv_rho = Scalar(1.) / exp(value(lnrho));
 
     // Regex replace CPU constants with get\(AC_([a-zA-Z_0-9]*)\)
