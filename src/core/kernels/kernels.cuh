@@ -739,17 +739,20 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
  * =============================================================================
  */
 
+/* // DEPRECATED
 static AcReal
 randf(void)
 {
     return AcReal(rand()) / AcReal(RAND_MAX);
 }
+*/
 
 AcResult
 rk3_step_async(const cudaStream_t stream, const int& step_number, const int3& start,
                const int3& end, const AcReal dt, VertexBufferArray* buffer)
 {
     const dim3 tpb(32, 1, 4);
+    /* // DEPRECATED
 /////////////////// Forcing
 #if LFORCING
     const AcReal ff_scale = AcReal(.2);
@@ -764,6 +767,7 @@ rk3_step_async(const cudaStream_t stream, const int& step_number, const int3& st
                             stream);
 #endif // LFORCING
     //////////////////////////
+    */
 
     const int nx = end.x - start.x;
     const int ny = end.y - start.y;
