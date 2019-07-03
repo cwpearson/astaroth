@@ -49,7 +49,7 @@ message(STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER_ID})
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0) # Because of GCC bug 48891
-        message(FATAL_ERROR "GCC version 6.0 or higher required")    
+        message(FATAL_ERROR "GCC version 6.0 or higher required")
     endif()
 endif()
 
@@ -128,8 +128,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}\
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}\
                              -O0 -g")
 
-set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror -Wno-error=unused-parameter\
-                        -Wno-error=unused-function -Wno-error=unknown-pragmas")
+set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror")
 
 # Also warn about implicit conversions if the compiler supports it
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
