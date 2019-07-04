@@ -13,7 +13,7 @@
 #-------------------General---------------------------------------------------#
 
 project(ASTAROTH_2.0 CXX)
-set (CMAKE_CXX_STANDARD 98)
+set (CMAKE_CXX_STANDARD 11)
 cmake_minimum_required (VERSION 3.5.1) # Need >= 3.8 for first-class CUDA support
 cmake_policy (SET CMP0023 NEW)
 
@@ -134,8 +134,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}\
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-    #MV: -Werror-all disabled because produces cryptical messages preventing compilation. 
-    #TODO: Would be good to find an optimal set of warning flags. 
+    #MV: -Werror-all disabled because produces cryptical messages preventing compilation.
+    #TODO: Would be good to find an optimal set of warning flags.
     #set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror-all -Wsign-conversion")
     set (CXX_FLAGS_WARNING "-Wall -Wextra -Wsign-conversion")
 else()
