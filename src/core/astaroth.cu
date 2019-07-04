@@ -254,7 +254,6 @@ acStore(AcMesh* host_mesh)
 AcResult
 acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
 {
-    WARNING("acIntegrateStepWithOffset called. This function has not been tested for correctness!");
     for (int i = 0; i < num_devices; ++i) {
         // DECOMPOSITION OFFSET HERE
         // Same naming here (d0, d1, da, db) as in acLoadWithOffset
@@ -265,7 +264,9 @@ acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& sta
         const int3 db = min(end, d1);
 
         if (db.z >= da.z) {
-            rkStep(devices[i], STREAM_PRIMARY, isubstep, da, db, dt);
+            const int3 da_local = da - (int3){0, 0, i * subgrid.n.z};
+            const int3 db_local = db - (int3){0, 0, i * subgrid.n.z};
+            rkStep(devices[i], STREAM_PRIMARY, isubstep, da_local, db_local, dt);
         }
     }
     return AC_SUCCESS;
@@ -275,12 +276,7 @@ AcResult
 acIntegrateStep(const int& isubstep, const AcReal& dt)
 {
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = start + subgrid.n;
-    /* Deprecated block, TODO remove when acIntegrateStepWithOffset confirmed to work
-     for (int i = 0; i < num_devices; ++i) {
-        rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
-    }
-    */
+    const int3 end   = start + grid.n;
     acIntegrateStepWithOffset(isubstep, dt, start, end);
 
     return AC_SUCCESS;
