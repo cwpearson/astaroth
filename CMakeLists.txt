@@ -27,6 +27,7 @@ option(DOUBLE_PRECISION "Generates double precision code" OFF)
 option(TIARA_CLUSTER "Special settings for compilation TIARA GPU cluster" OFF)
 option(MULTIGPU_ENABLED "If enabled, uses all the available GPUs" ON)
 option(ALTER_CONF "If enabled, loads astaroth.conf from the build directory" OFF)
+option(BUILD_RT_VISUALIZATION "Builds the module for real-time visualization using SDL2" OFF)
 
 #-------------------Determine build type--------------------------------------#
 
@@ -56,12 +57,15 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif()
 endif()
 
-# SDL 2
-set(SDL2_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/3rdparty/SDL2/include/)
-set(SDL2_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/3rdparty/SDL2/build/)
-set(SDL2_LIBRARY "SDL2")
-include_directories(${SDL2_INCLUDE_DIR})
-link_directories(${SDL2_LIBRARY_DIR})
+if (BUILD_RT_VISUALIZATION)
+    add_definitions(-DAC_BUILD_RT_VISUALIZATION=1)
+    # SDL 2
+    set(SDL2_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/3rdparty/SDL2/include/)
+    set(SDL2_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/3rdparty/SDL2/build/)
+    set(SDL2_LIBRARY "SDL2")
+    include_directories(${SDL2_INCLUDE_DIR})
+    link_directories(${SDL2_LIBRARY_DIR})
+endif()
 
 # CUDA
 find_package(CUDA)

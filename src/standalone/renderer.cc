@@ -26,6 +26,7 @@
  */
 #include "run.h"
 
+#if AC_BUILD_RT_VISUALIZATION
 #include <SDL.h>    // Note: using local version in src/3rdparty dir
 #include <math.h>   // ceil
 #include <string.h> // memcpy
@@ -421,3 +422,12 @@ run_renderer(void)
 
     return 0;
 }
+#else // BUILD_RT_VISUALIZATION == 0
+#include "core/errchk.h"
+int
+run_renderer(void)
+{
+    WARNING("Real-time visualization module not built. Set BUILD_RT_VISUALIZATION=ON with cmake.");
+    return 1;
+}
+#endif // BUILD_RT_VISUALIZATION
