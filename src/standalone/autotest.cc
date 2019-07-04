@@ -30,9 +30,9 @@
 
 #include "config_loader.h"
 #include "core/math_utils.h"
+#include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
-#include "model/host_forcing.h"
 #include "model/model_boundconds.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
@@ -701,11 +701,10 @@ run_autotest(void)
                 const AcReal dt   = host_timestep(umax, config);
 
 #if LFORCING
-  
-                //CURRENTLY AUTOTEST NOT SUPPORTED WITH FORCING!!!
+
+                // CURRENTLY AUTOTEST NOT SUPPORTED WITH FORCING!!!
 
 #endif
-
 
                 // Host integration step
                 model_rk3(dt, model_mesh);

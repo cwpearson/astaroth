@@ -126,12 +126,10 @@ run_benchmark(void)
         for (int i = 0; i < NUM_ITERS; ++i) {
 
             timer_reset(&t);
+            const AcReal dt = FLT_EPSILON; // TODO NOTE: time to timestep not measured
 #if GEN_BENCHMARK_RK3 == 1
-            acIntegrateStep(2, FLT_EPSILON);
+            acIntegrateStep(2, dt);
 #else // GEN_BENCHMARK_FULL
-            // const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
-            const AcReal dt = AcReal(
-                1e-2); // TODO adaptive timestep //host_timestep(umax, mesh_info);
             acIntegrate(dt);
 #endif
             acSynchronize();
