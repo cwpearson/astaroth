@@ -44,9 +44,9 @@ static Grid grid; // A grid consists of num_devices subgrids
 static Grid subgrid;
 
 static int
-gridIdx(const Grid& grid, const int i, const int j, const int k)
+gridIdx(const Grid grid, const int3 idx)
 {
-    return i + j * grid.m.x + k * grid.m.x * grid.m.y;
+    return idx.x + idx.y * grid.m.x + idx.z * grid.m.x * grid.m.y;
 }
 
 static int3
@@ -148,12 +148,6 @@ acQuit(void)
     return AC_SUCCESS;
 }
 
-int
-gridIdxx(const Grid grid, const int3 idx)
-{
-    return gridIdx(grid, idx.x, idx.y, idx.z);
-}
-
 AcResult
 acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertices)
 {
@@ -192,7 +186,7 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
         const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
 
         const int3 s0 = src;
-        const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0.x, s0.y, s0.z) + num_vertices);
+        const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0) + num_vertices);
 
         const int3 da = (int3){max(s0.x, d0.x), max(s0.y, d0.y), max(s0.z, d0.z)};
         const int3 db = (int3){min(s1.x, d1.x), min(s1.y, d1.y), min(s1.z, d1.z)};
@@ -207,7 +201,7 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
         printf("\t-> %s to device %d\n", db.z >= da.z ? "Copy" : "Do not copy", i);
         */
         if (db.z >= da.z) {
-            const int copy_cells = gridIdxx(subgrid, db) - gridIdxx(subgrid, da);
+            const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
             const int3 da_local  = (int3){
                 da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
             // printf("\t\tcopy %d cells to local index ", copy_cells); printInt3(da_local);
@@ -228,7 +222,7 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
         const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
 
         const int3 s0 = src;
-        const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0.x, s0.y, s0.z) + num_vertices);
+        const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0) + num_vertices);
 
         const int3 da = (int3){max(s0.x, d0.x), max(s0.y, d0.y), max(s0.z, d0.z)};
         const int3 db = (int3){min(s1.x, d1.x), min(s1.y, d1.y), min(s1.z, d1.z)};
@@ -243,7 +237,7 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
         printf("\t-> %s to device %d\n", db.z >= da.z ? "Copy" : "Do not copy", i);
         */
         if (db.z >= da.z) {
-            const int copy_cells = gridIdxx(subgrid, db) - gridIdxx(subgrid, da);
+            const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
             const int3 da_local  = (int3){
                 da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
             // printf("\t\tcopy %d cells from local index ", copy_cells); printInt3(da_local);
