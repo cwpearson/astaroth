@@ -266,14 +266,19 @@ acIntegrateStep(const int& isubstep, const AcReal& dt)
 AcResult
 acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
 {
-    /*
-    // A skeleton function for computing integrations with arbitrary subblocks
-    // Uncommenting the following should work with a single GPU.
-    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y,
-                              NGHOST + subgrid.n.z};
-    */
-    rkStep(devices[0], STREAM_PRIMARY, isubstep, start, end, dt);
+    WARNING("acIntegrateStepWithOffset called. This function has not been tested for correctness!");
+    for (int i = 0; i < num_devices; ++i) {
+        // DECOMPOSITION OFFSET HERE
+        const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
+        const int3 d1 = d0 + (int3){subgrid.n.x, subgrid.n.y, subgrid.n.z};
+
+        const int3 da = max(start, d0);
+        const int3 db = min(end, d1);
+
+        if (db.z >= da.z) {
+            rkStep(devices[i], STREAM_PRIMARY, isubstep, da, db, dt);
+        }
+    }
     return AC_SUCCESS;
 }
 
