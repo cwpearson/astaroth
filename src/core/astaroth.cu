@@ -56,7 +56,7 @@ gridIdx3d(const Grid& grid, const int idx)
                   idx / (grid.m.x * grid.m.y)};
 }
 
-void
+static void
 printInt3(const int3 vec)
 {
     printf("(%d, %d, %d)", vec.x, vec.y, vec.z);
@@ -268,7 +268,7 @@ AcResult
 acIntegrateStep(const int& isubstep, const AcReal& dt)
 {
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = (int3){NGHOST + subgrid.n.x, NGHOST + subgrid.n.y, NGHOST + subgrid.n.z};
+    const int3 end   = start + subgrid.n;
     for (int i = 0; i < num_devices; ++i) {
         rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
     }
@@ -295,8 +295,7 @@ acBoundcondStep(void)
 {
     acSynchronize();
     if (num_devices == 1) {
-        boundcondStep(devices[0], STREAM_PRIMARY, (int3){0, 0, 0},
-                      (int3){subgrid.m.x, subgrid.m.y, subgrid.m.z});
+        boundcondStep(devices[0], STREAM_PRIMARY, (int3){0, 0, 0}, subgrid.m);
     }
     else {
         // Local boundary conditions
