@@ -48,8 +48,11 @@ message(STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER})
 message(STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER_ID})
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0) # Because of GCC bug 48891
-        message(FATAL_ERROR "GCC version 6.0 or higher required")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.1)
+        # GCC >= 6.0 is required because of bug 48891. However, the fix seems to
+        # be backported so some older compilers which is why the code may also
+        # compile on gcc >= 4.9.1.
+        message(FATAL_ERROR "GCC version 4.9.1 or higher required")
     endif()
 endif()
 
