@@ -188,8 +188,8 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
         const int3 s0 = src;
         const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0) + num_vertices);
 
-        const int3 da = (int3){max(s0.x, d0.x), max(s0.y, d0.y), max(s0.z, d0.z)};
-        const int3 db = (int3){min(s1.x, d1.x), min(s1.y, d1.y), min(s1.z, d1.z)};
+        const int3 da = max(s0, d0);
+        const int3 db = min(s1, d1);
         /*
         printf("Device %d\n", i);
         printf("\ts0: "); printInt3(s0); printf("\n");
@@ -202,8 +202,8 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
         */
         if (db.z >= da.z) {
             const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
-            const int3 da_local  = (int3){
-                da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
+            // DECOMPOSITION OFFSET HERE
+            const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices};
             // printf("\t\tcopy %d cells to local index ", copy_cells); printInt3(da_local);
             // printf("\n");
             copyMeshToDevice(devices[i], STREAM_PRIMARY, host_mesh, da, da_local, copy_cells);
@@ -224,27 +224,14 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
         const int3 s0 = src;
         const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0) + num_vertices);
 
-        const int3 da = (int3){max(s0.x, d0.x), max(s0.y, d0.y), max(s0.z, d0.z)};
-        const int3 db = (int3){min(s1.x, d1.x), min(s1.y, d1.y), min(s1.z, d1.z)};
-        /*
-        printf("Device %d\n", i);
-        printf("\ts0: "); printInt3(s0); printf("\n");
-        printf("\td0: "); printInt3(d0); printf("\n");
-        printf("\tda: "); printInt3(da); printf("\n");
-        printf("\tdb: "); printInt3(db); printf("\n");
-        printf("\td1: "); printInt3(d1); printf("\n");
-        printf("\ts1: "); printInt3(s1); printf("\n");
-        printf("\t-> %s to device %d\n", db.z >= da.z ? "Copy" : "Do not copy", i);
-        */
+        const int3 da = max(s0, d0);
+        const int3 db = min(s1, d1);
         if (db.z >= da.z) {
             const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
-            const int3 da_local  = (int3){
-                da.x, da.y, da.z - i * grid.n.z / num_devices}; // DECOMPOSITION OFFSET HERE
-            // printf("\t\tcopy %d cells from local index ", copy_cells); printInt3(da_local);
-            // printf("\n");
+            // DECOMPOSITION OFFSET HERE
+            const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices};
             copyMeshToHost(devices[i], STREAM_PRIMARY, da_local, da, copy_cells, host_mesh);
         }
-        // printf("\n");
     }
     acBoundcondStep(); // TODO note: this is not the most efficient way to do things
     return AC_SUCCESS;
