@@ -11,10 +11,6 @@ find_package(CUDA 9 REQUIRED)
 set(CUDA_SEPARABLE_COMPILATION OFF)
 set(CUDA_PROPAGATE_HOST_FLAGS ON)
 
-# CUDA_BUILD_CUBIN requires that we're compiling for only one architecture
-# set(CUDA_BUILD_CUBIN ON)
-
-
 #----------------------Setup CUDA compilation flags----------------------------#
 
 # Generate code for the default architecture (Pascal)
