@@ -130,8 +130,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}\
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror")# -Wdouble-promotion -Wfloat-conversion")
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-    set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror-all -Wsign-conversion")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")\
+    #MV: -Werror-all disabled because produces cryptical messages preventing compilation. 
+    #TODO: Would be good to find an optimal set of warning flags. 
+    #set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror-all -Wsign-conversion")
+    set (CXX_FLAGS_WARNING "-Wall -Wextra -Wsign-conversion")
 else()
     message(WARNING "Using an unknown compiler. Compilation warning flags were not set.")
 endif()
