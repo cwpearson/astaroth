@@ -157,4 +157,6 @@ Modules used when compiling the code on TIARA cluster.
   * cmake/3.9.5
   * openmpi/1.10.2_ic16.0               
   * gcc/5.3.0
-  * cuda/9.0
+  * cuda/10.1
+
+
