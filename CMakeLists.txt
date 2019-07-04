@@ -132,7 +132,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}\
                              -O0 -g")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror")# -Wdouble-promotion -Wfloat-conversion")
+    set (CXX_FLAGS_WARNING "-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     #MV: -Werror-all disabled because produces cryptical messages preventing compilation. 
     #TODO: Would be good to find an optimal set of warning flags. 
