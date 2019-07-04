@@ -257,6 +257,7 @@ acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& sta
     WARNING("acIntegrateStepWithOffset called. This function has not been tested for correctness!");
     for (int i = 0; i < num_devices; ++i) {
         // DECOMPOSITION OFFSET HERE
+        // Same naming here (d0, d1, da, db) as in acLoadWithOffset
         const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
         const int3 d1 = d0 + (int3){subgrid.n.x, subgrid.n.y, subgrid.n.z};
 
