@@ -272,14 +272,8 @@ AcResult acQuit(void);
     unless otherwise stated. */
 AcResult acSynchronize(void);
 
-/** */
+/** Loads a parameter to the constant memory of all devices */
 AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
-
-/** Tool for loading forcing vector information into the device memory
- */
-AcResult acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force,
-                      const AcReal3 ff_hel_re, const AcReal3 ff_hel_im, const AcReal forcing_phase,
-                      const AcReal kaver);
 
 /* End extern "C" */
 #ifdef __cplusplus

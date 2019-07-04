@@ -42,4 +42,10 @@ AcReal3 helical_forcing_k_generator(const AcReal kmax, const AcReal kmin);
 
 void helical_forcing_e_generator(AcReal3* e_force, const AcReal3 k_force);
 
-void helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcReal3 k_force, const AcReal3 e_force, const AcReal relhel);
+void helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcReal3 k_force,
+                                    const AcReal3 e_force, const AcReal relhel);
+
+/** Tool for loading forcing vector information into the device memory
+ */
+void acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re,
+                  const AcReal3 ff_hel_im, const AcReal forcing_phase, const AcReal kaver);

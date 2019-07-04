@@ -175,3 +175,32 @@ helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcR
     *ff_hel_im = (AcReal3){relhel * k_cross_k_cross_e.x / denominator, relhel * k_cross_k_cross_e.y,
                            relhel * k_cross_k_cross_e.z};
 }
+
+// Tool for loading forcing vector information into the device memory
+// %JP: Added a generic function for loading device constants (acLoadDeviceConstant).
+// This acForcingVec should go outside the core library since it references user-defined
+// parameters such as AC_forcing_magnitude which may not be defined in all projects.
+// host_forcing.cc is probably a good place for this.
+// %JP update: moved this here out of astaroth.cu. Should be renamed such that it cannot be
+// confused with actual interface functions.
+void
+acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re,
+             const AcReal3 ff_hel_im, const AcReal forcing_phase, const AcReal kaver)
+{
+    acLoadDeviceConstant(AC_forcing_magnitude, forcing_magnitude);
+    acLoadDeviceConstant(AC_forcing_phase, forcing_phase);
+
+    acLoadDeviceConstant(AC_k_forcex, k_force.x);
+    acLoadDeviceConstant(AC_k_forcey, k_force.y);
+    acLoadDeviceConstant(AC_k_forcez, k_force.z);
+
+    acLoadDeviceConstant(AC_ff_hel_rex, ff_hel_re.x);
+    acLoadDeviceConstant(AC_ff_hel_rey, ff_hel_re.y);
+    acLoadDeviceConstant(AC_ff_hel_rez, ff_hel_re.z);
+
+    acLoadDeviceConstant(AC_ff_hel_imx, ff_hel_im.x);
+    acLoadDeviceConstant(AC_ff_hel_imy, ff_hel_im.y);
+    acLoadDeviceConstant(AC_ff_hel_imz, ff_hel_im.z);
+
+    acLoadDeviceConstant(AC_kaver, kaver);
+}
