@@ -252,18 +252,6 @@ acStore(AcMesh* host_mesh)
 }
 
 AcResult
-acIntegrateStep(const int& isubstep, const AcReal& dt)
-{
-    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = start + subgrid.n;
-    for (int i = 0; i < num_devices; ++i) {
-        rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
-    }
-
-    return AC_SUCCESS;
-}
-
-AcResult
 acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
 {
     WARNING("acIntegrateStepWithOffset called. This function has not been tested for correctness!");
@@ -279,6 +267,21 @@ acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& sta
             rkStep(devices[i], STREAM_PRIMARY, isubstep, da, db, dt);
         }
     }
+    return AC_SUCCESS;
+}
+
+AcResult
+acIntegrateStep(const int& isubstep, const AcReal& dt)
+{
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = start + subgrid.n;
+    /* Deprecated block, TODO remove when acIntegrateStepWithOffset confirmed to work
+     for (int i = 0; i < num_devices; ++i) {
+        rkStep(devices[i], STREAM_PRIMARY, isubstep, start, end, dt);
+    }
+    */
+    acIntegrateStepWithOffset(isubstep, dt, start, end);
+
     return AC_SUCCESS;
 }
 
