@@ -40,27 +40,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-/*
-// DEPRECATED: TODO remove
-static inline void
-print_diagnostics(const AcMesh& mesh, const int& step, const AcReal& dt)
-{
-    const int max_name_width = 16;
-    printf("Step %d, dt %e s\n", step, double(dt));
-    printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, "uu total",
-    double(model_reduce_vec(mesh, RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ)),
-    double(model_reduce_vec(mesh, RTYPE_MIN, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ)),
-    double(model_reduce_vec(mesh, RTYPE_RMS, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ)));
-
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, vtxbuf_names[i],
-        double(model_reduce_scal(mesh, RTYPE_MAX, VertexBufferHandle(i))),
-        double(model_reduce_scal(mesh, RTYPE_MIN, VertexBufferHandle(i))),
-        double(model_reduce_scal(mesh, RTYPE_RMS, VertexBufferHandle(i))));
-    }
-}
-*/
-
 // Write all setting info into a separate ascii file. This is done to guarantee
 // that we have the data specifi information in the thing, even though in
 // principle these things are in the astaroth.conf.
