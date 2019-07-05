@@ -260,8 +260,8 @@ acSwapBuffers(void)
     return AC_SUCCESS;
 }
 
-AcResult
-acExchangeHalos(void)
+static AcResult
+acSynchronizeHalos(void)
 {
     // Exchanges the halos of subgrids
     // After this step, the data within the main grid ranging from
@@ -287,6 +287,26 @@ acExchangeHalos(void)
                                    dst, num_vertices);
         }
     }
+    return AC_SUCCESS;
+}
+
+static AcResult
+acSynchronizeStream(const StreamType stream)
+{
+    for (int i = 0; i < num_devices; ++i) {
+        synchronize(devices[i], stream);
+    }
+
+    return AC_SUCCESS;
+}
+
+AcResult
+acSynchronize(void)
+{
+    acSynchronizeStream(STREAM_ALL);
+    acSynchronizeHalos();
+    acSynchronizeStream(STREAM_ALL);
+
     return AC_SUCCESS;
 }
 
@@ -397,10 +417,7 @@ acBoundcondStep(void)
                         periodic_boundconds(0, tpb, start, end, d_buffer.in[i]);
         <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         */
-        // Exchange halos
-        acExchangeHalos();
-
-        // With periodic boundary conditions we also exchange the front and back plates of the
+        // With periodic boundary conditions we exchange the front and back plates of the
         // grid. The exchange is done between the first and last device (0 and num_devices - 1).
         const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
         // ...|ooooxxx|... -> xxx|ooooooo|...
@@ -512,16 +529,6 @@ acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a, const Verte
     }
 
     return simple_final_reduce_scal(rtype, results, num_devices);
-}
-
-AcResult
-acSynchronize(void)
-{
-    for (int i = 0; i < num_devices; ++i) {
-        synchronize(devices[i], STREAM_ALL);
-    }
-
-    return AC_SUCCESS;
 }
 
 AcResult
