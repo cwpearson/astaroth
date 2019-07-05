@@ -251,34 +251,42 @@ acStore(AcMesh* host_mesh)
     return acStoreWithOffset((int3){0, 0, 0}, AC_VTXBUF_SIZE(host_mesh->info), host_mesh);
 }
 
-AcResult
-acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
+static AcResult
+acSwapBuffers(void)
 {
     for (int i = 0; i < num_devices; ++i) {
-        // DECOMPOSITION OFFSET HERE
-        // Same naming here (d0, d1, da, db) as in acLoadWithOffset
-        const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
-        const int3 d1 = d0 + (int3){subgrid.n.x, subgrid.n.y, subgrid.n.z};
-
-        const int3 da = max(start, d0);
-        const int3 db = min(end, d1);
-
-        if (db.z >= da.z) {
-            const int3 da_local = da - (int3){0, 0, i * subgrid.n.z};
-            const int3 db_local = db - (int3){0, 0, i * subgrid.n.z};
-            rkStep(devices[i], STREAM_PRIMARY, isubstep, da_local, db_local, dt);
-        }
+        swapBuffers(devices[i]);
     }
     return AC_SUCCESS;
 }
 
 AcResult
-acIntegrateStep(const int& isubstep, const AcReal& dt)
+acExchangeHalos(void)
 {
-    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = start + grid.n;
-    acIntegrateStepWithOffset(isubstep, dt, start, end);
+    // Exchanges the halos of subgrids
+    // After this step, the data within the main grid ranging from
+    // (0, 0, NGHOST) -> grid.m.x, grid.m.y, NGHOST + grid.n.z
+    // has been synchronized and transferred to appropriate subgrids
 
+    // We loop only to num_devices - 1 since the front and back plate of the grid is not
+    // transferred because their contents depend on the boundary conditions.
+    for (int i = 0; i < num_devices - 1; ++i) {
+        const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
+        // ...|ooooxxx|... -> xxx|ooooooo|...
+        {
+            const int3 src = (int3){0, 0, subgrid.n.z};
+            const int3 dst = (int3){0, 0, 0};
+            copyMeshDeviceToDevice(devices[i], STREAM_PRIMARY, src, devices[(i + 1) % num_devices],
+                                   dst, num_vertices);
+        }
+        // ...|ooooooo|xxx <- ...|xxxoooo|...
+        {
+            const int3 src = (int3){0, 0, NGHOST};
+            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
+            copyMeshDeviceToDevice(devices[(i + 1) % num_devices], STREAM_PRIMARY, src, devices[i],
+                                   dst, num_vertices);
+        }
+    }
     return AC_SUCCESS;
 }
 
@@ -390,34 +398,58 @@ acBoundcondStep(void)
         <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         */
         // Exchange halos
-        for (int i = 0; i < num_devices; ++i) {
-            const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
-            // ...|ooooxxx|... -> xxx|ooooooo|...
-            {
-                const int3 src = (int3){0, 0, subgrid.n.z};
-                const int3 dst = (int3){0, 0, 0};
-                copyMeshDeviceToDevice(devices[i], STREAM_PRIMARY, src,
-                                       devices[(i + 1) % num_devices], dst, num_vertices);
-            }
-            // ...|ooooooo|xxx <- ...|xxxoooo|...
-            {
-                const int3 src = (int3){0, 0, NGHOST};
-                const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
-                copyMeshDeviceToDevice(devices[(i + 1) % num_devices], STREAM_PRIMARY, src,
-                                       devices[i], dst, num_vertices);
-            }
+        acExchangeHalos();
+
+        // With periodic boundary conditions we also exchange the front and back plates of the
+        // grid. The exchange is done between the first and last device (0 and num_devices - 1).
+        const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
+        // ...|ooooxxx|... -> xxx|ooooooo|...
+        {
+            const int3 src = (int3){0, 0, subgrid.n.z};
+            const int3 dst = (int3){0, 0, 0};
+            copyMeshDeviceToDevice(devices[num_devices - 1], STREAM_PRIMARY, src, devices[0], dst,
+                                   num_vertices);
+        }
+        // ...|ooooooo|xxx <- ...|xxxoooo|...
+        {
+            const int3 src = (int3){0, 0, NGHOST};
+            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
+            copyMeshDeviceToDevice(devices[0], STREAM_PRIMARY, src, devices[num_devices - 1], dst,
+                                   num_vertices);
         }
     }
     acSynchronize();
     return AC_SUCCESS;
 }
 
-static AcResult
-acSwapBuffers(void)
+AcResult
+acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
 {
     for (int i = 0; i < num_devices; ++i) {
-        swapBuffers(devices[i]);
+        // DECOMPOSITION OFFSET HERE
+        // Same naming here (d0, d1, da, db) as in acLoadWithOffset
+        const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
+        const int3 d1 = d0 + (int3){subgrid.n.x, subgrid.n.y, subgrid.n.z};
+
+        const int3 da = max(start, d0);
+        const int3 db = min(end, d1);
+
+        if (db.z >= da.z) {
+            const int3 da_local = da - (int3){0, 0, i * subgrid.n.z};
+            const int3 db_local = db - (int3){0, 0, i * subgrid.n.z};
+            rkStep(devices[i], STREAM_PRIMARY, isubstep, da_local, db_local, dt);
+        }
     }
+    return AC_SUCCESS;
+}
+
+AcResult
+acIntegrateStep(const int& isubstep, const AcReal& dt)
+{
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = start + grid.n;
+    acIntegrateStepWithOffset(isubstep, dt, start, end);
+
     return AC_SUCCESS;
 }
 
