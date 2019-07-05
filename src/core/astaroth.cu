@@ -251,6 +251,7 @@ AcResult
 acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertices)
 {
     // See the beginning of the file for an explanation of the index mapping
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         const int3 d0 = (int3){0, 0, i * subgrid.n.z}; // DECOMPOSITION OFFSET HERE
         const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
@@ -287,6 +288,7 @@ AcResult
 acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
 {
     // See the beginning of the file for an explanation of the index mapping
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         const int3 d0 = (int3){0, 0, i * subgrid.n.z}; // DECOMPOSITION OFFSET HERE
         const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
@@ -324,6 +326,7 @@ acStore(AcMesh* host_mesh)
 static AcResult
 acSwapBuffers(void)
 {
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         swapBuffers(devices[i]);
     }
@@ -343,6 +346,7 @@ acSynchronizeHalos(void)
 
     // IMPORTANT NOTE: the boundary conditions must be applied before calling this function!
     // I.e. the halos of subgrids must contain up-to-date data!
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices - 1; ++i) {
         const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
         // ...|ooooxxx|... -> xxx|ooooooo|...
@@ -366,6 +370,7 @@ acSynchronizeHalos(void)
 static AcResult
 acSynchronizeStream(const StreamType stream)
 {
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         synchronize(devices[i], stream);
     }
@@ -392,6 +397,7 @@ acBoundcondStep(void)
     }
     else {
         // Local boundary conditions
+        // #pragma omp parallel for
         for (int i = 0; i < num_devices; ++i) {
             const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
@@ -455,6 +461,7 @@ AcResult
 acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
 {
     // See the beginning of the file for an explanation of the index mapping
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         // DECOMPOSITION OFFSET HERE
         const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
@@ -524,6 +531,8 @@ AcReal
 acReduceScal(const ReductionType& rtype, const VertexBufferHandle& vtxbuffer_handle)
 {
     AcReal results[num_devices];
+
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         reduceScal(devices[i], STREAM_PRIMARY, rtype, vtxbuffer_handle, &results[i]);
     }
@@ -536,6 +545,8 @@ acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a, const Verte
             const VertexBufferHandle& c)
 {
     AcReal results[num_devices];
+
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         reduceVec(devices[i], STREAM_PRIMARY, rtype, a, b, c, &results[i]);
     }
@@ -546,6 +557,7 @@ acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a, const Verte
 AcResult
 acLoadDeviceConstant(const AcRealParam param, const AcReal value)
 {
+    // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         loadDeviceConstant(devices[i], param, value);
     }
