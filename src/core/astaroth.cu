@@ -21,7 +21,106 @@
  * @file
  * \brief Multi-GPU implementation.
  *
- * Detailed info.
+ %JP: The old way for computing boundary conditions conflicts with the
+ way we have to do things with multiple GPUs.
+
+ The older approach relied on unified memory, which represented the whole
+ memory area as one huge mesh instead of several smaller ones. However, unified memory
+ in its current state is more meant for quick prototyping when performance is not an issue.
+ Getting the CUDA driver to migrate data intelligently across GPUs is much more difficult
+ than when managing the memory explicitly.
+
+ In this new approach, I have simplified the multi- and single-GPU layers significantly.
+ Quick rundown:
+         New struct: Grid. There are two global variables, "grid" and "subgrid", which
+         contain the extents of the whole simulation domain and the decomposed grids,
+ respectively. To simplify thing, we require that each GPU is assigned the same amount of
+ work, therefore each GPU in the node is assigned and "subgrid.m" -sized block of data to
+ work with.
+
+         The whole simulation domain is decomposed with respect to the z dimension.
+         For example, if the grid contains (nx, ny, nz) vertices, then the subgrids
+         contain (nx, ny, nz / num_devices) vertices.
+
+         An local index (i, j, k) in some subgrid can be mapped to the global grid with
+                 global idx = (i, j, k + device_id * subgrid.n.z)
+
+ Terminology:
+         - Single-GPU function: a function defined on the single-GPU layer (device.cu)
+
+ Changes required to this commented code block:
+         - The thread block dimensions (tpb) are no longer passed to the kernel here but in
+ device.cu instead. Same holds for any complex index calculations. Instead, the local
+ coordinates should be passed as an int3 type without having to consider how the data is
+ actually laid out in device memory
+         - The unified memory buffer no longer exists (d_buffer). Instead, we have an opaque
+ handle of type "Device" which should be passed to single-GPU functions. In this file, all
+ devices are stored in a global array "devices[num_devices]".
+         - Every single-GPU function is executed asynchronously by default such that we
+           can optimize Astaroth by executing memory transactions concurrently with
+ computation. Therefore a StreamType should be passed as a parameter to single-GPU functions.
+           Refresher: CUDA function calls are non-blocking when a stream is explicitly passed
+           as a parameter and commands executing in different streams can be processed
+           in parallel/concurrently.
+
+
+ Note on periodic boundaries (might be helpful when implementing other boundary conditions):
+
+         With multiple GPUs, periodic boundary conditions applied on indices ranging from
+
+                 (0, 0, STENCIL_ORDER/2) to (subgrid.m.x, subgrid.m.y, subgrid.m.z -
+ STENCIL_ORDER/2)
+
+         on a single device are "local", in the sense that they can be computed without
+ having to exchange data with neighboring GPUs. Special care is needed only for transferring
+         the data to the fron and back plates outside this range. In the solution we use
+ here, we solve the local boundaries first, and then just exchange the front and back plates
+         in a "ring", like so
+                                 device_id
+                     (n) <-> 0 <-> 1 <-> ... <-> n <-> (0)
+
+### Throughout this file we use the following notation and names for various index offsets
+
+    Global coordinates: coordinates with respect to the global grid (static Grid grid)
+    Local coordinates: coordinates with respect to the local subgrid (static Subgrid subgrid)
+
+    s0, s1: source indices in global coordinates
+    d0, d1: destination indices in global coordinates
+    da = max(s0, d0);
+    db = min(s1, d1);
+
+    These are used in at least
+    acLoad()
+    acStore()
+    acSynchronizeHalos()
+
+     Here we decompose the host mesh and distribute it among the GPUs in
+     the node.
+
+     The host mesh is a huge contiguous block of data. Its dimensions are given by
+     the global variable named "grid". A "grid" is decomposed into "subgrids",
+     one for each GPU. Here we check which parts of the range s0...s1 maps
+     to the memory space stored by some GPU, ranging d0...d1, and transfer
+     the data if needed.
+
+     The index mapping is inherently quite involved, but here's a picture which
+     hopefully helps make sense out of all this.
+
+
+     Grid
+                                      |----num_vertices---|
+     xxx|....................................................|xxx
+              ^                   ^   ^                   ^
+             d0                  d1  s0 (src)            s1
+
+     Subgrid
+
+              xxx|.............|xxx
+              ^                   ^
+             d0                  d1
+
+                                  ^   ^
+                                 db  da
  *
  */
 #include "astaroth.h"
@@ -151,36 +250,7 @@ acQuit(void)
 AcResult
 acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertices)
 {
-    /*
-    Here we decompose the host mesh and distribute it among the GPUs in
-    the node.
-
-    The host mesh is a huge contiguous block of data. Its dimensions are given by
-    the global variable named "grid". A "grid" is decomposed into "subgrids",
-    one for each GPU. Here we check which parts of the range s0...s1 maps
-    to the memory space stored by some GPU, ranging d0...d1, and transfer
-    the data if needed.
-
-    The index mapping is inherently quite involved, but here's a picture which
-    hopefully helps make sense out of all this.
-
-
-    Grid
-                                     |----num_vertices---|
-    xxx|....................................................|xxx
-             ^                   ^   ^                   ^
-            d0                  d1  s0 (src)            s1
-
-    Subgrid
-
-             xxx|.............|xxx
-             ^                   ^
-            d0                  d1
-
-                                 ^   ^
-                                db  da
-
-    */
+    // See the beginning of the file for an explanation of the index mapping
     for (int i = 0; i < num_devices; ++i) {
         const int3 d0 = (int3){0, 0, i * subgrid.n.z}; // DECOMPOSITION OFFSET HERE
         const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
@@ -216,7 +286,7 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
 AcResult
 acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
 {
-    // See acLoadWithOffset() for an explanation of the index mapping
+    // See the beginning of the file for an explanation of the index mapping
     for (int i = 0; i < num_devices; ++i) {
         const int3 d0 = (int3){0, 0, i * subgrid.n.z}; // DECOMPOSITION OFFSET HERE
         const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
@@ -270,6 +340,9 @@ acSynchronizeHalos(void)
 
     // We loop only to num_devices - 1 since the front and back plate of the grid is not
     // transferred because their contents depend on the boundary conditions.
+
+    // IMPORTANT NOTE: the boundary conditions must be applied before calling this function!
+    // I.e. the halos of subgrids must contain up-to-date data!
     for (int i = 0; i < num_devices - 1; ++i) {
         const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
         // ...|ooooxxx|... -> xxx|ooooooo|...
@@ -324,70 +397,24 @@ acBoundcondStep(void)
             const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
             boundcondStep(devices[i], STREAM_PRIMARY, d0, d1);
         }
-
+        // With periodic boundary conditions we exchange the front and back plates of the
+        // grid. The exchange is done between the first and last device (0 and num_devices - 1).
+        const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
+        // ...|ooooxxx|... -> xxx|ooooooo|...
+        {
+            const int3 src = (int3){0, 0, subgrid.n.z};
+            const int3 dst = (int3){0, 0, 0};
+            copyMeshDeviceToDevice(devices[num_devices - 1], STREAM_PRIMARY, src, devices[0], dst,
+                                   num_vertices);
+        }
+        // ...|ooooooo|xxx <- ...|xxxoooo|...
+        {
+            const int3 src = (int3){0, 0, NGHOST};
+            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
+            copyMeshDeviceToDevice(devices[0], STREAM_PRIMARY, src, devices[num_devices - 1], dst,
+                                   num_vertices);
+        }
         /*
-        // ===MIIKKANOTE START==========================================
-        %JP: The old way for computing boundary conditions conflicts with the
-        way we have to do things with multiple GPUs.
-
-        The older approach relied on unified memory, which represented the whole
-        memory area as one huge mesh instead of several smaller ones. However, unified memory
-        in its current state is more meant for quick prototyping when performance is not an issue.
-        Getting the CUDA driver to migrate data intelligently across GPUs is much more difficult
-        than when managing the memory explicitly.
-
-        In this new approach, I have simplified the multi- and single-GPU layers significantly.
-        Quick rundown:
-                New struct: Grid. There are two global variables, "grid" and "subgrid", which
-                contain the extents of the whole simulation domain and the decomposed grids,
-        respectively. To simplify thing, we require that each GPU is assigned the same amount of
-        work, therefore each GPU in the node is assigned and "subgrid.m" -sized block of data to
-        work with.
-
-                The whole simulation domain is decomposed with respect to the z dimension.
-                For example, if the grid contains (nx, ny, nz) vertices, then the subgrids
-                contain (nx, ny, nz / num_devices) vertices.
-
-                An local index (i, j, k) in some subgrid can be mapped to the global grid with
-                        global idx = (i, j, k + device_id * subgrid.n.z)
-
-        Terminology:
-                - Single-GPU function: a function defined on the single-GPU layer (device.cu)
-
-        Changes required to this commented code block:
-                - The thread block dimensions (tpb) are no longer passed to the kernel here but in
-        device.cu instead. Same holds for any complex index calculations. Instead, the local
-        coordinates should be passed as an int3 type without having to consider how the data is
-        actually laid out in device memory
-                - The unified memory buffer no longer exists (d_buffer). Instead, we have an opaque
-        handle of type "Device" which should be passed to single-GPU functions. In this file, all
-        devices are stored in a global array "devices[num_devices]".
-                - Every single-GPU function is executed asynchronously by default such that we
-                  can optimize Astaroth by executing memory transactions concurrently with
-        computation. Therefore a StreamType should be passed as a parameter to single-GPU functions.
-                  Refresher: CUDA function calls are non-blocking when a stream is explicitly passed
-                  as a parameter and commands executing in different streams can be processed
-                  in parallel/concurrently.
-
-
-        Note on periodic boundaries (might be helpful when implementing other boundary conditions):
-
-                With multiple GPUs, periodic boundary conditions applied on indices ranging from
-
-                        (0, 0, STENCIL_ORDER/2) to (subgrid.m.x, subgrid.m.y, subgrid.m.z -
-        STENCIL_ORDER/2)
-
-                on a single device are "local", in the sense that they can be computed without
-        having to exchange data with neighboring GPUs. Special care is needed only for transferring
-                the data to the fron and back plates outside this range. In the solution we use
-        here, we solve the local boundaries first, and then just exchange the front and back plates
-                in a "ring", like so
-                                        device_id
-                            (n) <-> 0 <-> 1 <-> ... <-> n <-> (0)
-
-
-        // ======MIIKKANOTE END==========================================
-
         <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MIIKKANOTE: This code block was essentially
                                                                   moved into device.cu, function
         boundCondStep() In astaroth.cu, we use acBoundcondStep() just to distribute the work and
@@ -417,23 +444,6 @@ acBoundcondStep(void)
                         periodic_boundconds(0, tpb, start, end, d_buffer.in[i]);
         <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         */
-        // With periodic boundary conditions we exchange the front and back plates of the
-        // grid. The exchange is done between the first and last device (0 and num_devices - 1).
-        const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
-        // ...|ooooxxx|... -> xxx|ooooooo|...
-        {
-            const int3 src = (int3){0, 0, subgrid.n.z};
-            const int3 dst = (int3){0, 0, 0};
-            copyMeshDeviceToDevice(devices[num_devices - 1], STREAM_PRIMARY, src, devices[0], dst,
-                                   num_vertices);
-        }
-        // ...|ooooooo|xxx <- ...|xxxoooo|...
-        {
-            const int3 src = (int3){0, 0, NGHOST};
-            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
-            copyMeshDeviceToDevice(devices[0], STREAM_PRIMARY, src, devices[num_devices - 1], dst,
-                                   num_vertices);
-        }
     }
     acSynchronize();
     return AC_SUCCESS;
@@ -442,9 +452,9 @@ acBoundcondStep(void)
 AcResult
 acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
 {
+    // See the beginning of the file for an explanation of the index mapping
     for (int i = 0; i < num_devices; ++i) {
         // DECOMPOSITION OFFSET HERE
-        // Same naming here (d0, d1, da, db) as in acLoadWithOffset
         const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
         const int3 d1 = d0 + (int3){subgrid.n.x, subgrid.n.y, subgrid.n.z};
 
