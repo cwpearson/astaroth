@@ -921,6 +921,7 @@ reduce_scal(const cudaStream_t stream, const ReductionType rtype, const int3& st
         ERROR("Unrecognized rtype");
     }
     // clang-format on
+    cudaStreamSynchronize(stream);
     AcReal result;
     cudaMemcpy(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost);
     return result;
@@ -971,6 +972,8 @@ reduce_vec(const cudaStream_t stream, const ReductionType rtype, const int3& sta
         ERROR("Unrecognized rtype");
     }
     // clang-format on
+
+    cudaStreamSynchronize(stream);
     AcReal result;
     cudaMemcpy(&result, reduce_result, sizeof(AcReal), cudaMemcpyDeviceToHost);
     return result;

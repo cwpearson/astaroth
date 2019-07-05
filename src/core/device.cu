@@ -150,7 +150,7 @@ createDevice(const int id, const AcMeshInfo device_config, Device* device_handle
 
     // Concurrency
     for (int i = 0; i < NUM_STREAM_TYPES; ++i) {
-        cudaStreamCreate(&device->streams[i]);
+        cudaStreamCreateWithFlags(&device->streams[i], cudaStreamNonBlocking);
     }
 
     // Memory

@@ -458,6 +458,49 @@ acBoundcondStep(void)
 }
 
 AcResult
+acLocalBoundcondStep(void)
+{
+    if (num_devices == 1) {
+        boundcondStep(devices[0], STREAM_PRIMARY, (int3){0, 0, 0}, subgrid.m);
+    }
+    else {
+        // Local boundary conditions
+        // #pragma omp parallel for
+        for (int i = 0; i < num_devices; ++i) {
+            const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
+            const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
+            boundcondStep(devices[i], STREAM_PRIMARY, d0, d1);
+        }
+    }
+    return AC_SUCCESS;
+}
+
+AcResult
+acGlobalBoundcondStep(void)
+{
+    if (num_devices > 1) {
+        // With periodic boundary conditions we exchange the front and back plates of the
+        // grid. The exchange is done between the first and last device (0 and num_devices - 1).
+        const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
+        // ...|ooooxxx|... -> xxx|ooooooo|...
+        {
+            const int3 src = (int3){0, 0, subgrid.n.z};
+            const int3 dst = (int3){0, 0, 0};
+            copyMeshDeviceToDevice(devices[num_devices - 1], STREAM_PRIMARY, src, devices[0], dst,
+                                   num_vertices);
+        }
+        // ...|ooooooo|xxx <- ...|xxxoooo|...
+        {
+            const int3 src = (int3){0, 0, NGHOST};
+            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
+            copyMeshDeviceToDevice(devices[0], STREAM_PRIMARY, src, devices[num_devices - 1], dst,
+                                   num_vertices);
+        }
+    }
+    return AC_SUCCESS;
+}
+
+AcResult
 acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
 {
     // See the beginning of the file for an explanation of the index mapping
@@ -495,7 +538,11 @@ acIntegrate(const AcReal& dt)
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
         acIntegrateStep(isubstep, dt); // Note: boundaries must be initialized.
         acSwapBuffers();
-        acBoundcondStep();
+        acLocalBoundcondStep();
+        acSynchronizeStream(STREAM_ALL);
+        acGlobalBoundcondStep();
+        acSynchronizeHalos();
+        acSynchronizeStream(STREAM_ALL);
     }
     return AC_SUCCESS;
 }
