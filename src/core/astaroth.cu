@@ -386,7 +386,7 @@ acSynchronize(void)
 AcResult
 acBoundcondStep(void)
 {
-    acSynchronize();
+    acSynchronizeStream(STREAM_ALL);
     if (num_devices == 1) {
         boundcondStep(devices[0], STREAM_PRIMARY, (int3){0, 0, 0}, subgrid.m);
     }
@@ -445,6 +445,8 @@ acBoundcondStep(void)
         <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         */
     }
+    // TODO, better to use acSynchronizeStream here and let the user call acSynchronizeHalos when
+    // needed
     acSynchronize();
     return AC_SUCCESS;
 }
