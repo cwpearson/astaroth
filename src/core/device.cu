@@ -202,8 +202,9 @@ destroyDevice(Device device)
 #endif
 
     // Concurrency
-    for (int i = 0; i < NUM_STREAM_TYPES; ++i)
+    for (int i = 0; i < NUM_STREAM_TYPES; ++i) {
         cudaStreamDestroy(device->streams[i]);
+    }
 
     // Destroy Device
     free(device);
