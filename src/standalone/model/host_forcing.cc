@@ -183,9 +183,11 @@ helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, const AcR
 // host_forcing.cc is probably a good place for this.
 // %JP update: moved this here out of astaroth.cu. Should be renamed such that it cannot be
 // confused with actual interface functions.
+// %JP update 2: deprecated acForcingVec: use loadForcingParams instead
 void
-acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re,
-             const AcReal3 ff_hel_im, const AcReal forcing_phase, const AcReal kaver)
+DEPRECATED_acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force,
+                        const AcReal3 ff_hel_re, const AcReal3 ff_hel_im,
+                        const AcReal forcing_phase, const AcReal kaver)
 {
     acLoadDeviceConstant(AC_forcing_magnitude, forcing_magnitude);
     acLoadDeviceConstant(AC_forcing_phase, forcing_phase);
@@ -203,4 +205,88 @@ acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal
     acLoadDeviceConstant(AC_ff_hel_imz, ff_hel_im.z);
 
     acLoadDeviceConstant(AC_kaver, kaver);
+}
+
+void
+loadForcingParamsToDevice(const ForcingParams& forcing_params)
+{
+    acLoadDeviceConstant(AC_forcing_magnitude, forcing_params.magnitude);
+    acLoadDeviceConstant(AC_forcing_phase, forcing_params.phase);
+
+    acLoadDeviceConstant(AC_k_forcex, forcing_params.k_force.x);
+    acLoadDeviceConstant(AC_k_forcey, forcing_params.k_force.y);
+    acLoadDeviceConstant(AC_k_forcez, forcing_params.k_force.z);
+
+    acLoadDeviceConstant(AC_ff_hel_rex, forcing_params.ff_hel_re.x);
+    acLoadDeviceConstant(AC_ff_hel_rey, forcing_params.ff_hel_re.y);
+    acLoadDeviceConstant(AC_ff_hel_rez, forcing_params.ff_hel_re.z);
+
+    acLoadDeviceConstant(AC_ff_hel_imx, forcing_params.ff_hel_im.x);
+    acLoadDeviceConstant(AC_ff_hel_imy, forcing_params.ff_hel_im.y);
+    acLoadDeviceConstant(AC_ff_hel_imz, forcing_params.ff_hel_im.z);
+
+    acLoadDeviceConstant(AC_kaver, forcing_params.kaver);
+    // acSynchronizeStream(STREAM_ALL); // This will be needed in the future when the interface
+    // functions are guaranteed to be asynchronous
+}
+
+/** This function would be used in autotesting to update the forcing params of the host
+    configuration. */
+void
+loadForcingParamsToHost(const ForcingParams& forcing_params, AcMesh* mesh)
+{
+    // %JP: Left some regex magic here in case we need to modify the ForcingParams struct
+    // acLoadDeviceConstant\(([A-Za-z_]*), ([a-z_.]*)\);
+    // mesh->info.real_params[$1] = $2;
+    mesh->info.real_params[AC_forcing_magnitude] = forcing_params.magnitude;
+    mesh->info.real_params[AC_forcing_phase]     = forcing_params.phase;
+
+    mesh->info.real_params[AC_k_forcex] = forcing_params.k_force.x;
+    mesh->info.real_params[AC_k_forcey] = forcing_params.k_force.y;
+    mesh->info.real_params[AC_k_forcez] = forcing_params.k_force.z;
+
+    mesh->info.real_params[AC_ff_hel_rex] = forcing_params.ff_hel_re.x;
+    mesh->info.real_params[AC_ff_hel_rey] = forcing_params.ff_hel_re.y;
+    mesh->info.real_params[AC_ff_hel_rez] = forcing_params.ff_hel_re.z;
+
+    mesh->info.real_params[AC_ff_hel_imx] = forcing_params.ff_hel_im.x;
+    mesh->info.real_params[AC_ff_hel_imy] = forcing_params.ff_hel_im.y;
+    mesh->info.real_params[AC_ff_hel_imz] = forcing_params.ff_hel_im.z;
+
+    mesh->info.real_params[AC_kaver] = forcing_params.kaver;
+}
+
+ForcingParams
+generateForcingParams(const AcMeshInfo& mesh_info)
+{
+    ForcingParams params = {};
+
+    // Forcing properties
+    AcReal relhel    = mesh_info.real_params[AC_relhel];
+    params.magnitude = mesh_info.real_params[AC_forcing_magnitude];
+    AcReal kmin      = mesh_info.real_params[AC_kmin];
+    AcReal kmax      = mesh_info.real_params[AC_kmax];
+
+    params.kaver = (kmax - kmin) / AcReal(2.0);
+
+    // Generate forcing wave vector k_force
+    params.k_force = helical_forcing_k_generator(kmax, kmin);
+
+    // Randomize the phase
+    params.phase = AcReal(2.0) * AcReal(M_PI) * get_random_number_01();
+
+    // Generate e for k. Needed for the sake of isotrophy.
+    AcReal3 e_force;
+    if ((params.k_force.y == AcReal(0.0)) && (params.k_force.z == AcReal(0.0))) {
+        e_force = (AcReal3){0.0, 1.0, 0.0};
+    }
+    else {
+        e_force = (AcReal3){1.0, 0.0, 0.0};
+    }
+    helical_forcing_e_generator(&e_force, params.k_force);
+
+    helical_forcing_special_vector(&params.ff_hel_re, &params.ff_hel_im, params.k_force, e_force,
+                                   relhel);
+
+    return params;
 }
