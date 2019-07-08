@@ -246,7 +246,7 @@ run_simulation(void)
 
         // Generate e for k. Needed for the sake of isotrophy.
         AcReal3 e_force;
-        if ((k_force.y == 0.0) && (k_force.z == 0.0)) {
+        if ((k_force.y == AcReal(0.0)) && (k_force.z == AcReal(0.0))) {
             e_force = (AcReal3){0.0, 1.0, 0.0};
         }
         else {

@@ -96,6 +96,7 @@ printDeviceInfo(const Device device)
     printf("    Peak Memory Bandwidth (GiB/s): %f\n",
            2 * (props.memoryClockRate * 1e3) * props.memoryBusWidth / (8. * 1024. * 1024. * 1024.));
     printf("    ECC enabled: %d\n", props.ECCEnabled);
+
     // Memory usage
     size_t free_bytes, total_bytes;
     cudaMemGetInfo(&free_bytes, &total_bytes);
@@ -108,8 +109,10 @@ printDeviceInfo(const Device device)
     printf("    Local L1 cache supported: %d\n", props.localL1CacheSupported);
     printf("    Global L1 cache supported: %d\n", props.globalL1CacheSupported);
     printf("    L2 size: %d KiB\n", props.l2CacheSize / (1024));
-    printf("    Total const mem: %ld KiB\n", props.totalConstMem / (1024));
-    printf("    Shared mem per block: %ld KiB\n", props.sharedMemPerBlock / (1024));
+//MV: props.totalConstMem and props.sharedMemPerBlock cause assembler error
+//MV: while compiling in TIARA gp cluster. Therefore commeted out. 
+//!!    printf("    Total const mem: %ld KiB\n", props.totalConstMem / (1024));
+//!!    printf("    Shared mem per block: %ld KiB\n", props.sharedMemPerBlock / (1024));
     printf("  Other\n");
     printf("    Warp size: %d\n", props.warpSize);
     // printf("    Single to double perf. ratio: %dx\n",
