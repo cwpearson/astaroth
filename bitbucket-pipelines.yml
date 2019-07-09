@@ -1,0 +1,20 @@
+# This is a sample build configuration for C++ – Make.
+# Check our guides at https://confluence.atlassian.com/x/5Q4SMw for more examples.
+# Only use spaces to indent your .yml configuration.
+# -----
+# You can specify a custom docker image from Docker Hub as your build environment.
+image: nvidia/cuda
+
+pipelines:
+  # default: # Default is run at every push but we have only 500 build minutes / month so that probably wouldn't work out
+  custom: # Manual/scheduled building only
+    scheduled:
+    - step:
+        script: # Modify the commands below to build your repository.
+          - source ./sourceme.sh
+          - mkdir -p build && cd build
+          - apt-get update
+          - apt-get install -y cmake flex bison
+          - ../scripts/compile_acc.sh
+          - cmake ..
+          - make -j
