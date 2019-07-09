@@ -458,7 +458,7 @@ autoOptimize(const Device device)
                 if (cudaGetLastError() != cudaSuccess) // resets the error if any
                     continue;
 
-                printf("(%d, %d, %d)\n", x, y, z);
+                // printf("(%d, %d, %d)\n", x, y, z);
 
                 cudaEvent_t tstart, tstop;
                 cudaEventCreate(&tstart);
@@ -482,13 +482,16 @@ autoOptimize(const Device device)
             }
         }
     }
-
-    printf("Best dims (%d, %d, %d) %f ms\n", best_dims.x, best_dims.y, best_dims.z,
+#if VERBOSE_PRINTING
+    printf("Auto-optimization done. The best threadblock dimensions for rkStep: (%d, %d, %d) %f ms\n", best_dims.x, best_dims.y, best_dims.z,
            double(best_time) / NUM_ITERATIONS);
+#endif
+    /*
     FILE* fp = fopen("../config/rk3_tbdims.cuh", "w");
     ERRCHK(fp);
     fprintf(fp, "%d, %d, %d\n", best_dims.x, best_dims.y, best_dims.z);
     fclose(fp);
+    */
 
     rk3_tpb = best_dims;
     return AC_SUCCESS;
