@@ -116,6 +116,9 @@ run_benchmark(void)
         std::vector<double> results;
         results.reserve(NUM_ITERS);
 
+        // Optimize
+        // acAutoOptimize();
+
         // Warmup
         for (int i = 0; i < 10; ++i) {
             acIntegrate(0);

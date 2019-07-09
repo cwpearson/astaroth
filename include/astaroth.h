@@ -55,7 +55,6 @@ extern "C" {
 #define REGISTERS_PER_THREAD (255)
 #define MAX_REGISTERS_PER_BLOCK (65536)
 #define MAX_THREADS_PER_BLOCK (1024)
-#define MAX_TB_DIM (MAX_THREADS_PER_BLOCK)
 #define NUM_ITERATIONS (10)
 #define WARP_SIZE (32)
 /*
@@ -274,6 +273,10 @@ AcResult acSynchronize(void);
 
 /** Loads a parameter to the constant memory of all devices */
 AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
+
+/** Auto-optimizes the library. This function is free from side-effects: the input vertex buffer is
+ * guaranteed not be modified.*/
+AcResult acAutoOptimize(void);
 
 /* End extern "C" */
 #ifdef __cplusplus

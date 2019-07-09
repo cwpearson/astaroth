@@ -42,6 +42,8 @@ __constant__ Grid globalGrid;
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
 #include "kernels/kernels.cuh"
 
+static dim3 rk3_tpb = (dim3){32, 1, 4};
+
 #if PACKED_DATA_TRANSFERS // Defined in device.cuh
 // #include "kernels/pack_unpack.cuh"
 #endif
@@ -183,6 +185,11 @@ createDevice(const int id, const AcMeshInfo device_config, Device* device_handle
 
     printf("Created device %d (%p)\n", device->id, device);
     *device_handle = device;
+
+    // Autoptimize
+    if (id == 0)
+        autoOptimize(device);
+
     return AC_SUCCESS;
 }
 
@@ -271,7 +278,8 @@ rkStep(const Device device, const StreamType stream_type, const int step_number,
 {
     cudaSetDevice(device->id);
 
-    const dim3 tpb(32, 1, 4);
+    // const dim3 tpb(32, 1, 4);
+    const dim3 tpb = rk3_tpb;
 
     const int3 n = end - start;
     const dim3 bpg((unsigned int)ceil(n.x / AcReal(tpb.x)), //
@@ -416,6 +424,73 @@ autoOptimize(const Device device)
 {
     cudaSetDevice(device->id);
 
+    // RK3
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = start + (int3){device->local_config.int_params[AC_nx], //
+                                    device->local_config.int_params[AC_ny], //
+                                    device->local_config.int_params[AC_nz]};
+
+    dim3 best_dims(0, 0, 0);
+    float best_time = INFINITY;
+
+    for (int z = 1; z <= MAX_THREADS_PER_BLOCK; ++z) {
+        for (int y = 1; y <= MAX_THREADS_PER_BLOCK; ++y) {
+            for (int x = WARP_SIZE; x <= MAX_THREADS_PER_BLOCK; x += WARP_SIZE) {
+
+                if (x > end.x - start.x || y > end.y - start.y || z > end.z - start.z)
+                    break;
+                if (x * y * z > MAX_THREADS_PER_BLOCK)
+                    break;
+
+                if (x * y * z * REGISTERS_PER_THREAD > MAX_REGISTERS_PER_BLOCK)
+                    break;
+
+                if (((x * y * z) % WARP_SIZE) != 0)
+                    continue;
+
+                const dim3 tpb(x, y, z);
+                const int3 n = end - start;
+                const dim3 bpg((unsigned int)ceil(n.x / AcReal(tpb.x)), //
+                               (unsigned int)ceil(n.y / AcReal(tpb.y)), //
+                               (unsigned int)ceil(n.z / AcReal(tpb.z)));
+
+                cudaDeviceSynchronize();
+                if (cudaGetLastError() != cudaSuccess) // resets the error if any
+                    continue;
+
+                printf("(%d, %d, %d)\n", x, y, z);
+
+                cudaEvent_t tstart, tstop;
+                cudaEventCreate(&tstart);
+                cudaEventCreate(&tstop);
+
+                cudaEventRecord(tstart); // ---------------------------------------- Timing start
+
+                for (int i = 0; i < NUM_ITERATIONS; ++i)
+                    solve<2><<<bpg, tpb>>>(start, end, device->vba, FLT_EPSILON);
+
+                cudaEventRecord(tstop); // ----------------------------------------- Timing end
+                cudaEventSynchronize(tstop);
+                float milliseconds = 0;
+                cudaEventElapsedTime(&milliseconds, tstart, tstop);
+
+                ERRCHK_CUDA_KERNEL_ALWAYS();
+                if (milliseconds < best_time) {
+                    best_time = milliseconds;
+                    best_dims = tpb;
+                }
+            }
+        }
+    }
+
+    printf("Best dims (%d, %d, %d) %f ms\n", best_dims.x, best_dims.y, best_dims.z,
+           double(best_time) / NUM_ITERATIONS);
+    FILE* fp = fopen("../config/rk3_tbdims.cuh", "w");
+    ERRCHK(fp);
+    fprintf(fp, "%d, %d, %d\n", best_dims.x, best_dims.y, best_dims.z);
+    fclose(fp);
+
+    rk3_tpb = best_dims;
     return AC_SUCCESS;
 }
 
