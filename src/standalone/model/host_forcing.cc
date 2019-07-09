@@ -226,8 +226,7 @@ loadForcingParamsToDevice(const ForcingParams& forcing_params)
     acLoadDeviceConstant(AC_ff_hel_imz, forcing_params.ff_hel_im.z);
 
     acLoadDeviceConstant(AC_kaver, forcing_params.kaver);
-    // acSynchronizeStream(STREAM_ALL); // This will be needed in the future when the interface
-    // functions are guaranteed to be asynchronous
+    acSynchronizeStream(STREAM_ALL);
 }
 
 /** This function would be used in autotesting to update the forcing params of the host
