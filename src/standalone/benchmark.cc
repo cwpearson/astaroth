@@ -131,6 +131,7 @@ run_benchmark(void)
             const AcReal dt = FLT_EPSILON; // TODO NOTE: time to timestep not measured
 #if GEN_BENCHMARK_RK3 == 1
             acIntegrateStep(2, dt);
+            acSynchronizeStream(STREAM_ALL);
 #else // GEN_BENCHMARK_FULL
             acIntegrate(dt);
 #endif
