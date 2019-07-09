@@ -25,7 +25,10 @@
  *
  */
 #pragma once
-#include <math.h>   // isnan, isinf
+#include <cmath>
+using namespace std; // Potentially bad practice to declare namespace std here
+// #include <math.h>   // isnan, isinf // Overloads incorrect/bugged with GCC <= 6.0
+// #include <tgmath.h> // Even this does not work
 #include <stdlib.h> // rand
 
 template <class T>

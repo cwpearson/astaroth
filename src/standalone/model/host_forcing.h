@@ -46,6 +46,23 @@ void helical_forcing_special_vector(AcReal3* ff_hel_re, AcReal3* ff_hel_im, cons
                                     const AcReal3 e_force, const AcReal relhel);
 
 /** Tool for loading forcing vector information into the device memory
+    // DEPRECATED in favour of loadForcingParams
  */
-void acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force, const AcReal3 ff_hel_re,
-                  const AcReal3 ff_hel_im, const AcReal forcing_phase, const AcReal kaver);
+void DEPRECATED_acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force,
+                             const AcReal3 ff_hel_re, const AcReal3 ff_hel_im,
+                             const AcReal forcing_phase, const AcReal kaver);
+
+typedef struct {
+    AcReal magnitude;
+    AcReal3 k_force;
+    AcReal3 ff_hel_re;
+    AcReal3 ff_hel_im;
+    AcReal phase;
+    AcReal kaver;
+} ForcingParams;
+
+void loadForcingParamsToDevice(const ForcingParams& forcing_params);
+
+void loadForcingParamsToHost(const ForcingParams& forcing_params, AcMesh* mesh);
+
+ForcingParams generateForcingParams(const AcMeshInfo& mesh_info);
