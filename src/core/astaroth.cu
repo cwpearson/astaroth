@@ -305,7 +305,6 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
             copyMeshToHost(devices[i], STREAM_PRIMARY, da_local, da, copy_cells, host_mesh);
         }
     }
-    acBoundcondStep(); // TODO note: this is not the most efficient way to do things
     return AC_SUCCESS;
 }
 
@@ -388,76 +387,7 @@ acSynchronize(void)
     return AC_SUCCESS;
 }
 
-AcResult
-acBoundcondStep(void)
-{
-    acSynchronizeStream(STREAM_ALL);
-    if (num_devices == 1) {
-        boundcondStep(devices[0], STREAM_PRIMARY, (int3){0, 0, 0}, subgrid.m);
-    }
-    else {
-        // Local boundary conditions
-        // #pragma omp parallel for
-        for (int i = 0; i < num_devices; ++i) {
-            const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
-            const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
-            boundcondStep(devices[i], STREAM_PRIMARY, d0, d1);
-        }
-        // With periodic boundary conditions we exchange the front and back plates of the
-        // grid. The exchange is done between the first and last device (0 and num_devices - 1).
-        const int num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
-        // ...|ooooxxx|... -> xxx|ooooooo|...
-        {
-            const int3 src = (int3){0, 0, subgrid.n.z};
-            const int3 dst = (int3){0, 0, 0};
-            copyMeshDeviceToDevice(devices[num_devices - 1], STREAM_PRIMARY, src, devices[0], dst,
-                                   num_vertices);
-        }
-        // ...|ooooooo|xxx <- ...|xxxoooo|...
-        {
-            const int3 src = (int3){0, 0, NGHOST};
-            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
-            copyMeshDeviceToDevice(devices[0], STREAM_PRIMARY, src, devices[num_devices - 1], dst,
-                                   num_vertices);
-        }
-        /*
-        <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MIIKKANOTE: This code block was essentially
-                                                                  moved into device.cu, function
-        boundCondStep() In astaroth.cu, we use acBoundcondStep() just to distribute the work and
-        manage communication between GPUs.
-
-            printf("Boundconds best dims (%d, %d, %d) %f ms\n", best_dims.x, best_dims.y,
-        best_dims.z, double(best_time) / NUM_ITERATIONS);
-
-            exit(0);
-            #else
-
-
-                const int depth = (int)ceil(mesh_info.int_params[AC_mz]/(float)num_devices);
-
-                const int3 start = (int3){0, 0, device_id * depth};
-                const int3 end = (int3){mesh_info.int_params[AC_mx],
-                                        mesh_info.int_params[AC_my],
-                                        min((device_id+1) * depth, mesh_info.int_params[AC_mz])};
-
-                const dim3 tpb(8,2,8);
-
-                // TODO uses the default stream currently
-                if (mesh_info.int_params[AC_bc_type] == 666) { // TODO MAKE A BETTER SWITCH
-                    wedge_boundconds(0, tpb, start, end, d_buffer);
-                } else {
-                    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-                        periodic_boundconds(0, tpb, start, end, d_buffer.in[i]);
-        <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        */
-    }
-    // TODO, better to use acSynchronizeStream here and let the user call acSynchronizeHalos when
-    // needed
-    acSynchronize();
-    return AC_SUCCESS;
-}
-
-AcResult
+static AcResult
 acLocalBoundcondStep(void)
 {
     if (num_devices == 1) {
@@ -475,7 +405,7 @@ acLocalBoundcondStep(void)
     return AC_SUCCESS;
 }
 
-AcResult
+static AcResult
 acGlobalBoundcondStep(void)
 {
     if (num_devices > 1) {
@@ -497,6 +427,18 @@ acGlobalBoundcondStep(void)
                                    num_vertices);
         }
     }
+    return AC_SUCCESS;
+}
+
+AcResult
+acBoundcondStep(void)
+{
+    acLocalBoundcondStep();
+    acSynchronizeStream(STREAM_ALL);
+    acGlobalBoundcondStep();
+    acSynchronizeHalos();
+    acSynchronizeStream(STREAM_ALL);
+
     return AC_SUCCESS;
 }
 
