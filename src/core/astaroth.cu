@@ -610,3 +610,9 @@ acLoadDeviceConstant(const AcRealParam param, const AcReal value)
     }
     return AC_SUCCESS;
 }
+
+AcResult
+acAutoOptimize(void)
+{
+    return autoOptimize(devices[0]);
+}
