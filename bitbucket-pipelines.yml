@@ -10,7 +10,7 @@ pipelines:
     - step:
         script: # Modify the commands below to build your repository.
           - mkdir -p build && cd build
-          - apt update
-          - apt install -y cmake 
+          - apt-get update
+          - apt-get -t jessie-backports install -y cmake
           - cmake ..
           - make -j
