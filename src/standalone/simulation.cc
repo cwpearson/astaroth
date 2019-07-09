@@ -205,7 +205,6 @@ run_simulation(void)
     write_mesh_info(&mesh_info);
     print_diagnostics(0, AcReal(.0), t_step, diag_file);
 
-    acSynchronize();
     acStore(mesh);
     save_mesh(*mesh, 0, t_step);
 
@@ -275,8 +274,6 @@ run_simulation(void)
                 acSynchronize();
                 acStore(mesh);
             */
-
-            acSynchronize();
             acStore(mesh);
 
             save_mesh(*mesh, i, t_step);

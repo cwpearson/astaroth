@@ -122,7 +122,6 @@ run_benchmark(void)
         // Warmup
         for (int i = 0; i < 10; ++i) {
             acIntegrate(0);
-            acSynchronize();
         }
 
         Timer t;
@@ -135,8 +134,6 @@ run_benchmark(void)
 #else // GEN_BENCHMARK_FULL
             acIntegrate(dt);
 #endif
-            acSynchronize();
-
             const double ms_elapsed = timer_diff_nsec(t) / 1e6;
             results.push_back(ms_elapsed);
         }

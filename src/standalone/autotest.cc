@@ -413,8 +413,6 @@ check_rk3(const AcMeshInfo& mesh_info)
             const AcReal dt = AcReal(1e-2); // Use a small constant timestep to avoid instabilities
 
             acIntegrate(dt);
-            acBoundcondStep();
-            acSynchronize();
 
             model_rk3(dt, model_mesh);
             boundconds(model_mesh->info, model_mesh);
@@ -712,8 +710,6 @@ run_autotest(void)
 
                 // Device integration step
                 acIntegrate(dt);
-                acBoundcondStep();
-                acSynchronize();
                 acStore(candidate_mesh);
 
                 // Check fields

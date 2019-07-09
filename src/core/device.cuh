@@ -27,15 +27,6 @@
 #pragma once
 #include "astaroth.h"
 
-// clang-format off
-typedef enum {
-    STREAM_PRIMARY,
-    STREAM_SECONDARY,
-    NUM_STREAM_TYPES,
-    STREAM_ALL
-} StreamType;
-// clang-format on
-
 typedef struct {
     int3 m;
     int3 n;

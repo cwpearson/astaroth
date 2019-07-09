@@ -406,7 +406,7 @@ run_renderer(void)
             const int num_vertices = mesh->info.int_params[AC_mxy];
             const int3 dst         = (int3){0, 0, k_slice};
             acStoreWithOffset(dst, num_vertices, mesh);
-            acSynchronize();
+            acSynchronizeStream(STREAM_ALL);
             renderer_draw(*mesh); // Bottleneck is here
             printf("Step #%d, dt: %f\n", steps, double(dt));
             timer_reset(&frame_timer);
