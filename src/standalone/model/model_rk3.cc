@@ -687,10 +687,10 @@ helical_forcing(ModelScalar /* magnitude */, ModelVector k_force, ModelVector xx
     xx.y = xx.y * (2.0 * M_PI / (get(AC_dsy) * (get(AC_ny_max) - get(AC_ny_min))));
     xx.z = xx.z * (2.0 * M_PI / (get(AC_dsz) * (get(AC_ny_max) - get(AC_ny_min))));
 
-    ModelScalar cos_phi     = cos(phi);
-    ModelScalar sin_phi     = sin(phi);
-    ModelScalar cos_k_dox_x = cos(dot(k_force, xx));
-    ModelScalar sin_k_dox_x = sin(dot(k_force, xx));
+    ModelScalar cos_phi     = cosl(phi);
+    ModelScalar sin_phi     = sinl(phi);
+    ModelScalar cos_k_dox_x = cosl(dot(k_force, xx));
+    ModelScalar sin_k_dox_x = sinl(dot(k_force, xx));
     // Phase affect only the x-component
     ModelScalar real_comp_phase = cos_k_dox_x * cos_phi - sin_k_dox_x * sin_phi;
     ModelScalar imag_comp_phase = cos_k_dox_x * sin_phi + sin_k_dox_x * cos_phi;
@@ -715,7 +715,7 @@ forcing(int3 globalVertexIdx, ModelScalar dt)
         (globalVertexIdx.y - get(AC_ny_min) * get(AC_dsy)),
         (globalVertexIdx.z - get(AC_nz_min) * get(AC_dsz))}; // sink (current index)
     const ModelScalar cs2 = get(AC_cs2_sound);
-    const ModelScalar cs  = sqrt(cs2);
+    const ModelScalar cs  = sqrtl(cs2);
 
     // Placeholders until determined properly
     ModelScalar magnitude = get(AC_forcing_magnitude);
@@ -729,12 +729,12 @@ forcing(int3 globalVertexIdx, ModelScalar dt)
     // ModelVector force = simple_outward_flow_forcing(a, xx, magnitude);
     ModelVector force = helical_forcing(magnitude, k_force, xx, ff_re, ff_im, phase);
 
-    // Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
-    const ModelScalar NN = cs * sqrt(get(AC_kaver) * cs);
+    // Scaling N = magnitude*cs*sqrtl(k*cs/dt)  * dt
+    const ModelScalar NN = cs * sqrtl(get(AC_kaver) * cs);
     // MV: Like in the Pencil Code. I don't understandf the logic here.
-    force.x = sqrt(dt) * NN * force.x;
-    force.y = sqrt(dt) * NN * force.y;
-    force.z = sqrt(dt) * NN * force.z;
+    force.x = sqrtl(dt) * NN * force.x;
+    force.y = sqrtl(dt) * NN * force.y;
+    force.z = sqrtl(dt) * NN * force.z;
 
     if (is_valid(force)) {
         return force;
