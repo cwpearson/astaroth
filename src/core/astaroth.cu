@@ -551,9 +551,10 @@ acStore(AcMesh* host_mesh)
 AcResult
 acLoadDeviceConstant(const AcRealParam param, const AcReal value)
 {
+    const StreamType stream = STREAM_PRIMARY;
     // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
-        loadDeviceConstant(devices[i], param, value);
+        loadDeviceConstant(devices[i], stream, param, value);
     }
     return AC_SUCCESS;
 }
