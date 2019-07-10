@@ -55,7 +55,6 @@ extern "C" {
 #define REGISTERS_PER_THREAD (255)
 #define MAX_REGISTERS_PER_BLOCK (65536)
 #define MAX_THREADS_PER_BLOCK (1024)
-#define NUM_ITERATIONS (10)
 #define WARP_SIZE (32)
 /*
  * =============================================================================
