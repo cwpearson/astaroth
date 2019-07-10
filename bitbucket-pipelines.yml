@@ -3,7 +3,7 @@
 # Only use spaces to indent your .yml configuration.
 # -----
 # You can specify a custom docker image from Docker Hub as your build environment.
-image: nvidia/cuda
+image: nvidia/cuda:devel
 
 pipelines:
   # default: # Default is run at every push but we have only 500 build minutes / month so that probably wouldn't work out
@@ -11,9 +11,6 @@ pipelines:
     scheduled:
     - step:
         script: # Modify the commands below to build your repository.
-          - apt-get install -y pciutils mesa-utils
-          - lspci -v # Print system information
-          - glxinfo | grep OpenGL # GPU driver information
           - source ./sourceme.sh
           - mkdir -p build && cd build
           - apt-get update
@@ -21,3 +18,4 @@ pipelines:
           - ../scripts/compile_acc.sh
           - cmake ..
           - make -j
+          - ./ac_run -t
