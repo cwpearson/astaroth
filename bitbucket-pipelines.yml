@@ -18,4 +18,3 @@ pipelines:
           - ../scripts/compile_acc.sh
           - cmake ..
           - make -j
-          - ./ac_run -t
