@@ -431,7 +431,8 @@ autoOptimize(const Device device)
                                     device->local_config.int_params[AC_nz]};
 
     dim3 best_dims(0, 0, 0);
-    float best_time = INFINITY;
+    float best_time          = INFINITY;
+    const int num_iterations = 10;
 
     for (int z = 1; z <= MAX_THREADS_PER_BLOCK; ++z) {
         for (int y = 1; y <= MAX_THREADS_PER_BLOCK; ++y) {
@@ -466,7 +467,6 @@ autoOptimize(const Device device)
 
                 cudaEventRecord(tstart); // ---------------------------------------- Timing start
 
-                const int num_iterations = 10;
                 for (int i = 0; i < num_iterations; ++i)
                     solve<2><<<bpg, tpb>>>(start, end, device->vba, FLT_EPSILON);
 
