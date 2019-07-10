@@ -195,7 +195,7 @@ acSynchronizeStream(const StreamType stream)
 }
 
 static AcResult
-synchronize_halos(void)
+synchronize_halos(const StreamType stream)
 {
     // Exchanges the halos of subgrids
     // After this step, the data within the main grid ranging from
@@ -214,15 +214,15 @@ synchronize_halos(void)
         {
             const int3 src = (int3){0, 0, subgrid.n.z};
             const int3 dst = (int3){0, 0, 0};
-            copyMeshDeviceToDevice(devices[i], STREAM_PRIMARY, src, devices[(i + 1) % num_devices],
-                                   dst, num_vertices);
+            copyMeshDeviceToDevice(devices[i], stream, src, devices[(i + 1) % num_devices], dst,
+                                   num_vertices);
         }
         // ...|ooooooo|xxx <- ...|xxxoooo|...
         {
             const int3 src = (int3){0, 0, NGHOST};
             const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
-            copyMeshDeviceToDevice(devices[(i + 1) % num_devices], STREAM_PRIMARY, src, devices[i],
-                                   dst, num_vertices);
+            copyMeshDeviceToDevice(devices[(i + 1) % num_devices], stream, src, devices[i], dst,
+                                   num_vertices);
         }
     }
     return AC_SUCCESS;
@@ -232,7 +232,7 @@ AcResult
 acSynchronizeMesh(void)
 {
     acSynchronizeStream(STREAM_ALL);
-    synchronize_halos();
+    synchronize_halos(STREAM_DEFAULT);
     acSynchronizeStream(STREAM_ALL);
 
     return AC_SUCCESS;
@@ -307,7 +307,8 @@ acQuit(void)
 }
 
 AcResult
-acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
+acIntegrateStepWithOffsetAsync(const int& isubstep, const AcReal& dt, const int3& start,
+                               const int3& end, const StreamType stream)
 {
     // See the beginning of the file for an explanation of the index mapping
     // #pragma omp parallel for
@@ -322,27 +323,37 @@ acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& sta
         if (db.z >= da.z) {
             const int3 da_local = da - (int3){0, 0, i * subgrid.n.z};
             const int3 db_local = db - (int3){0, 0, i * subgrid.n.z};
-            rkStep(devices[i], STREAM_PRIMARY, isubstep, da_local, db_local, dt);
+            rkStep(devices[i], stream, isubstep, da_local, db_local, dt);
         }
     }
     return AC_SUCCESS;
 }
 
 AcResult
-acIntegrateStep(const int& isubstep, const AcReal& dt)
+acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
+{
+    return acIntegrateStepWithOffsetAsync(isubstep, dt, start, end, STREAM_DEFAULT);
+}
+
+AcResult
+acIntegrateStepAsync(const int& isubstep, const AcReal& dt, const StreamType stream)
 {
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
     const int3 end   = start + grid.n;
-    acIntegrateStepWithOffset(isubstep, dt, start, end);
+    return acIntegrateStepWithOffsetAsync(isubstep, dt, start, end, stream);
+}
 
-    return AC_SUCCESS;
+AcResult
+acIntegrateStep(const int& isubstep, const AcReal& dt)
+{
+    return acIntegrateStepAsync(isubstep, dt, STREAM_DEFAULT);
 }
 
 static AcResult
-local_boundcondstep(void)
+local_boundcondstep(const StreamType stream)
 {
     if (num_devices == 1) {
-        boundcondStep(devices[0], STREAM_PRIMARY, (int3){0, 0, 0}, subgrid.m);
+        boundcondStep(devices[0], stream, (int3){0, 0, 0}, subgrid.m);
     }
     else {
         // Local boundary conditions
@@ -350,14 +361,14 @@ local_boundcondstep(void)
         for (int i = 0; i < num_devices; ++i) {
             const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
-            boundcondStep(devices[i], STREAM_PRIMARY, d0, d1);
+            boundcondStep(devices[i], stream, d0, d1);
         }
     }
     return AC_SUCCESS;
 }
 
 static AcResult
-global_boundcondstep(void)
+global_boundcondstep(const StreamType stream)
 {
     if (num_devices > 1) {
         // With periodic boundary conditions we exchange the front and back plates of the
@@ -367,14 +378,14 @@ global_boundcondstep(void)
         {
             const int3 src = (int3){0, 0, subgrid.n.z};
             const int3 dst = (int3){0, 0, 0};
-            copyMeshDeviceToDevice(devices[num_devices - 1], STREAM_PRIMARY, src, devices[0], dst,
+            copyMeshDeviceToDevice(devices[num_devices - 1], stream, src, devices[0], dst,
                                    num_vertices);
         }
         // ...|ooooooo|xxx <- ...|xxxoooo|...
         {
             const int3 src = (int3){0, 0, NGHOST};
             const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
-            copyMeshDeviceToDevice(devices[0], STREAM_PRIMARY, src, devices[num_devices - 1], dst,
+            copyMeshDeviceToDevice(devices[0], stream, src, devices[num_devices - 1], dst,
                                    num_vertices);
         }
     }
@@ -382,15 +393,22 @@ global_boundcondstep(void)
 }
 
 AcResult
+acBoundcondStepAsync(const StreamType stream)
+{
+    ERRCHK_ALWAYS(stream < NUM_STREAM_TYPES);
+
+    local_boundcondstep(stream);
+    acSynchronizeStream(stream);
+    global_boundcondstep(stream);
+    synchronize_halos(stream);
+    acSynchronizeStream(stream);
+    return AC_SUCCESS;
+}
+
+AcResult
 acBoundcondStep(void)
 {
-    local_boundcondstep();
-    acSynchronizeStream(STREAM_ALL);
-    global_boundcondstep();
-    synchronize_halos();
-    acSynchronizeStream(STREAM_ALL);
-
-    return AC_SUCCESS;
+    return acBoundcondStepAsync(STREAM_DEFAULT);
 }
 
 static AcResult
@@ -450,7 +468,7 @@ acReduceScal(const ReductionType& rtype, const VertexBufferHandle& vtxbuffer_han
     AcReal results[num_devices];
     // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
-        reduceScal(devices[i], STREAM_PRIMARY, rtype, vtxbuffer_handle, &results[i]);
+        reduceScal(devices[i], STREAM_DEFAULT, rtype, vtxbuffer_handle, &results[i]);
     }
 
     return simple_final_reduce_scal(rtype, results, num_devices);
@@ -465,14 +483,15 @@ acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a, const Verte
     AcReal results[num_devices];
     // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
-        reduceVec(devices[i], STREAM_PRIMARY, rtype, a, b, c, &results[i]);
+        reduceVec(devices[i], STREAM_DEFAULT, rtype, a, b, c, &results[i]);
     }
 
     return simple_final_reduce_scal(rtype, results, num_devices);
 }
 
 AcResult
-acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertices)
+acLoadWithOffsetAsync(const AcMesh& host_mesh, const int3& src, const int num_vertices,
+                      const StreamType stream)
 {
     // See the beginning of the file for an explanation of the index mapping
     // #pragma omp parallel for
@@ -501,11 +520,17 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
             const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices};
             // printf("\t\tcopy %d cells to local index ", copy_cells); printInt3(da_local);
             // printf("\n");
-            copyMeshToDevice(devices[i], STREAM_PRIMARY, host_mesh, da, da_local, copy_cells);
+            copyMeshToDevice(devices[i], stream, host_mesh, da, da_local, copy_cells);
         }
         // printf("\n");
     }
     return AC_SUCCESS;
+}
+
+AcResult
+acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertices)
+{
+    return acLoadWithOffsetAsync(host_mesh, src, num_vertices, STREAM_DEFAULT);
 }
 
 AcResult
@@ -517,7 +542,8 @@ acLoad(const AcMesh& host_mesh)
 }
 
 AcResult
-acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
+acStoreWithOffsetAsync(const int3& src, const int num_vertices, AcMesh* host_mesh,
+                       const StreamType stream)
 {
     // See the beginning of the file for an explanation of the index mapping
     // #pragma omp parallel for
@@ -534,10 +560,16 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
             const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
             // DECOMPOSITION OFFSET HERE
             const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices};
-            copyMeshToHost(devices[i], STREAM_PRIMARY, da_local, da, copy_cells, host_mesh);
+            copyMeshToHost(devices[i], stream, da_local, da, copy_cells, host_mesh);
         }
     }
     return AC_SUCCESS;
+}
+
+AcResult
+acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
+{
+    return acStoreWithOffsetAsync(src, num_vertices, host_mesh, STREAM_DEFAULT);
 }
 
 AcResult
@@ -549,12 +581,17 @@ acStore(AcMesh* host_mesh)
 }
 
 AcResult
-acLoadDeviceConstant(const AcRealParam param, const AcReal value)
+acLoadDeviceConstantAsync(const AcRealParam param, const AcReal value, const StreamType stream)
 {
-    const StreamType stream = STREAM_PRIMARY;
     // #pragma omp parallel for
     for (int i = 0; i < num_devices; ++i) {
         loadDeviceConstant(devices[i], stream, param, value);
     }
     return AC_SUCCESS;
+}
+
+AcResult
+acLoadDeviceConstant(const AcRealParam param, const AcReal value)
+{
+    return acLoadDeviceConstantAsync(param, value, STREAM_DEFAULT);
 }

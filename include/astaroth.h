@@ -215,8 +215,7 @@ typedef struct {
  * =============================================================================
  */
 typedef enum {
-    STREAM_PRIMARY,   //
-    STREAM_SECONDARY, //
+    STREAM_DEFAULT,
     NUM_STREAM_TYPES, //
     STREAM_ALL
 } StreamType;
@@ -275,25 +274,35 @@ AcResult acStore(AcMesh* host_mesh);
  */
 /** Loads a parameter to the constant memory of all GPUs in the node. Asynchronous. */
 AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
+AcResult acLoadDeviceConstantAsync(const AcRealParam param, const AcReal value,
+                                   const StreamType stream);
 
 /** Splits a subset of the host_mesh and distributes it among the GPUs in the node. Asynchronous. */
 AcResult acLoadWithOffset(const AcMesh& host_mesh, const int3& start, const int num_vertices);
+AcResult acLoadWithOffsetAsync(const AcMesh& host_mesh, const int3& start, const int num_vertices,
+                               const StreamType stream);
 
 /** Gathers a subset of the data distributed among the GPUs in the node and stores the mesh back to
  * CPU memory. Asynchronous.
  */
 AcResult acStoreWithOffset(const int3& start, const int num_vertices, AcMesh* host_mesh);
+AcResult acStoreWithOffsetAsync(const int3& start, const int num_vertices, AcMesh* host_mesh,
+                                const StreamType stream);
 
 /** Performs a single RK3 step without computing boundary conditions. Asynchronous.*/
 AcResult acIntegrateStep(const int& isubstep, const AcReal& dt);
+AcResult acIntegrateStepAsync(const int& isubstep, const AcReal& dt, const StreamType stream);
 
 /** Performs a single RK3 step on a subset of the mesh without computing the boundary conditions.
  * Asynchronous.*/
 AcResult acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start,
                                    const int3& end);
+AcResult acIntegrateStepWithOffsetAsync(const int& isubstep, const AcReal& dt, const int3& start,
+                                        const int3& end, const StreamType stream);
 
 /** Performs the boundary condition step on the GPUs in the node. Asynchronous. */
 AcResult acBoundcondStep(void);
+AcResult acBoundcondStepAsync(const StreamType stream);
 
 /* End extern "C" */
 #ifdef __cplusplus
