@@ -14,7 +14,7 @@ pipelines:
           - source ./sourceme.sh
           - mkdir -p build && cd build
           - apt-get update
-          - apt-get install -y cmake flex bison nvidia-cuda-toolkit
+          - apt-get install -y cmake flex bison
           - ../scripts/compile_acc.sh
           - cmake ..
           - make -j
