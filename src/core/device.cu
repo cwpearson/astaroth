@@ -387,7 +387,8 @@ swapBuffers(const Device device)
 }
 
 AcResult
-loadDeviceConstant(const Device device, const AcIntParam param, const int value)
+loadDeviceConstant(const Device device, const StreamType stream_type, const AcIntParam param,
+                   const int value)
 {
     cudaSetDevice(device->id);
     // CUDA 10 apparently creates only a single name for a device constant (d_mesh_info here)
@@ -395,18 +396,21 @@ loadDeviceConstant(const Device device, const AcIntParam param, const int value)
     // Therefore we have to obfuscate the code a bit and compute the offset address before
     // invoking cudaMemcpyToSymbol.
     const size_t offset = (size_t)&d_mesh_info.int_params[param] - (size_t)&d_mesh_info;
-    ERRCHK_CUDA_ALWAYS(
-        cudaMemcpyToSymbol(d_mesh_info, &value, sizeof(value), offset, cudaMemcpyHostToDevice));
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+                                               cudaMemcpyHostToDevice,
+                                               device->streams[stream_type]));
     return AC_SUCCESS;
 }
 
 AcResult
-loadDeviceConstant(const Device device, const AcRealParam param, const AcReal value)
+loadDeviceConstant(const Device device, const StreamType stream_type, const AcRealParam param,
+                   const AcReal value)
 {
     cudaSetDevice(device->id);
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
-    ERRCHK_CUDA_ALWAYS(
-        cudaMemcpyToSymbol(d_mesh_info, &value, sizeof(value), offset, cudaMemcpyHostToDevice));
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+                                               cudaMemcpyHostToDevice,
+                                               device->streams[stream_type]));
     return AC_SUCCESS;
 }
 

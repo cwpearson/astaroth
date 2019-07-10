@@ -82,10 +82,12 @@ AcResult copyMeshDeviceToDevice(const Device src, const StreamType stream_type, 
 AcResult swapBuffers(const Device device);
 
 /** */
-AcResult loadDeviceConstant(const Device device, const AcIntParam param, const int value);
+AcResult loadDeviceConstant(const Device device, const StreamType stream_type,
+                            const AcIntParam param, const int value);
 
 /** */
-AcResult loadDeviceConstant(const Device device, const AcRealParam param, const AcReal value);
+AcResult loadDeviceConstant(const Device device, const StreamType stream_type,
+                            const AcRealParam param, const AcReal value);
 
 /** */
 AcResult loadGlobalGrid(const Device device, const Grid grid);
