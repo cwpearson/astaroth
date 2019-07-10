@@ -3,7 +3,14 @@
 # Only use spaces to indent your .yml configuration.
 # -----
 # You can specify a custom docker image from Docker Hub as your build environment.
-image: nvidia/cuda:latest
+image: nvidia/cuda
+
+# JP notes:
+# 1) We need a sufficiently recent GPU to run the code (needs to support CUDA 10 + NVIDIA drivers 418)
+# 2) The default CUDA driver loaded with the docker image is too old
+# => Either Bitbucket offers no NVIDIA GPUs at all, the GPUs are very old, or then we have to update the drivers  by ourselves
+# ==> Updating the kernel drivers by ourselves probably requires creating our own docker image.
+# ===> Which might not even work since I don't know what kind of hardware we're running on (lspci was not available)
 
 pipelines:
   # default: # Default is run at every push but we have only 500 build minutes / month so that probably wouldn't work out
@@ -18,4 +25,4 @@ pipelines:
           - ../scripts/compile_acc.sh
           - cmake ..
           - make -j
-          - ./ac_run -t
+          # - ./ac_run -t
