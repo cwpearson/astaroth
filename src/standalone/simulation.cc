@@ -218,6 +218,14 @@ run_simulation(void)
     /* initialize random seed: */
     srand(312256655);
 
+    //TODO_SINK. init_sink_particle()
+    //  Initialize the basic variables of the sink particle to a suitable initial value.
+    //  1. Location of the particle
+    //  2. Mass of the particle
+    //  (3. Velocity of the particle)
+    //  This at the level of Host in this case. 
+    //  acUpdate_sink_particle() will do the similar trick to the device. 
+
     /* Step the simulation */
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
@@ -228,7 +236,26 @@ run_simulation(void)
         loadForcingParamsToDevice(forcing_params);
 #endif
 
+       //TODO_SINK acUpdate_sink_particle()
+       //  Update properties of the sing particle for acIntegrate(). Essentially:
+       //  1. Location of the particle
+       //  2. Mass of the particle
+       //  (3. Velocity of the particle)
+       //  These can be used for calculating he gravitational field. 
+
         acIntegrate(dt);
+       //TODO_SINK acAdvect_sink_particle()
+       //  THIS IS OPTIONAL. We will start from unmoving particle. 
+       //  1. Calculate the equation of motion for the sink particle. 
+       //  NOTE: Might require embedding with acIntegrate(dt). 
+
+       //TODO_SINK acAccrete_sink_particle()
+       //  Calculate accretion of the sink particle from the surrounding medium 
+       //  1. Transfer density into sink particle mass
+       //  2. Transfer momentum into sink particle 
+       //  (OPTIONAL: Affection the motion of the particle)
+       //  NOTE: Might require embedding with acIntegrate(dt).
+       //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference. 
 
         t_step += dt;
 
