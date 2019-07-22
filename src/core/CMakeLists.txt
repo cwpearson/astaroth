@@ -19,7 +19,6 @@ set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
                     -gencode arch=compute_60,code=sm_60
                     -gencode arch=compute_61,code=sm_61
                     -lineinfo
-                    --maxrregcount=255
                     -ftz=true
                     -std=c++11) #--maxrregcount=255 -ftz=true #ftz = flush denormalized floats to zero
 # -Xptxas -dlcm=ca opt-in to cache all global loads to L1/texture cache
