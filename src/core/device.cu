@@ -28,6 +28,12 @@
 
 #include "errchk.h"
 
+// Device info
+#define REGISTERS_PER_THREAD (255)
+#define MAX_REGISTERS_PER_BLOCK (65536)
+#define MAX_THREADS_PER_BLOCK (1024)
+#define WARP_SIZE (32)
+
 typedef struct {
     AcReal* in[NUM_VTXBUF_HANDLES];
     AcReal* out[NUM_VTXBUF_HANDLES];
