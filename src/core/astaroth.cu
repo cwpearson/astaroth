@@ -291,6 +291,29 @@ acInit(const AcMeshInfo& config)
         printDeviceInfo(devices[i]);
     }
 
+    // Enable peer access
+    for (int i = 0; i < num_devices; ++i) {
+        const int front = (i + 1) % num_devices;
+        const int back  = (i - 1 + num_devices) % num_devices;
+
+        int can_access_front, can_access_back;
+        cudaDeviceCanAccessPeer(&can_access_front, i, front);
+        cudaDeviceCanAccessPeer(&can_access_back, i, back);
+#if VERBOSE_PRINTING
+        printf(
+            "Trying to enable peer access from %d to %d (can access: %d) and %d (can access: %d)\n",
+            i, front, can_access_front, back, can_access_back);
+#endif
+
+        cudaSetDevice(i);
+        if (can_access_front) {
+            ERRCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(front, 0));
+        }
+        if (can_access_back) {
+            ERRCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(back, 0));
+        }
+    }
+
     acSynchronizeStream(STREAM_ALL);
     return AC_SUCCESS;
 }
