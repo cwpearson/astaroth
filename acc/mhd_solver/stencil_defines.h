@@ -1,4 +1,24 @@
 /*
+    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+
+    This file is part of Astaroth.
+
+    Astaroth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Astaroth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#pragma once
+
+/*
  * =============================================================================
  * Logical switches
  * =============================================================================
@@ -26,8 +46,11 @@
         FUNC(AC_max_steps), \
         FUNC(AC_save_steps), \
         FUNC(AC_bin_steps), \
-        FUNC(AC_bc_type)
-#define AC_FOR_REAL_PARAM_TYPES(FUNC)\
+        FUNC(AC_bc_type),
+
+#define AC_FOR_USER_INT3_PARAM_TYPES(FUNC)
+
+#define AC_FOR_USER_REAL_PARAM_TYPES(FUNC)\
         /* cparams */\
         FUNC(AC_dsx), \
         FUNC(AC_dsy), \
@@ -97,7 +120,9 @@
         FUNC(AC_cs2_sound), \
         FUNC(AC_inv_dsx), \
         FUNC(AC_inv_dsy), \
-        FUNC(AC_inv_dsz)
+        FUNC(AC_inv_dsz),
+
+#define AC_FOR_USER_REAL3_PARAM_TYPES(FUNC)
 // clang-format on
 
 /*
@@ -106,49 +131,33 @@
  * =============================================================================
  */
 // clang-format off
-#if LDENSITY
-#define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_LNRHO),
-#else
-#define AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC)
-#endif
-
-#if LHYDRO
-#define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_UUX), \
-        FUNC(VTXBUF_UUY), \
-        FUNC(VTXBUF_UUZ),
-#else
-#define AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC)
-#endif
-
-#if LMAGNETIC
-#define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_AX), \
-        FUNC(VTXBUF_AY), \
-        FUNC(VTXBUF_AZ),
-#else
-#define AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC)
-#endif
-
 #if LENTROPY
-#define AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
-        FUNC(VTXBUF_ENTROPY),
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO), \
+    FUNC(VTXBUF_UUX), \
+    FUNC(VTXBUF_UUY), \
+    FUNC(VTXBUF_UUZ), \
+    FUNC(VTXBUF_AX), \
+    FUNC(VTXBUF_AY), \
+    FUNC(VTXBUF_AZ), \
+    FUNC(VTXBUF_ENTROPY),
+#elif LMAGNETIC
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO), \
+    FUNC(VTXBUF_UUX), \
+    FUNC(VTXBUF_UUY), \
+    FUNC(VTXBUF_UUZ), \
+    FUNC(VTXBUF_AX), \
+    FUNC(VTXBUF_AY), \
+    FUNC(VTXBUF_AZ),
+#elif LHYDRO
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO), \
+    FUNC(VTXBUF_UUX), \
+    FUNC(VTXBUF_UUY), \
+    FUNC(VTXBUF_UUZ),
 #else
-#define AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC)
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO),
 #endif
-
-//MR: Temperature must not have an additional variable slot, but should sit on the
-//    same as entropy.
-#if LTEMPERATURE
-    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)\
-          FUNC(VTXBUF_TEMPERATURE),
-#else
-    #define AC_FOR_TEMPERATURE_VTXBUF_HANDLES(FUNC)
-#endif
-
-#define AC_FOR_VTXBUF_HANDLES(FUNC) AC_FOR_HYDRO_VTXBUF_HANDLES(FUNC) \
-                                    AC_FOR_DENSITY_VTXBUF_HANDLES(FUNC) \
-                                    AC_FOR_ENTROPY_VTXBUF_HANDLES(FUNC) \
-                                    AC_FOR_MAGNETIC_VTXBUF_HANDLES(FUNC) \
 // clang-format on
