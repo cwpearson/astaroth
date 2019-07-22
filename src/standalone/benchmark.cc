@@ -40,6 +40,48 @@
 #include <math.h>
 #include <vector>
 
+int
+run_benchmark(void)
+{
+    const int nn        = 256;
+    const int num_iters = 100;
+
+    AcMeshInfo mesh_info;
+    load_config(&mesh_info);
+    mesh_info.int_params[AC_nx] = nn;
+    mesh_info.int_params[AC_ny] = mesh_info.int_params[AC_nx];
+    mesh_info.int_params[AC_nz] = mesh_info.int_params[AC_nx];
+    update_config(&mesh_info);
+
+    AcMesh* mesh = acmesh_create(mesh_info);
+    acmesh_init_to(INIT_TYPE_ABC_FLOW, mesh);
+
+    acInit(mesh_info);
+    acLoad(*mesh);
+
+    // Warmup
+    for (int i = 0; i < 10; ++i) {
+        acIntegrate(0);
+    }
+
+    Timer total_time;
+    timer_reset(&total_time);
+    for (int i = 0; i < num_iters; ++i) {
+        const AcReal dt = FLT_EPSILON;
+        acIntegrate(dt);
+    }
+    acSynchronizeStream(STREAM_ALL);
+    const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
+    printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
+    printf("Total time: %f ms\n", ms_elapsed);
+
+    acQuit();
+    acmesh_destroy(mesh);
+
+    return AC_SUCCESS;
+}
+
+#if 0 // Old single-GPU benchmark
 static bool
 smaller_than(const double& a, const double& b)
 {
@@ -162,6 +204,7 @@ run_benchmark(void)
 
     return 0;
 }
+#endif // single-GPU benchmark
 
 /*
 
