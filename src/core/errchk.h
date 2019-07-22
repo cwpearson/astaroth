@@ -109,4 +109,6 @@ cuda_assert(cudaError_t code, const char* file, int line, bool abort = true)
     ERRCHK_CUDA_ALWAYS(cudaPeekAtLastError());                                    \
     ERRCHK_CUDA_ALWAYS(cudaDeviceSynchronize());                                  \
 }
+
+#define WARNCHK_CUDA_ALWAYS(params) { cuda_assert((params), __FILE__, __LINE__, false); }
 // clang-format on
