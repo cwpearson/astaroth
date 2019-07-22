@@ -273,20 +273,20 @@ typedef enum {
  */
 typedef enum {
     AC_FOR_INT_PARAM_TYPES(AC_GEN_ID),
-    NUM_INT_PARAM_TYPES
+    NUM_INT_PARAMS
 } AcIntParam;
 
 typedef enum {
     AC_FOR_REAL_PARAM_TYPES(AC_GEN_ID),
-    NUM_REAL_PARAM_TYPES
+    NUM_REAL_PARAMS
 } AcRealParam;
 
 extern const char* intparam_names[];  // Defined in astaroth.cu
 extern const char* realparam_names[]; // Defined in astaroth.cu
 
 typedef struct {
-    int int_params[NUM_INT_PARAM_TYPES];
-    AcReal real_params[NUM_REAL_PARAM_TYPES];
+    int int_params[NUM_INT_PARAMS];
+    AcReal real_params[NUM_REAL_PARAMS];
 } AcMeshInfo;
 
 /*
