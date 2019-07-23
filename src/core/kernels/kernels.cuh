@@ -708,7 +708,7 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
  */
 
 ////////////////REDUCE///////////////////////////
-#include "src/core/math_utils.h" // is_power_of_two
+#include "math_utils.h" // is_power_of_two
 
 /*
 Reduction steps:

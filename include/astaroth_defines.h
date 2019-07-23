@@ -22,9 +22,27 @@
 extern "C" {
 #endif
 
-#include <float.h>        // FLT_EPSILON, etc
-#include <stdlib.h>       // size_t
-#include <vector_types.h> // CUDA vector types (float4, etc)
+#include <float.h>  // FLT_EPSILON, etc
+#include <stdlib.h> // size_t
+//#include <vector_types.h> // CUDA vector types (float4, etc)
+
+#ifndef __CUDACC__
+typedef struct {
+    int x, y, z;
+} int3;
+
+typedef struct {
+    float x, y;
+} float2;
+
+typedef struct {
+    float x, y, z;
+} float3;
+
+typedef struct {
+    double x, y, z;
+} double3;
+#endif // __CUDACC__
 
 #include "stencil_defines.h"
 
