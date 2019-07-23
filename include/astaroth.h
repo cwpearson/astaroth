@@ -24,7 +24,7 @@ typedef struct {
     int int_params[NUM_INT_PARAMS];
     int3 int3_params[NUM_INT3_PARAMS];
     AcReal real_params[NUM_REAL_PARAMS];
-    AcReal3 vec_params[NUM_REAL3_PARAMS];
+    AcReal3 real3_params[NUM_REAL3_PARAMS];
 } AcMeshInfo;
 
 typedef struct {
@@ -158,3 +158,53 @@ acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo& info)
            j * info.int_params[AC_mx] + //
            k * info.int_params[AC_mx] * info.int_params[AC_my];
 }
+
+/*
+static inline int
+acGetParam(const AcMeshInfo& info, const AcIntParam param)
+{
+    return info.int_params[param];
+}
+
+static inline int3
+acGetParam(const AcMeshInfo& info, const AcInt3Param param)
+{
+    return info.int3_params[param];
+}
+
+static inline AcReal
+acGetParam(const AcMeshInfo& info, const AcRealParam param)
+{
+    return info.real_params[param];
+}
+
+static inline AcReal3
+acGetParam(const AcMeshInfo& info, const AcReal3Param param)
+{
+    return info.real3_params[param];
+}
+
+static inline void
+acSetParam(const AcIntParam param, const int value, AcMeshInfo* info)
+{
+    info->int_params[param] = value;
+}
+
+static inline void
+acSetParam(const AcInt3Param param, const int3 value, AcMeshInfo* info)
+{
+    info->int3_params[param] = value;
+}
+
+static inline void
+acSetParam(const AcRealParam param, const AcReal value, AcMeshInfo* info)
+{
+    info->real_params[param] = value;
+}
+
+static inline void
+acSetParam(const AcReal3Param param, const AcReal3 value, AcMeshInfo* info)
+{
+    info->real3_params[param] = value;
+}
+*/
