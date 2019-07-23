@@ -12,7 +12,7 @@
 
 #-------------------General---------------------------------------------------#
 
-project(ASTAROTH_2.0 CXX)
+project(ASTAROTH_2.0 C CXX)
 set (CMAKE_CXX_STANDARD 11)
 cmake_minimum_required (VERSION 3.5.1) # Need >= 3.8 for first-class CUDA support
 cmake_policy (SET CMP0023 NEW)
@@ -181,3 +181,5 @@ if (BUILD_STANDALONE)
     cuda_add_executable(ac_run src/standalone/main.cc)
     target_link_libraries(ac_run astaroth_standalone astaroth_core ${SDL2_LIBRARY})
 endif()
+
+add_subdirectory(ctest)

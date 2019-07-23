@@ -57,3 +57,4 @@ file(GLOB CUDA_SOURCES "*.cu" "kernels/*.cu")
 # With fpic: 4.96 user, 4.02 system, 0:09.90 elapsed
 # With fPIC: 4.94 user, 4.05 system, 0:10.23 elapsed
 CUDA_ADD_LIBRARY(astaroth_core STATIC ${CUDA_SOURCES} OPTIONS --compiler-options "-fpic")
+target_link_libraries(astaroth_core m)
