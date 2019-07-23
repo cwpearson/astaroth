@@ -15,7 +15,7 @@
 cmake_minimum_required (VERSION 3.5.1) # Need >= 3.8 for first-class CUDA support
 
 ## Project settings
-project(astaroth CXX)
+project(astaroth C CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -64,3 +64,5 @@ add_subdirectory(src/core)
 if (BUILD_STANDALONE)
     add_subdirectory(src/standalone)
 endif ()
+
+add_subdirectory(src/ctest)
