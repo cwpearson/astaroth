@@ -79,6 +79,12 @@ typedef enum { AC_SUCCESS = 0, AC_FAILURE = 1 } AcResult;
 
 typedef enum { RTYPE_MAX, RTYPE_MIN, RTYPE_RMS, RTYPE_RMS_EXP, NUM_REDUCTION_TYPES } ReductionType;
 
+typedef enum {
+    STREAM_DEFAULT,
+    NUM_STREAM_TYPES, //
+    STREAM_ALL
+} StreamType;
+
 #define AC_GEN_ID(X) X
 typedef enum {
     AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_ID) //
@@ -115,6 +121,105 @@ extern const char* int3param_names[];
 extern const char* realparam_names[];
 extern const char* real3param_names[];
 extern const char* vtxbuf_names[];
+
+typedef struct {
+    int int_params[NUM_INT_PARAMS];
+    int3 int3_params[NUM_INT3_PARAMS];
+    AcReal real_params[NUM_REAL_PARAMS];
+    AcReal3 real3_params[NUM_REAL3_PARAMS];
+} AcMeshInfo;
+
+typedef struct {
+    AcReal* vertex_buffer[NUM_VTXBUF_HANDLES];
+    AcMeshInfo info;
+} AcMesh;
+
+/*
+ * =============================================================================
+ * Helper functions
+ * =============================================================================
+ */
+static inline size_t
+acVertexBufferSize(const AcMeshInfo& info)
+{
+    return info.int_params[AC_mx] * info.int_params[AC_my] * info.int_params[AC_mz];
+}
+
+static inline size_t
+acVertexBufferSizeBytes(const AcMeshInfo& info)
+{
+    return sizeof(AcReal) * acVertexBufferSize(info);
+}
+
+static inline size_t
+acVertexBufferCompdomainSize(const AcMeshInfo& info)
+{
+    return info.int_params[AC_nx] * info.int_params[AC_ny] * info.int_params[AC_nz];
+}
+
+static inline size_t
+acVertexBufferCompdomainSizeBytes(const AcMeshInfo& info)
+{
+    return sizeof(AcReal) * acVertexBufferCompdomainSize(info);
+}
+
+static inline size_t
+acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo& info)
+{
+    return i +                          //
+           j * info.int_params[AC_mx] + //
+           k * info.int_params[AC_mx] * info.int_params[AC_my];
+}
+
+/*
+static inline int
+acGetParam(const AcMeshInfo& info, const AcIntParam param)
+{
+    return info.int_params[param];
+}
+
+static inline int3
+acGetParam(const AcMeshInfo& info, const AcInt3Param param)
+{
+    return info.int3_params[param];
+}
+
+static inline AcReal
+acGetParam(const AcMeshInfo& info, const AcRealParam param)
+{
+    return info.real_params[param];
+}
+
+static inline AcReal3
+acGetParam(const AcMeshInfo& info, const AcReal3Param param)
+{
+    return info.real3_params[param];
+}
+
+static inline void
+acSetParam(const AcIntParam param, const int value, AcMeshInfo* info)
+{
+    info->int_params[param] = value;
+}
+
+static inline void
+acSetParam(const AcInt3Param param, const int3 value, AcMeshInfo* info)
+{
+    info->int3_params[param] = value;
+}
+
+static inline void
+acSetParam(const AcRealParam param, const AcReal value, AcMeshInfo* info)
+{
+    info->real_params[param] = value;
+}
+
+static inline void
+acSetParam(const AcReal3Param param, const AcReal3 value, AcMeshInfo* info)
+{
+    info->real3_params[param] = value;
+}
+*/
 
 #ifdef __cplusplus
 } // extern "C"
