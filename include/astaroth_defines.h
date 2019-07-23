@@ -99,7 +99,10 @@ typedef enum {
     NUM_REAL3_PARAMS
 } AcReal3Param;
 
-typedef enum { AC_FOR_VTXBUF_HANDLES(AC_GEN_ID) NUM_VTXBUF_HANDLES } VertexBufferHandle;
+typedef enum {
+    AC_FOR_VTXBUF_HANDLES(AC_GEN_ID) //
+    NUM_VTXBUF_HANDLES
+} VertexBufferHandle;
 #undef AC_GEN_ID
 
 extern const char* intparam_names[];
