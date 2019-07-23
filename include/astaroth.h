@@ -18,6 +18,10 @@
 */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "astaroth_defines.h"
 
 /** Checks whether there are any CUDA devices available. Returns AC_SUCCESS if there is 1 or more,
@@ -103,3 +107,7 @@ AcResult acIntegrateStepWithOffsetAsync(const int& isubstep, const AcReal& dt, c
 /** Performs the boundary condition step on the GPUs in the node. Asynchronous. */
 AcResult acBoundcondStep(void);
 AcResult acBoundcondStepAsync(const StreamType stream);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
