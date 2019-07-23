@@ -18,6 +18,10 @@
 */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "astaroth_defines.h"
 
 typedef struct {
@@ -208,3 +212,7 @@ acSetParam(const AcReal3Param param, const AcReal3 value, AcMeshInfo* info)
     info->real3_params[param] = value;
 }
 */
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

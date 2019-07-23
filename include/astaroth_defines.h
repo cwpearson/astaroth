@@ -17,6 +17,11 @@
     along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <float.h>        // FLT_EPSILON, etc
 #include <stdlib.h>       // size_t
 #include <vector_types.h> // CUDA vector types (float4, etc)
@@ -110,3 +115,7 @@ extern const char* int3param_names[];
 extern const char* realparam_names[];
 extern const char* real3param_names[];
 extern const char* vtxbuf_names[];
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
