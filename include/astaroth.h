@@ -38,22 +38,6 @@ typedef enum {
     STREAM_ALL
 } StreamType;
 
-#define AC_VTXBUF_SIZE(mesh_info)                                                                  \
-    ((size_t)(mesh_info.int_params[AC_mx] * mesh_info.int_params[AC_my] *                          \
-              mesh_info.int_params[AC_mz]))
-
-#define AC_VTXBUF_SIZE_BYTES(mesh_info) (sizeof(AcReal) * AC_VTXBUF_SIZE(mesh_info))
-
-#define AC_VTXBUF_COMPDOMAIN_SIZE(mesh_info)                                                       \
-    (mesh_info.int_params[AC_nx] * mesh_info.int_params[AC_ny] * mesh_info.int_params[AC_nz])
-
-#define AC_VTXBUF_COMPDOMAIN_SIZE_BYTES(mesh_info)                                                 \
-    (sizeof(AcReal) * AC_VTXBUF_COMPDOMAIN_SIZE(mesh_info))
-
-#define AC_VTXBUF_IDX(i, j, k, mesh_info)                                                          \
-    ((i) + (j)*mesh_info.int_params[AC_mx] +                                                       \
-     (k)*mesh_info.int_params[AC_mx] * mesh_info.int_params[AC_my])
-
 /** Checks whether there are any CUDA devices available. Returns AC_SUCCESS if there is 1 or more,
  * AC_FAILURE otherwise. */
 AcResult acCheckDeviceAvailability(void);
@@ -137,3 +121,40 @@ AcResult acIntegrateStepWithOffsetAsync(const int& isubstep, const AcReal& dt, c
 /** Performs the boundary condition step on the GPUs in the node. Asynchronous. */
 AcResult acBoundcondStep(void);
 AcResult acBoundcondStepAsync(const StreamType stream);
+
+/*
+ * =============================================================================
+ * Helper functions
+ * =============================================================================
+ */
+static inline size_t
+acVertexBufferSize(const AcMeshInfo& info)
+{
+    return info.int_params[AC_mx] * info.int_params[AC_my] * info.int_params[AC_mz];
+}
+
+static inline size_t
+acVertexBufferSizeBytes(const AcMeshInfo& info)
+{
+    return sizeof(AcReal) * acVertexBufferSize(info);
+}
+
+static inline size_t
+acVertexBufferCompdomainSize(const AcMeshInfo& info)
+{
+    return info.int_params[AC_nx] * info.int_params[AC_ny] * info.int_params[AC_nz];
+}
+
+static inline size_t
+acVertexBufferCompdomainSizeBytes(const AcMeshInfo& info)
+{
+    return sizeof(AcReal) * acVertexBufferCompdomainSize(info);
+}
+
+static inline size_t
+acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo& info)
+{
+    return i +                          //
+           j * info.int_params[AC_mx] + //
+           k * info.int_params[AC_mx] * info.int_params[AC_my];
+}
