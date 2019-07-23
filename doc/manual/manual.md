@@ -56,7 +56,7 @@ Saving output binaries is not enabled yet.
 
 - All essential tructs, macros and enumerators are found in astaroth.h for better reference.
 
-- In the case there is changes in the data layout, better use macro `AC_VTXBUF_IDX(i, j, k, mesh_info)`which transform indices from 3D to 1D. Therefore no need to start writing `i + j * mesh_info.int_params[AC_mx] + ...` which would affect the code readability.
+- In the case there is changes in the data layout, better use macro `acVertexBufferIdx(i, j, k, mesh_info)`which transform indices from 3D to 1D. Therefore no need to start writing `i + j * mesh_info.int_params[AC_mx] + ...` which would affect the code readability.
 
 - AcReal on generic floating point real number type used everywhere in the code. Currently can be either `float` or `double`. Possibly in the future also `half` or `long double` could become available.
 
@@ -96,7 +96,7 @@ printf("nx: %d, dsx %f\n",
         mesh->info.int_params[AC_nx], 
         double(mesh->info.real_params[AC_dsx]));
 printf("First vertex of the computational domain: %f\n",        
-double(mesh->vertex_buffer[VTXBUF_LNRHO][AC_VTXBUF_IDX(3, 3, 3, mesh_info)]));
+double(mesh->vertex_buffer[VTXBUF_LNRHO][acVertexBufferIdx(3, 3, 3, mesh_info)]));
 
 ```
 

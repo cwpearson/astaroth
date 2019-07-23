@@ -316,21 +316,21 @@ typedef struct {
     AcMeshInfo info;
 } AcMesh;
 
-#define AC_VTXBUF_SIZE(mesh_info)                                              \
+#define acVertexBufferSize(mesh_info)                                              \
     ((size_t)(mesh_info.int_params[AC_mx] * mesh_info.int_params[AC_my] *      \
               mesh_info.int_params[AC_mz]))
 
-#define AC_VTXBUF_SIZE_BYTES(mesh_info)                                        \
-    (sizeof(AcReal) * AC_VTXBUF_SIZE(mesh_info))
+#define acVertexBufferSizeBytes(mesh_info)                                        \
+    (sizeof(AcReal) * acVertexBufferSize(mesh_info))
 
-#define AC_VTXBUF_COMPDOMAIN_SIZE(mesh_info)                                   \
+#define acVertexBufferCompdomainSize(mesh_info)                                   \
     (mesh_info.int_params[AC_nx] * mesh_info.int_params[AC_ny] *               \
      mesh_info.int_params[AC_nz])
 
-#define AC_VTXBUF_COMPDOMAIN_SIZE_BYTES(mesh_info)                             \
-    (sizeof(AcReal) * AC_VTXBUF_COMPDOMAIN_SIZE(mesh_info))
+#define acVertexBufferCompdomainSizeBytes(mesh_info)                             \
+    (sizeof(AcReal) * acVertexBufferCompdomainSize(mesh_info))
 
-#define AC_VTXBUF_IDX(i, j, k, mesh_info)                                      \
+#define acVertexBufferIdx(i, j, k, mesh_info)                                      \
     ((i) + (j)*mesh_info.int_params[AC_mx] +                                   \
      (k)*mesh_info.int_params[AC_mx] * mesh_info.int_params[AC_my])
 

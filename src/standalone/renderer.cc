@@ -162,7 +162,7 @@ draw_vertex_buffer(const AcMesh& mesh, const VertexBufferHandle& vertex_buffer, 
         for (int i = 0; i < mesh.info.int_params[AC_mx]; ++i) {
             ERRCHK(i < datasurface_width && j < datasurface_height);
 
-            const int idx       = AC_VTXBUF_IDX(i, j, k, mesh.info);
+            const int idx       = acVertexBufferIdx(i, j, k, mesh.info);
             const uint8_t shade = (uint8_t)(
                 255.f * (fabsf(float(mesh.vertex_buffer[vertex_buffer][idx]) - mid)) / range);
             uint8_t color[4]            = {0, 0, 0, 255};
@@ -219,7 +219,7 @@ draw_vertex_buffer_vec(const AcMesh& mesh, const VertexBufferHandle& vertex_buff
         for (int i = 0; i < mesh.info.int_params[AC_mx]; ++i) {
             ERRCHK(i < datasurface_width && j < datasurface_height);
 
-            const int idx   = AC_VTXBUF_IDX(i, j, k, mesh.info);
+            const int idx   = acVertexBufferIdx(i, j, k, mesh.info);
             const uint8_t r = (uint8_t)(
                 255.f * (fabsf(float(mesh.vertex_buffer[vertex_buffer_a][idx]) - mid)) / range);
             const uint8_t g = (uint8_t)(

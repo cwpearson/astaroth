@@ -107,20 +107,3 @@ extern const char* int3param_names[];
 extern const char* realparam_names[];
 extern const char* real3param_names[];
 extern const char* vtxbuf_names[];
-
-// Deprecated
-#define AC_VTXBUF_SIZE(mesh_info)                                                                  \
-    ((size_t)(mesh_info.int_params[AC_mx] * mesh_info.int_params[AC_my] *                          \
-              mesh_info.int_params[AC_mz]))
-
-#define AC_VTXBUF_SIZE_BYTES(mesh_info) (sizeof(AcReal) * AC_VTXBUF_SIZE(mesh_info))
-
-#define AC_VTXBUF_COMPDOMAIN_SIZE(mesh_info)                                                       \
-    (mesh_info.int_params[AC_nx] * mesh_info.int_params[AC_ny] * mesh_info.int_params[AC_nz])
-
-#define AC_VTXBUF_COMPDOMAIN_SIZE_BYTES(mesh_info)                                                 \
-    (sizeof(AcReal) * AC_VTXBUF_COMPDOMAIN_SIZE(mesh_info))
-
-#define AC_VTXBUF_IDX(i, j, k, mesh_info)                                                          \
-    ((i) + (j)*mesh_info.int_params[AC_mx] +                                                       \
-     (k)*mesh_info.int_params[AC_mx] * mesh_info.int_params[AC_my])

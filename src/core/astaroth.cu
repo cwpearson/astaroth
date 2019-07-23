@@ -566,7 +566,7 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
 AcResult
 acLoad(const AcMesh& host_mesh)
 {
-    acLoadWithOffset(host_mesh, (int3){0, 0, 0}, AC_VTXBUF_SIZE(host_mesh.info));
+    acLoadWithOffset(host_mesh, (int3){0, 0, 0}, acVertexBufferSize(host_mesh.info));
     acSynchronizeStream(STREAM_ALL);
     return AC_SUCCESS;
 }
@@ -605,7 +605,7 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
 AcResult
 acStore(AcMesh* host_mesh)
 {
-    acStoreWithOffset((int3){0, 0, 0}, AC_VTXBUF_SIZE(host_mesh->info), host_mesh);
+    acStoreWithOffset((int3){0, 0, 0}, acVertexBufferSize(host_mesh->info), host_mesh);
     acSynchronizeStream(STREAM_ALL);
     return AC_SUCCESS;
 }

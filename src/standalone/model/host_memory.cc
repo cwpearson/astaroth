@@ -62,7 +62,7 @@ acmesh_create(const AcMeshInfo& mesh_info)
     AcMesh* mesh = (AcMesh*)malloc(sizeof(*mesh));
     mesh->info   = mesh_info;
 
-    const size_t bytes = AC_VTXBUF_SIZE_BYTES(mesh->info);
+    const size_t bytes = acVertexBufferSizeBytes(mesh->info);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         mesh->vertex_buffer[VertexBufferHandle(i)] = (AcReal*)malloc(bytes);
         ERRCHK(mesh->vertex_buffer[VertexBufferHandle(i)] != NULL);
@@ -74,7 +74,7 @@ acmesh_create(const AcMeshInfo& mesh_info)
 static void
 vertex_buffer_set(const VertexBufferHandle& key, const AcReal& val, AcMesh* mesh)
 {
-    const int n = AC_VTXBUF_SIZE(mesh->info);
+    const int n = acVertexBufferSize(mesh->info);
     for (int i = 0; i < n; ++i)
         mesh->vertex_buffer[key][i] = val;
 }
@@ -539,7 +539,7 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
 {
     srand(123456789);
 
-    const int n = AC_VTXBUF_SIZE(mesh->info);
+    const int n = acVertexBufferSize(mesh->info);
 
     const int mx = mesh->info.int_params[AC_mx];
     const int my = mesh->info.int_params[AC_my];
@@ -705,7 +705,7 @@ modelmesh_create(const AcMeshInfo& mesh_info)
     ModelMesh* mesh = (ModelMesh*)malloc(sizeof(*mesh));
     mesh->info      = mesh_info;
 
-    const size_t bytes = AC_VTXBUF_SIZE(mesh->info) * sizeof(mesh->vertex_buffer[0][0]);
+    const size_t bytes = acVertexBufferSize(mesh->info) * sizeof(mesh->vertex_buffer[0][0]);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         mesh->vertex_buffer[VertexBufferHandle(i)] = (ModelScalar*)malloc(bytes);
         ERRCHK(mesh->vertex_buffer[VertexBufferHandle(i)] != NULL);
@@ -731,7 +731,7 @@ acmesh_to_modelmesh(const AcMesh& acmesh, ModelMesh* modelmesh)
     memcpy(&modelmesh->info, &acmesh.info, sizeof(acmesh.info));
 
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-        for (size_t j = 0; j < AC_VTXBUF_SIZE(acmesh.info); ++j)
+        for (size_t j = 0; j < acVertexBufferSize(acmesh.info); ++j)
             modelmesh->vertex_buffer[i][j] = (ModelScalar)acmesh.vertex_buffer[i][j];
 }
 
@@ -742,6 +742,6 @@ modelmesh_to_acmesh(const ModelMesh& modelmesh, AcMesh* acmesh)
     memcpy(&acmesh->info, &modelmesh.info, sizeof(modelmesh.info));
 
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-        for (size_t j = 0; j < AC_VTXBUF_SIZE(modelmesh.info); ++j)
+        for (size_t j = 0; j < acVertexBufferSize(modelmesh.info); ++j)
             acmesh->vertex_buffer[i][j] = (AcReal)modelmesh.vertex_buffer[i][j];
 }
