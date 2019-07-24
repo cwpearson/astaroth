@@ -243,6 +243,7 @@ run_simulation(void)
        //  (3. Velocity of the particle)
        //  These can be used for calculating he gravitational field. 
        //  This is my first comment! by Jack
+       //  This is my second comment! by Jack
 
         acIntegrate(dt);
        //TODO_SINK acAdvect_sink_particle()
