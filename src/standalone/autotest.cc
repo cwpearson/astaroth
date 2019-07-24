@@ -318,7 +318,7 @@ verify_meshes(const ModelMesh& model, const AcMesh& candidate)
 
     const ModelScalar range = get_data_range(model);
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
-        const size_t n = AC_VTXBUF_SIZE(model.info);
+        const size_t n = acVertexBufferSize(model.info);
 
         // Maximum errors
         ErrorInfo max_abs_error = ErrorInfo();
@@ -555,7 +555,7 @@ get_max_abs_error_mesh(const ModelMesh& model_mesh, const AcMesh& candidate_mesh
     error.abs_error = -1;
 
     for (size_t j = 0; j < NUM_VTXBUF_HANDLES; ++j) {
-        for (size_t i = 0; i < AC_VTXBUF_SIZE(model_mesh.info); ++i) {
+        for (size_t i = 0; i < acVertexBufferSize(model_mesh.info); ++i) {
             Error curr_error = get_error(model_mesh.vertex_buffer[j][i],
                                          candidate_mesh.vertex_buffer[j][i]);
             if (curr_error.abs_error > error.abs_error)
@@ -574,7 +574,7 @@ get_maximum_magnitude(const ModelScalar* field, const AcMeshInfo info)
 {
     ModelScalar maximum = -INFINITY;
 
-    for (size_t i = 0; i < AC_VTXBUF_SIZE(info); ++i)
+    for (size_t i = 0; i < acVertexBufferSize(info); ++i)
         maximum = max(maximum, fabsl(field[i]));
 
     return maximum;
@@ -585,7 +585,7 @@ get_minimum_magnitude(const ModelScalar* field, const AcMeshInfo info)
 {
     ModelScalar minimum = INFINITY;
 
-    for (size_t i = 0; i < AC_VTXBUF_SIZE(info); ++i)
+    for (size_t i = 0; i < acVertexBufferSize(info); ++i)
         minimum = min(minimum, fabsl(field[i]));
 
     return minimum;
@@ -601,7 +601,7 @@ get_max_abs_error_vtxbuf(const VertexBufferHandle vtxbuf_handle, const ModelMesh
     Error error;
     error.abs_error = -1;
 
-    for (size_t i = 0; i < AC_VTXBUF_SIZE(model_mesh.info); ++i) {
+    for (size_t i = 0; i < acVertexBufferSize(model_mesh.info); ++i) {
 
         Error curr_error = get_error(model_vtxbuf[i], candidate_vtxbuf[i]);
 

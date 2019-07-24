@@ -86,10 +86,10 @@ boundconds(const AcMeshInfo& mesh_info, ModelMesh* mesh)
             j_src += ny_min;
             k_src += nz_min;
 
-            const size_t src_idx      = AC_VTXBUF_IDX(i_src, j_src, k_src, mesh_info);
-            const size_t dst_idx      = AC_VTXBUF_IDX(i_dst, j_dst, k_dst, mesh_info);
-            ERRCHK(src_idx < AC_VTXBUF_SIZE(mesh_info));
-            ERRCHK(dst_idx < AC_VTXBUF_SIZE(mesh_info));
+            const size_t src_idx      = acVertexBufferIdx(i_src, j_src, k_src, mesh_info);
+            const size_t dst_idx      = acVertexBufferIdx(i_dst, j_dst, k_dst, mesh_info);
+            ERRCHK(src_idx < acVertexBufferSize(mesh_info));
+            ERRCHK(dst_idx < acVertexBufferSize(mesh_info));
             mesh->vertex_buffer[w][dst_idx] = mesh->vertex_buffer[w][src_idx];
         }
         }

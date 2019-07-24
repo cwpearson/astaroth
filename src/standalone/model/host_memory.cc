@@ -30,7 +30,9 @@
 
 #include "core/errchk.h"
 
+#define AC_GEN_STR(X) #X
 const char* init_type_names[] = {AC_FOR_INIT_TYPES(AC_GEN_STR)};
+#undef AC_GEN_STR
 
 #define XORIG (AcReal(.5) * mesh->info.int_params[AC_nx] * mesh->info.real_params[AC_dsx])
 #define YORIG (AcReal(.5) * mesh->info.int_params[AC_ny] * mesh->info.real_params[AC_dsy])
@@ -43,14 +45,14 @@ static uint64_t ac_rand_next = 1;
 static int32_t
 ac_rand(void)
 {
-	ac_rand_next = ac_rand_next * 1103515245 + 12345;
-	return (uint32_t)(ac_rand_next/65536) % 32768;
+        ac_rand_next = ac_rand_next * 1103515245 + 12345;
+        return (uint32_t)(ac_rand_next/65536) % 32768;
 }
 
 static void
 ac_srand(const uint32_t seed)
 {
-	ac_rand_next = seed;	
+        ac_rand_next = seed;
 }
 */
 
@@ -60,7 +62,7 @@ acmesh_create(const AcMeshInfo& mesh_info)
     AcMesh* mesh = (AcMesh*)malloc(sizeof(*mesh));
     mesh->info   = mesh_info;
 
-    const size_t bytes = AC_VTXBUF_SIZE_BYTES(mesh->info);
+    const size_t bytes = acVertexBufferSizeBytes(mesh->info);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         mesh->vertex_buffer[VertexBufferHandle(i)] = (AcReal*)malloc(bytes);
         ERRCHK(mesh->vertex_buffer[VertexBufferHandle(i)] != NULL);
@@ -70,14 +72,12 @@ acmesh_create(const AcMeshInfo& mesh_info)
 }
 
 static void
-vertex_buffer_set(const VertexBufferHandle& key, const AcReal& val,
-                  AcMesh* mesh)
+vertex_buffer_set(const VertexBufferHandle& key, const AcReal& val, AcMesh* mesh)
 {
-    const int n = AC_VTXBUF_SIZE(mesh->info);
+    const int n = acVertexBufferSize(mesh->info);
     for (int i = 0; i < n; ++i)
         mesh->vertex_buffer[key][i] = val;
 }
-
 
 /** Inits all fields to 1. Setting the mesh to zero is problematic because some fields are supposed
     to be > 0 and the results would vary widely, which leads to loss of precision in the
@@ -95,13 +95,12 @@ randr(void)
     return AcReal(rand()) / AcReal(RAND_MAX);
 }
 
-
 void
 lnrho_step(AcMesh* mesh)
 {
-    const int    mx     = mesh->info.int_params[AC_mx];
-    const int    my     = mesh->info.int_params[AC_my];
-    const int    mz     = mesh->info.int_params[AC_mz];
+    const int mx = mesh->info.int_params[AC_mx];
+    const int my = mesh->info.int_params[AC_my];
+    const int mz = mesh->info.int_params[AC_mz];
 
     // const int    nx_min = mesh->info.int_params[AC_nx_min];
     // const int    nx_max = mesh->info.int_params[AC_nx_max];
@@ -116,22 +115,23 @@ lnrho_step(AcMesh* mesh)
     // const AcReal xmax   = DX * (nx_max - nx_min) ;
     // const AcReal zmax   = DZ * (nz_max - nz_min) ;
 
-    // const AcReal lnrho1 = (AcReal) -1.0; // TODO mesh->info.real_params[AC_lnrho1];  
-    const AcReal lnrho2 = (AcReal) 0.0; // TODO mesh->info.real_params[AC_lnrho2]; 
-    // const AcReal rho1   = (AcReal) exp(lnrho1); 
+    // const AcReal lnrho1 = (AcReal) -1.0; // TODO mesh->info.real_params[AC_lnrho1];
+    const AcReal lnrho2 = (AcReal)0.0; // TODO mesh->info.real_params[AC_lnrho2];
+    // const AcReal rho1   = (AcReal) exp(lnrho1);
     // const AcReal rho2   = (AcReal) exp(lnrho2);
 
-    // const AcReal k_pert    = (AcReal) 1.0; //mesh->info.real_params[AC_k_pert]; //Wamenumber of the perturbation
-    // const AcReal k_pert    = 4.0; //mesh->info.real_params[AC_k_pert]; //Wamenumber of the perturbation
-    //const AcReal ampl_pert = xmax/10.0; // xmax/mesh->info.real_params[AC_pert]; //Amplitude of the perturbation
-    // const AcReal ampl_pert = (AcReal) 0.0;//xmax/20.0; // xmax/mesh->info.real_params[AC_pert]; //Amplitude of the perturbation
-    // const AcReal two_pi       = (AcReal) 6.28318531;
+    // const AcReal k_pert    = (AcReal) 1.0; //mesh->info.real_params[AC_k_pert]; //Wamenumber of
+    // the perturbation const AcReal k_pert    = 4.0; //mesh->info.real_params[AC_k_pert];
+    // //Wamenumber of the perturbation
+    // const AcReal ampl_pert = xmax/10.0; // xmax/mesh->info.real_params[AC_pert]; //Amplitude of
+    // the perturbation
+    // const AcReal ampl_pert = (AcReal) 0.0;//xmax/20.0; // xmax/mesh->info.real_params[AC_pert];
+    // //Amplitude of the perturbation const AcReal two_pi       = (AcReal) 6.28318531;
 
     // const AcReal xorig  = mesh->info.real_params[AC_xorig];
     // const AcReal zorig  = mesh->info.real_params[AC_zorig];
     // const AcReal trans  = mesh->info.real_params[AC_trans];
-     
-    
+
     // AcReal       xx, zz, tanhprof, cosz_wave;
 
     for (int k = 0; k < mz; k++) {
@@ -139,21 +139,19 @@ lnrho_step(AcMesh* mesh)
             for (int i = 0; i < mx; i++) {
                 int idx = i + j * mx + k * mx * my;
                 // zz = DZ * AcReal(k) - zorig; // Not used
-                // cosz_wave = ampl_pert*AcReal(cos(k_pert*((zz/zmax)*two_pi))); // Not used        
+                // cosz_wave = ampl_pert*AcReal(cos(k_pert*((zz/zmax)*two_pi))); // Not used
                 // xx = DX * AcReal(i) - xorig + cosz_wave; //ADD WAVE TODO // Not used
-                // tanhprof = AcReal(0.5)*((rho2+rho1) + (rho2-rho1)*AcReal(tanh(xx/trans))); // Not used
-                // Commented out the step function initial codition. 
-                //mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(tanhprof);
+                // tanhprof = AcReal(0.5)*((rho2+rho1) + (rho2-rho1)*AcReal(tanh(xx/trans))); // Not
+                // used Commented out the step function initial codition.
+                // mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(tanhprof);
                 mesh->vertex_buffer[VTXBUF_LNRHO][idx] = lnrho2;
             }
         }
-    } 
-
-
+    }
 }
 
 // This is the initial condition type for the infalling vedge in the pseudodisk
-// model. 
+// model.
 void
 inflow_vedge(AcMesh* mesh)
 {
@@ -170,7 +168,7 @@ inflow_vedge(AcMesh* mesh)
 
     // const double DX    = mesh->info.real_params[AC_dsx];
     // const double DY    = mesh->info.real_params[AC_dsy];
-    const double DZ    = mesh->info.real_params[AC_dsz];
+    const double DZ = mesh->info.real_params[AC_dsz];
 
     const double AMPL_UU = mesh->info.real_params[AC_ampl_uu];
     const double ANGL_UU = mesh->info.real_params[AC_angl_uu];
@@ -184,30 +182,33 @@ inflow_vedge(AcMesh* mesh)
     // const AcReal zmax  = AcReal(DZ * (nz_max - nz_min));
     // const AcReal gaussr  = zmax / AcReal(4.0);
 
-    //for (int k = nz_min; k < nz_max; k++) {
+    // for (int k = nz_min; k < nz_max; k++) {
     //    for (int j = ny_min; j < ny_max; j++) {
     //        for (int i = nx_min; i < nx_max; i++) {
     for (int k = 0; k < mz; k++) {
         for (int j = 0; j < my; j++) {
             for (int i = 0; i < mx; i++) {
                 int idx = i + j * mx + k * mx * my;
-                zz = DZ * double(k) - zorig;
-                //mesh->vertex_buffer[VTXBUF_UUX][idx] = -AMPL_UU*cos(ANGL_UU); 
-                mesh->vertex_buffer[VTXBUF_UUX][idx] = AcReal(-AMPL_UU*cos(ANGL_UU)*fabs(tanh(zz/trans))); 
+                zz      = DZ * double(k) - zorig;
+                // mesh->vertex_buffer[VTXBUF_UUX][idx] = -AMPL_UU*cos(ANGL_UU);
+                mesh->vertex_buffer[VTXBUF_UUX][idx] = AcReal(-AMPL_UU * cos(ANGL_UU) *
+                                                              fabs(tanh(zz / trans)));
                 mesh->vertex_buffer[VTXBUF_UUY][idx] = AcReal(0.0);
-                mesh->vertex_buffer[VTXBUF_UUZ][idx] = AcReal(-AMPL_UU*sin(ANGL_UU)*tanh(zz/trans)); 
+                mesh->vertex_buffer[VTXBUF_UUZ][idx] = AcReal(-AMPL_UU * sin(ANGL_UU) *
+                                                              tanh(zz / trans));
 
-                //Variarion to density
-                //AcReal rho = exp(mesh->vertex_buffer[VTXBUF_LNRHO][idx]);
-                //NO GAUSSIAN//rho = rho*exp(-(zz/gaussr)*(zz/gaussr));
-                //mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(rho + (range*rho) * (randr() - AcReal(-0.5)));
+                // Variarion to density
+                // AcReal rho = exp(mesh->vertex_buffer[VTXBUF_LNRHO][idx]);
+                // NO GAUSSIAN//rho = rho*exp(-(zz/gaussr)*(zz/gaussr));
+                // mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(rho + (range*rho) * (randr() -
+                // AcReal(-0.5)));
             }
         }
     }
 }
 
 // This is the initial condition type for the infalling vedge in the pseudodisk
-// model. 
+// model.
 void
 inflow_vedge_freefall(AcMesh* mesh)
 {
@@ -222,13 +223,13 @@ inflow_vedge_freefall(AcMesh* mesh)
     // const int nz_min = mesh->info.int_params[AC_nz_min];
     // const int nz_max = mesh->info.int_params[AC_nz_max];
 
-    const double DX    = mesh->info.real_params[AC_dsx];
+    const double DX = mesh->info.real_params[AC_dsx];
     // const double DY    = mesh->info.real_params[AC_dsy];
-    const double DZ    = mesh->info.real_params[AC_dsz];
+    const double DZ = mesh->info.real_params[AC_dsz];
 
     // const double AMPL_UU = mesh->info.real_params[AC_ampl_uu];
     const double ANGL_UU = mesh->info.real_params[AC_angl_uu];
-    const double SQ2GM = mesh->info.real_params[AC_sq2GM_star];
+    const double SQ2GM   = mesh->info.real_params[AC_sq2GM_star];
     // const double GM = mesh->info.real_params[AC_GM_star];
     // const double M_star  = mesh->info.real_params[AC_M_star];
     // const double G_CONST = mesh->info.real_params[AC_G_CONST];
@@ -255,46 +256,51 @@ inflow_vedge_freefall(AcMesh* mesh)
         for (int j = 0; j < my; j++) {
             for (int i = 0; i < mx; i++) {
                 int idx = i + j * mx + k * mx * my;
-                xx = DX * double(i) - xorig;
-                zz = DZ * double(k) - zorig;
+                xx      = DX * double(i) - xorig;
+                zz      = DZ * double(k) - zorig;
 
-                delx = xx - star_pos_x; 
+                delx = xx - star_pos_x;
                 delz = zz - star_pos_z;
-                //TODO: Figure out isthis needed. Now a placeholder.
-                //tanhz = fabs(tanh(zz/trans));
+                // TODO: Figure out isthis needed. Now a placeholder.
+                // tanhz = fabs(tanh(zz/trans));
                 tanhz = 1.0;
-                
-                RR = sqrt(delx*delx + delz*delz);
-                veltot = SQ2GM/sqrt(RR); //Free fall velocity
 
-                //Normal velocity components
-                u_x = - veltot*(delx/RR);  
-                u_z = - veltot*(delz/RR);
+                RR     = sqrt(delx * delx + delz * delz);
+                veltot = SQ2GM / sqrt(RR); // Free fall velocity
 
-                //printf("star_pos_z %e, zz %e, delz %e, RR %e\n", star_pos_z, zz, delz, RR);
+                // Normal velocity components
+                u_x = -veltot * (delx / RR);
+                u_z = -veltot * (delz / RR);
 
-                //printf("unit_length = %e, unit_density = %e, unit_velocity = %e,\n M_star = %e, G_CONST = %e, GM = %e, SQ2GM = %e, \n RR = %e, u_x = %e, u_z %e\n", 
-                //        unit_length, unit_density, 
+                // printf("star_pos_z %e, zz %e, delz %e, RR %e\n", star_pos_z, zz, delz, RR);
+
+                // printf("unit_length = %e, unit_density = %e, unit_velocity = %e,\n M_star = %e,
+                // G_CONST = %e, GM = %e, SQ2GM = %e, \n RR = %e, u_x = %e, u_z %e\n",
+                //        unit_length, unit_density,
                 //        unit_velocity, M_star, G_CONST, GM, SQ2GM, RR, u_x, u_z);
-                //printf("%e\n", unit_length*unit_length*unit_length); 
+                // printf("%e\n", unit_length*unit_length*unit_length);
 
- 
-                //Here including an angel tilt due to pseudodisk
+                // Here including an angel tilt due to pseudodisk
                 if (delz >= 0.0) {
-                    mesh->vertex_buffer[VTXBUF_UUX][idx] = AcReal((u_x*cos(ANGL_UU) - u_z*sin(ANGL_UU))*tanhz); 
+                    mesh->vertex_buffer[VTXBUF_UUX][idx] = AcReal(
+                        (u_x * cos(ANGL_UU) - u_z * sin(ANGL_UU)) * tanhz);
                     mesh->vertex_buffer[VTXBUF_UUY][idx] = AcReal(0.0);
-                    mesh->vertex_buffer[VTXBUF_UUZ][idx] = AcReal((u_x*sin(ANGL_UU) + u_z*cos(ANGL_UU))*tanhz); 
-                } else {
-                    mesh->vertex_buffer[VTXBUF_UUX][idx] = AcReal((u_x*cos(ANGL_UU) + u_z*sin(ANGL_UU))*tanhz); 
+                    mesh->vertex_buffer[VTXBUF_UUZ][idx] = AcReal(
+                        (u_x * sin(ANGL_UU) + u_z * cos(ANGL_UU)) * tanhz);
+                }
+                else {
+                    mesh->vertex_buffer[VTXBUF_UUX][idx] = AcReal(
+                        (u_x * cos(ANGL_UU) + u_z * sin(ANGL_UU)) * tanhz);
                     mesh->vertex_buffer[VTXBUF_UUY][idx] = AcReal(0.0);
-                    mesh->vertex_buffer[VTXBUF_UUZ][idx] = AcReal((-u_x*sin(ANGL_UU) + u_z*cos(ANGL_UU))*tanhz); 
+                    mesh->vertex_buffer[VTXBUF_UUZ][idx] = AcReal(
+                        (-u_x * sin(ANGL_UU) + u_z * cos(ANGL_UU)) * tanhz);
                 }
             }
         }
     }
 }
 
-// Only x-direction free fall 
+// Only x-direction free fall
 void
 inflow_freefall_x(AcMesh* mesh)
 {
@@ -302,7 +308,7 @@ inflow_freefall_x(AcMesh* mesh)
     const int my = mesh->info.int_params[AC_my];
     const int mz = mesh->info.int_params[AC_mz];
 
-    const double DX    = mesh->info.real_params[AC_dsx];
+    const double DX = mesh->info.real_params[AC_dsx];
 
     const double SQ2GM = mesh->info.real_params[AC_sq2GM_star];
     // const double G_CONST = mesh->info.real_params[AC_G_CONST];
@@ -320,36 +326,36 @@ inflow_freefall_x(AcMesh* mesh)
         for (int j = 0; j < my; j++) {
             for (int i = 0; i < mx; i++) {
                 int idx = i + j * mx + k * mx * my;
-                xx = DX * double(i) - xorig;
+                xx      = DX * double(i) - xorig;
 
                 delx = xx - star_pos_x;
-                
+
                 RR = fabs(delx);
 
-                veltot = SQ2GM/sqrt(RR); //Free fall velocity
+                veltot = SQ2GM / sqrt(RR); // Free fall velocity
 
-                if (isinf(veltot) == 1) printf("xx %e star_pos_x %e delz %e RR %e veltot %e\n",xx, star_pos_x, delx, RR, veltot);
+                if (isinf(veltot) == 1)
+                    printf("xx %e star_pos_x %e delz %e RR %e veltot %e\n", xx, star_pos_x, delx,
+                           RR, veltot);
 
-                //Normal velocity components
-                // u_x = - veltot; // Not used 
+                // Normal velocity components
+                // u_x = - veltot; // Not used
 
-                //Freefall condition 
-                //mesh->vertex_buffer[VTXBUF_UUX][idx] = u_x; 
-                //mesh->vertex_buffer[VTXBUF_UUY][idx] = 0.0;
-                //mesh->vertex_buffer[VTXBUF_UUZ][idx] = 0.0; 
+                // Freefall condition
+                // mesh->vertex_buffer[VTXBUF_UUX][idx] = u_x;
+                // mesh->vertex_buffer[VTXBUF_UUY][idx] = 0.0;
+                // mesh->vertex_buffer[VTXBUF_UUZ][idx] = 0.0;
 
-                //Starting with steady state
-                mesh->vertex_buffer[VTXBUF_UUX][idx] = 0.0; 
+                // Starting with steady state
+                mesh->vertex_buffer[VTXBUF_UUX][idx] = 0.0;
                 mesh->vertex_buffer[VTXBUF_UUY][idx] = 0.0;
-                mesh->vertex_buffer[VTXBUF_UUZ][idx] = 0.0; 
+                mesh->vertex_buffer[VTXBUF_UUZ][idx] = 0.0;
 
-                mesh->vertex_buffer[VTXBUF_LNRHO][idx] = AcReal(ampl_lnrho); 
+                mesh->vertex_buffer[VTXBUF_LNRHO][idx] = AcReal(ampl_lnrho);
             }
         }
     }
 }
-
-
 
 void
 gaussian_radial_explosion(AcMesh* mesh)
@@ -368,11 +374,11 @@ gaussian_radial_explosion(AcMesh* mesh)
     const int nz_min = mesh->info.int_params[AC_nz_min];
     const int nz_max = mesh->info.int_params[AC_nz_max];
 
-    const double DX    = mesh->info.real_params[AC_dsx];
-    const double DY    = mesh->info.real_params[AC_dsy];
-    const double DZ    = mesh->info.real_params[AC_dsz];
+    const double DX = mesh->info.real_params[AC_dsx];
+    const double DY = mesh->info.real_params[AC_dsy];
+    const double DZ = mesh->info.real_params[AC_dsz];
 
-    const double xorig = double(XORIG) - 0.000001; 
+    const double xorig = double(XORIG) - 0.000001;
     const double yorig = double(YORIG) - 0.000001;
     const double zorig = double(ZORIG) - 0.000001;
 
@@ -447,8 +453,7 @@ gaussian_radial_explosion(AcMesh* mesh)
                             //+-
                             yy_abs = -yy;
                             phi    = 2.0 * M_PI - atan(yy_abs / xx);
-                            if (phi < (3.0 * M_PI) / 2.0 ||
-                                phi > (2.0 * M_PI + 1e-6)) {
+                            if (phi < (3.0 * M_PI) / 2.0 || phi > (2.0 * M_PI + 1e-6)) {
                                 printf("Explosion PHI WRONG +-: xx = %.3f, yy "
                                        "= %.3f, phi = %.3e/PI, M_PI = %.3e\n",
                                        xx, yy, phi / M_PI, M_PI);
@@ -459,23 +464,20 @@ gaussian_radial_explosion(AcMesh* mesh)
                             yy_abs = -yy;
                             xx_abs = -xx;
                             phi    = M_PI + atan(yy_abs / xx_abs);
-                            if (phi < M_PI ||
-                                phi > ((3.0 * M_PI) / 2.0 + 1e-6)) {
+                            if (phi < M_PI || phi > ((3.0 * M_PI) / 2.0 + 1e-6)) {
                                 printf("Explosion PHI WRONG --: xx = %.3f, yy "
                                        "= %.3f, xx_abs = %.3f, yy_abs = %.3f, "
                                        "phi = %.3e, (3.0*M_PI)/2.0 = %.3e\n",
-                                       xx, yy, xx_abs, yy_abs, phi,
-                                       (3.0 * M_PI) / 2.0);
+                                       xx, yy, xx_abs, yy_abs, phi, (3.0 * M_PI) / 2.0);
                             }
                         }
                         else {
                             //++
                             phi = atan(yy / xx);
                             if (phi < 0 || phi > M_PI / 2.0) {
-                                printf(
-                                    "Explosion PHI WRONG --: xx = %.3f, yy = "
-                                    "%.3f, phi = %.3e, (3.0*M_PI)/2.0 = %.3e\n",
-                                    xx, yy, phi, (3.0 * M_PI) / 2.0);
+                                printf("Explosion PHI WRONG --: xx = %.3f, yy = "
+                                       "%.3f, phi = %.3e, (3.0*M_PI)/2.0 = %.3e\n",
+                                       xx, yy, phi, (3.0 * M_PI) / 2.0);
                             }
                         }
                     }
@@ -502,8 +504,8 @@ gaussian_radial_explosion(AcMesh* mesh)
                     // the exact centre coordinates uu_radial = AMPL_UU*exp(
                     // -pow((rr - 4.0*WIDTH_UU),2.0) / (2.0*pow(WIDTH_UU, 2.0))
                     // ); //TODO: Parametrize the peak location.
-                    uu_radial = AMPL_UU * exp(-pow((rr - UU_SHELL_R), 2.0) /
-                                              (2.0 * pow(WIDTH_UU, 2.0)));
+                    uu_radial = AMPL_UU *
+                                exp(-pow((rr - UU_SHELL_R), 2.0) / (2.0 * pow(WIDTH_UU, 2.0)));
                 }
                 else {
                     uu_radial = 0.0; // TODO: There will be a discontinuity in
@@ -537,8 +539,7 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
 {
     srand(123456789);
 
-
-    const int n = AC_VTXBUF_SIZE(mesh->info);
+    const int n = acVertexBufferSize(mesh->info);
 
     const int mx = mesh->info.int_params[AC_mx];
     const int my = mesh->info.int_params[AC_my];
@@ -563,7 +564,7 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
     }
     case INIT_TYPE_GAUSSIAN_RADIAL_EXPL:
         acmesh_clear(mesh);
-        //acmesh_init_to(INIT_TYPE_RANDOM, mesh);
+        // acmesh_init_to(INIT_TYPE_RANDOM, mesh);
         gaussian_radial_explosion(mesh);
 
         break;
@@ -573,21 +574,22 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
         for (int k = 0; k < mz; k++) {
             for (int j = 0; j < my; j++) {
                 for (int i = 0; i < mx; i++) {
-                    int idx = i + j * mx + k * mx * my;
-                    mesh->vertex_buffer[VTXBUF_UUX][idx] = 2*AcReal(sin(j * AcReal(M_PI) / mx)) - 1;
+                    int idx                              = i + j * mx + k * mx * my;
+                    mesh->vertex_buffer[VTXBUF_UUX][idx] = 2 * AcReal(sin(j * AcReal(M_PI) / mx)) -
+                                                           1;
                 }
             }
         }
         break;
-    case INIT_TYPE_VEDGE: 
+    case INIT_TYPE_VEDGE:
         acmesh_clear(mesh);
         inflow_vedge_freefall(mesh);
         break;
-    case INIT_TYPE_VEDGEX: 
+    case INIT_TYPE_VEDGEX:
         acmesh_clear(mesh);
         inflow_freefall_x(mesh);
         break;
-    case INIT_TYPE_RAYLEIGH_TAYLOR: 
+    case INIT_TYPE_RAYLEIGH_TAYLOR:
         acmesh_clear(mesh);
         inflow_freefall_x(mesh);
         lnrho_step(mesh);
@@ -627,9 +629,15 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
                     const AcReal ky_uu   = 8.;
                     const AcReal kz_uu   = 8.;
 
-                    mesh->vertex_buffer[VTXBUF_UUX][idx] = ampl_uu * (ABC_A * (AcReal)sin(kz_uu * zz) + ABC_C * (AcReal)cos(ky_uu * yy));
-                    mesh->vertex_buffer[VTXBUF_UUY][idx] = ampl_uu * (ABC_B * (AcReal)sin(kx_uu * xx) + ABC_A * (AcReal)cos(kz_uu * zz));
-                    mesh->vertex_buffer[VTXBUF_UUZ][idx] = ampl_uu * (ABC_C * (AcReal)sin(ky_uu * yy) + ABC_B * (AcReal)cos(kx_uu * xx));
+                    mesh->vertex_buffer[VTXBUF_UUX][idx] = ampl_uu *
+                                                           (ABC_A * (AcReal)sin(kz_uu * zz) +
+                                                            ABC_C * (AcReal)cos(ky_uu * yy));
+                    mesh->vertex_buffer[VTXBUF_UUY][idx] = ampl_uu *
+                                                           (ABC_B * (AcReal)sin(kx_uu * xx) +
+                                                            ABC_A * (AcReal)cos(kz_uu * zz));
+                    mesh->vertex_buffer[VTXBUF_UUZ][idx] = ampl_uu *
+                                                           (ABC_C * (AcReal)sin(ky_uu * yy) +
+                                                            ABC_B * (AcReal)cos(kx_uu * xx));
                 }
             }
         }
@@ -637,20 +645,23 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
     }
     case INIT_TYPE_RAYLEIGH_BENARD: {
         acmesh_init_to(INIT_TYPE_RANDOM, mesh);
-        #if LTEMPERATURE
+#if LTEMPERATURE
         vertex_buffer_set(VTXBUF_LNRHO, 1, mesh);
         const AcReal range = AcReal(0.9);
         for (int k = nz_min; k < nz_max; k++) {
             for (int j = ny_min; j < ny_max; j++) {
                 for (int i = nx_min; i < nx_max; i++) {
-                    const int idx = i + j * mx + k * mx * my;
-                    mesh->vertex_buffer[VTXBUF_TEMPERATURE][idx] = (range * (k - nz_min)) / mesh->info.int_params[AC_nz] + 0.1;
+                    const int idx                                = i + j * mx + k * mx * my;
+                    mesh->vertex_buffer[VTXBUF_TEMPERATURE][idx] = (range * (k - nz_min)) /
+                                                                       mesh->info
+                                                                           .int_params[AC_nz] +
+                                                                   0.1;
                 }
             }
         }
-        #else
+#else
         WARNING("INIT_TYPE_RAYLEIGH_BERNARD called even though VTXBUF_TEMPERATURE is not used");
-        #endif
+#endif
         break;
     }
     default:
@@ -688,14 +699,13 @@ acmesh_destroy(AcMesh* mesh)
     free(mesh);
 }
 
-
 ModelMesh*
 modelmesh_create(const AcMeshInfo& mesh_info)
 {
     ModelMesh* mesh = (ModelMesh*)malloc(sizeof(*mesh));
-    mesh->info   = mesh_info;
+    mesh->info      = mesh_info;
 
-    const size_t bytes = AC_VTXBUF_SIZE(mesh->info) * sizeof(mesh->vertex_buffer[0][0]);
+    const size_t bytes = acVertexBufferSize(mesh->info) * sizeof(mesh->vertex_buffer[0][0]);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         mesh->vertex_buffer[VertexBufferHandle(i)] = (ModelScalar*)malloc(bytes);
         ERRCHK(mesh->vertex_buffer[VertexBufferHandle(i)] != NULL);
@@ -721,7 +731,7 @@ acmesh_to_modelmesh(const AcMesh& acmesh, ModelMesh* modelmesh)
     memcpy(&modelmesh->info, &acmesh.info, sizeof(acmesh.info));
 
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-        for (size_t j = 0; j < AC_VTXBUF_SIZE(acmesh.info); ++j)
+        for (size_t j = 0; j < acVertexBufferSize(acmesh.info); ++j)
             modelmesh->vertex_buffer[i][j] = (ModelScalar)acmesh.vertex_buffer[i][j];
 }
 
@@ -732,6 +742,6 @@ modelmesh_to_acmesh(const ModelMesh& modelmesh, AcMesh* acmesh)
     memcpy(&acmesh->info, &modelmesh.info, sizeof(modelmesh.info));
 
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-        for (size_t j = 0; j < AC_VTXBUF_SIZE(modelmesh.info); ++j)
+        for (size_t j = 0; j < acVertexBufferSize(modelmesh.info); ++j)
             acmesh->vertex_buffer[i][j] = (AcReal)modelmesh.vertex_buffer[i][j];
 }

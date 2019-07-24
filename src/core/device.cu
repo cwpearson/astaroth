@@ -28,6 +28,12 @@
 
 #include "errchk.h"
 
+// Device info
+#define REGISTERS_PER_THREAD (255)
+#define MAX_REGISTERS_PER_BLOCK (65536)
+#define MAX_THREADS_PER_BLOCK (1024)
+#define WARP_SIZE (32)
+
 typedef struct {
     AcReal* in[NUM_VTXBUF_HANDLES];
     AcReal* out[NUM_VTXBUF_HANDLES];
@@ -159,13 +165,13 @@ createDevice(const int id, const AcMeshInfo device_config, Device* device_handle
     }
 
     // Memory
-    const size_t vba_size_bytes = AC_VTXBUF_SIZE_BYTES(device_config);
+    const size_t vba_size_bytes = acVertexBufferSizeBytes(device_config);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.in[i], vba_size_bytes));
         ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.out[i], vba_size_bytes));
     }
     ERRCHK_CUDA_ALWAYS(
-        cudaMalloc(&device->reduce_scratchpad, AC_VTXBUF_COMPDOMAIN_SIZE_BYTES(device_config)));
+        cudaMalloc(&device->reduce_scratchpad, acVertexBufferCompdomainSizeBytes(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->reduce_result, sizeof(AcReal)));
 
 #if PACKED_DATA_TRANSFERS
@@ -335,8 +341,8 @@ AcResult
 copyMeshToDevice(const Device device, const StreamType stream_type, const AcMesh& host_mesh,
                  const int3& src, const int3& dst, const int num_vertices)
 {
-    const size_t src_idx = AC_VTXBUF_IDX(src.x, src.y, src.z, host_mesh.info);
-    const size_t dst_idx = AC_VTXBUF_IDX(dst.x, dst.y, dst.z, device->local_config);
+    const size_t src_idx = acVertexBufferIdx(src.x, src.y, src.z, host_mesh.info);
+    const size_t dst_idx = acVertexBufferIdx(dst.x, dst.y, dst.z, device->local_config);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         loadWithOffset(device, stream_type, &host_mesh.vertex_buffer[i][src_idx],
                        num_vertices * sizeof(AcReal), &device->vba.in[i][dst_idx]);
@@ -348,8 +354,8 @@ AcResult
 copyMeshToHost(const Device device, const StreamType stream_type, const int3& src, const int3& dst,
                const int num_vertices, AcMesh* host_mesh)
 {
-    const size_t src_idx = AC_VTXBUF_IDX(src.x, src.y, src.z, device->local_config);
-    const size_t dst_idx = AC_VTXBUF_IDX(dst.x, dst.y, dst.z, host_mesh->info);
+    const size_t src_idx = acVertexBufferIdx(src.x, src.y, src.z, device->local_config);
+    const size_t dst_idx = acVertexBufferIdx(dst.x, dst.y, dst.z, host_mesh->info);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         storeWithOffset(device, stream_type, &device->vba.in[i][src_idx],
                         num_vertices * sizeof(AcReal), &host_mesh->vertex_buffer[i][dst_idx]);
@@ -362,8 +368,8 @@ copyMeshDeviceToDevice(const Device src_device, const StreamType stream_type, co
                        Device dst_device, const int3& dst, const int num_vertices)
 {
     cudaSetDevice(src_device->id);
-    const size_t src_idx = AC_VTXBUF_IDX(src.x, src.y, src.z, src_device->local_config);
-    const size_t dst_idx = AC_VTXBUF_IDX(dst.x, dst.y, dst.z, dst_device->local_config);
+    const size_t src_idx = acVertexBufferIdx(src.x, src.y, src.z, src_device->local_config);
+    const size_t dst_idx = acVertexBufferIdx(dst.x, dst.y, dst.z, dst_device->local_config);
 
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         ERRCHK_CUDA(cudaMemcpyPeerAsync(&dst_device->vba.in[i][dst_idx], dst_device->id,

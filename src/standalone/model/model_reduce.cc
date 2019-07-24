@@ -99,7 +99,7 @@ model_reduce_scal(const ModelMesh& mesh, const ReductionType& rtype,
         ERROR("Unrecognized RTYPE");
     }
 
-    const int initial_idx = AC_VTXBUF_IDX(
+    const int initial_idx = acVertexBufferIdx(
         mesh.info.int_params[AC_nx_min], mesh.info.int_params[AC_ny_min],
         mesh.info.int_params[AC_nz_min], mesh.info);
 
@@ -115,7 +115,7 @@ model_reduce_scal(const ModelMesh& mesh, const ReductionType& rtype,
              j < mesh.info.int_params[AC_ny_max]; ++j) {
             for (int i = mesh.info.int_params[AC_nx_min];
                  i < mesh.info.int_params[AC_nx_max]; ++i) {
-                const int idx              = AC_VTXBUF_IDX(i, j, k, mesh.info);
+                const int idx              = acVertexBufferIdx(i, j, k, mesh.info);
                 const ModelScalar curr_val = reduce_initial(
                     mesh.vertex_buffer[a][idx]);
                 res = reduce(res, curr_val);
@@ -166,7 +166,7 @@ model_reduce_vec(const ModelMesh& mesh, const ReductionType& rtype,
         ERROR("Unrecognized RTYPE");
     }
 
-    const int initial_idx = AC_VTXBUF_IDX(
+    const int initial_idx = acVertexBufferIdx(
         mesh.info.int_params[AC_nx_min], mesh.info.int_params[AC_ny_min],
         mesh.info.int_params[AC_nz_min], mesh.info);
 
@@ -184,7 +184,7 @@ model_reduce_vec(const ModelMesh& mesh, const ReductionType& rtype,
              j < mesh.info.int_params[AC_ny_max]; j++) {
             for (int i = mesh.info.int_params[AC_nx_min];
                  i < mesh.info.int_params[AC_nx_max]; i++) {
-                const int idx              = AC_VTXBUF_IDX(i, j, k, mesh.info);
+                const int idx              = acVertexBufferIdx(i, j, k, mesh.info);
                 const ModelScalar curr_val = reduce_initial(
                     mesh.vertex_buffer[a][idx], mesh.vertex_buffer[b][idx],
                     mesh.vertex_buffer[c][idx]);

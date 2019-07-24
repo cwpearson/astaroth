@@ -100,7 +100,7 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
     FILE* save_ptr;
 
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
-        const size_t n = AC_VTXBUF_SIZE(save_mesh.info);
+        const size_t n = acVertexBufferSize(save_mesh.info);
 
         const char* buffername = vtxbuf_names[w];
         char cstep[11];

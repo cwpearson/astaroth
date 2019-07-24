@@ -68,7 +68,7 @@ get(const AcRealParam param)
 static inline int
 IDX(const int i, const int j, const int k)
 {
-    return AC_VTXBUF_IDX(i, j, k, (*mesh_info));
+    return acVertexBufferIdx(i, j, k, (*mesh_info));
 }
 
 /*
@@ -749,7 +749,7 @@ static void
 solve_alpha_step(const int step_number, const ModelScalar dt, const int i, const int j, const int k,
                  ModelMesh& in, ModelMesh* out)
 {
-    const int idx = AC_VTXBUF_IDX(i, j, k, in.info);
+    const int idx = acVertexBufferIdx(i, j, k, in.info);
 
     const ModelScalarData lnrho = read_data(i, j, k, in.vertex_buffer, VTXBUF_LNRHO);
     const ModelVectorData uu    = read_data(i, j, k, in.vertex_buffer,
@@ -797,7 +797,7 @@ static void
 solve_beta_step(const int step_number, const ModelScalar dt, const int i, const int j, const int k,
                 const ModelMesh& in, ModelMesh* out)
 {
-    const int idx = AC_VTXBUF_IDX(i, j, k, in.info);
+    const int idx = acVertexBufferIdx(i, j, k, in.info);
 
     // Williamson (1980) NOTE: older version of astaroth used inhomogenous
     const ModelScalar beta[] = {ModelScalar(1. / 3.), ModelScalar(15. / 16.),

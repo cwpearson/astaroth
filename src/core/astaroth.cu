@@ -130,10 +130,17 @@
 #include "math_utils.h"               // sum for reductions
 #include "standalone/config_loader.h" // update_config
 
-const char* intparam_names[]  = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR)
-                                    AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
-const char* realparam_names[] = {AC_FOR_REAL_PARAM_TYPES(AC_GEN_STR)};
-const char* vtxbuf_names[]    = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
+#define AC_GEN_STR(X) #X
+const char* intparam_names[]   = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
+                                AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
+const char* int3param_names[]  = {AC_FOR_BUILTIN_INT3_PARAM_TYPES(AC_GEN_STR) //
+                                 AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR)};
+const char* realparam_names[]  = {AC_FOR_BUILTIN_REAL_PARAM_TYPES(AC_GEN_STR) //
+                                 AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR)};
+const char* real3param_names[] = {AC_FOR_BUILTIN_REAL3_PARAM_TYPES(AC_GEN_STR) //
+                                  AC_FOR_USER_REAL3_PARAM_TYPES(AC_GEN_STR)};
+const char* vtxbuf_names[]     = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
+#undef AC_GEN_STR
 
 static const int MAX_NUM_DEVICES       = 32;
 static int num_devices                 = 0;
@@ -559,7 +566,7 @@ acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertice
 AcResult
 acLoad(const AcMesh& host_mesh)
 {
-    acLoadWithOffset(host_mesh, (int3){0, 0, 0}, AC_VTXBUF_SIZE(host_mesh.info));
+    acLoadWithOffset(host_mesh, (int3){0, 0, 0}, acVertexBufferSize(host_mesh.info));
     acSynchronizeStream(STREAM_ALL);
     return AC_SUCCESS;
 }
@@ -598,7 +605,7 @@ acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
 AcResult
 acStore(AcMesh* host_mesh)
 {
-    acStoreWithOffset((int3){0, 0, 0}, AC_VTXBUF_SIZE(host_mesh->info), host_mesh);
+    acStoreWithOffset((int3){0, 0, 0}, acVertexBufferSize(host_mesh->info), host_mesh);
     acSynchronizeStream(STREAM_ALL);
     return AC_SUCCESS;
 }

@@ -41,30 +41,30 @@ der_scal(const int& i, const int& j, const int& k, const AcMeshInfo& mesh_info,
 
     switch (axis) {
     case AXIS_X:
-        f0 = scal[AC_VTXBUF_IDX(i - 3, j, k, mesh_info)];
-        f1 = scal[AC_VTXBUF_IDX(i - 2, j, k, mesh_info)];
-        f2 = scal[AC_VTXBUF_IDX(i - 1, j, k, mesh_info)];
-        f4 = scal[AC_VTXBUF_IDX(i + 1, j, k, mesh_info)];
-        f5 = scal[AC_VTXBUF_IDX(i + 2, j, k, mesh_info)];
-        f6 = scal[AC_VTXBUF_IDX(i + 3, j, k, mesh_info)];
+        f0 = scal[acVertexBufferIdx(i - 3, j, k, mesh_info)];
+        f1 = scal[acVertexBufferIdx(i - 2, j, k, mesh_info)];
+        f2 = scal[acVertexBufferIdx(i - 1, j, k, mesh_info)];
+        f4 = scal[acVertexBufferIdx(i + 1, j, k, mesh_info)];
+        f5 = scal[acVertexBufferIdx(i + 2, j, k, mesh_info)];
+        f6 = scal[acVertexBufferIdx(i + 3, j, k, mesh_info)];
         ds = mesh_info.real_params[AC_dsx];
         break;
     case AXIS_Y:
-        f0 = scal[AC_VTXBUF_IDX(i, j - 3, k, mesh_info)];
-        f1 = scal[AC_VTXBUF_IDX(i, j - 2, k, mesh_info)];
-        f2 = scal[AC_VTXBUF_IDX(i, j - 1, k, mesh_info)];
-        f4 = scal[AC_VTXBUF_IDX(i, j + 1, k, mesh_info)];
-        f5 = scal[AC_VTXBUF_IDX(i, j + 2, k, mesh_info)];
-        f6 = scal[AC_VTXBUF_IDX(i, j + 3, k, mesh_info)];
+        f0 = scal[acVertexBufferIdx(i, j - 3, k, mesh_info)];
+        f1 = scal[acVertexBufferIdx(i, j - 2, k, mesh_info)];
+        f2 = scal[acVertexBufferIdx(i, j - 1, k, mesh_info)];
+        f4 = scal[acVertexBufferIdx(i, j + 1, k, mesh_info)];
+        f5 = scal[acVertexBufferIdx(i, j + 2, k, mesh_info)];
+        f6 = scal[acVertexBufferIdx(i, j + 3, k, mesh_info)];
         ds = mesh_info.real_params[AC_dsy];
         break;
     case AXIS_Z:
-        f0 = scal[AC_VTXBUF_IDX(i, j, k - 3, mesh_info)];
-        f1 = scal[AC_VTXBUF_IDX(i, j, k - 2, mesh_info)];
-        f2 = scal[AC_VTXBUF_IDX(i, j, k - 1, mesh_info)];
-        f4 = scal[AC_VTXBUF_IDX(i, j, k + 1, mesh_info)];
-        f5 = scal[AC_VTXBUF_IDX(i, j, k + 2, mesh_info)];
-        f6 = scal[AC_VTXBUF_IDX(i, j, k + 3, mesh_info)];
+        f0 = scal[acVertexBufferIdx(i, j, k - 3, mesh_info)];
+        f1 = scal[acVertexBufferIdx(i, j, k - 2, mesh_info)];
+        f2 = scal[acVertexBufferIdx(i, j, k - 1, mesh_info)];
+        f4 = scal[acVertexBufferIdx(i, j, k + 1, mesh_info)];
+        f5 = scal[acVertexBufferIdx(i, j, k + 2, mesh_info)];
+        f6 = scal[acVertexBufferIdx(i, j, k + 3, mesh_info)];
         ds = mesh_info.real_params[AC_dsz];
         break;
     default:
@@ -82,34 +82,34 @@ der2_scal(const int& i, const int& j, const int& k, const AcMeshInfo& mesh_info,
     MODEL_REAL f0, f1, f2, f3, f4, f5, f6;
     MODEL_REAL ds;
 
-    f3 = scal[AC_VTXBUF_IDX(i, j, k, mesh_info)];
+    f3 = scal[acVertexBufferIdx(i, j, k, mesh_info)];
 
     switch (axis) {
     case AXIS_X:
-        f0 = scal[AC_VTXBUF_IDX(i - 3, j, k, mesh_info)];
-        f1 = scal[AC_VTXBUF_IDX(i - 2, j, k, mesh_info)];
-        f2 = scal[AC_VTXBUF_IDX(i - 1, j, k, mesh_info)];
-        f4 = scal[AC_VTXBUF_IDX(i + 1, j, k, mesh_info)];
-        f5 = scal[AC_VTXBUF_IDX(i + 2, j, k, mesh_info)];
-        f6 = scal[AC_VTXBUF_IDX(i + 3, j, k, mesh_info)];
+        f0 = scal[acVertexBufferIdx(i - 3, j, k, mesh_info)];
+        f1 = scal[acVertexBufferIdx(i - 2, j, k, mesh_info)];
+        f2 = scal[acVertexBufferIdx(i - 1, j, k, mesh_info)];
+        f4 = scal[acVertexBufferIdx(i + 1, j, k, mesh_info)];
+        f5 = scal[acVertexBufferIdx(i + 2, j, k, mesh_info)];
+        f6 = scal[acVertexBufferIdx(i + 3, j, k, mesh_info)];
         ds = mesh_info.real_params[AC_dsx];
         break;
     case AXIS_Y:
-        f0 = scal[AC_VTXBUF_IDX(i, j - 3, k, mesh_info)];
-        f1 = scal[AC_VTXBUF_IDX(i, j - 2, k, mesh_info)];
-        f2 = scal[AC_VTXBUF_IDX(i, j - 1, k, mesh_info)];
-        f4 = scal[AC_VTXBUF_IDX(i, j + 1, k, mesh_info)];
-        f5 = scal[AC_VTXBUF_IDX(i, j + 2, k, mesh_info)];
-        f6 = scal[AC_VTXBUF_IDX(i, j + 3, k, mesh_info)];
+        f0 = scal[acVertexBufferIdx(i, j - 3, k, mesh_info)];
+        f1 = scal[acVertexBufferIdx(i, j - 2, k, mesh_info)];
+        f2 = scal[acVertexBufferIdx(i, j - 1, k, mesh_info)];
+        f4 = scal[acVertexBufferIdx(i, j + 1, k, mesh_info)];
+        f5 = scal[acVertexBufferIdx(i, j + 2, k, mesh_info)];
+        f6 = scal[acVertexBufferIdx(i, j + 3, k, mesh_info)];
         ds = mesh_info.real_params[AC_dsy];
         break;
     case AXIS_Z:
-        f0 = scal[AC_VTXBUF_IDX(i, j, k - 3, mesh_info)];
-        f1 = scal[AC_VTXBUF_IDX(i, j, k - 2, mesh_info)];
-        f2 = scal[AC_VTXBUF_IDX(i, j, k - 1, mesh_info)];
-        f4 = scal[AC_VTXBUF_IDX(i, j, k + 1, mesh_info)];
-        f5 = scal[AC_VTXBUF_IDX(i, j, k + 2, mesh_info)];
-        f6 = scal[AC_VTXBUF_IDX(i, j, k + 3, mesh_info)];
+        f0 = scal[acVertexBufferIdx(i, j, k - 3, mesh_info)];
+        f1 = scal[acVertexBufferIdx(i, j, k - 2, mesh_info)];
+        f2 = scal[acVertexBufferIdx(i, j, k - 1, mesh_info)];
+        f4 = scal[acVertexBufferIdx(i, j, k + 1, mesh_info)];
+        f5 = scal[acVertexBufferIdx(i, j, k + 2, mesh_info)];
+        f6 = scal[acVertexBufferIdx(i, j, k + 3, mesh_info)];
         ds = mesh_info.real_params[AC_dsz];
         break;
     default:
@@ -163,7 +163,7 @@ vec_dot_nabla_scal(const int& i, const int& j, const int& k,
                    const AcMeshInfo& mesh_info, const MODEL_REAL* vec_x,
                    const MODEL_REAL* vec_y, const MODEL_REAL* vec_z, const MODEL_REAL* scal)
 {
-    const int idx = AC_VTXBUF_IDX(i, j, k, mesh_info);
+    const int idx = acVertexBufferIdx(i, j, k, mesh_info);
     MODEL_REAL ddx_scal, ddy_scal, ddz_scal;
     grad(i, j, k, mesh_info, scal, &ddx_scal, &ddy_scal, &ddz_scal);
     return vec_x[idx] * ddx_scal + vec_y[idx] * ddy_scal +
@@ -196,56 +196,56 @@ dernm_scal(const int& i, const int& j, const int& k,
     switch (dernm) {
     case DERNM_XY:
         fac     = MODEL_REAL(1. / 720.) * (MODEL_REAL(1.) / dsx) * (MODEL_REAL(1.) / dsy);
-        f_p1_p1 = scal[AC_VTXBUF_IDX(i + 1, j + 1, k, mesh_info)];
-        f_m1_p1 = scal[AC_VTXBUF_IDX(i - 1, j + 1, k, mesh_info)];
-        f_m1_m1 = scal[AC_VTXBUF_IDX(i - 1, j - 1, k, mesh_info)];
-        f_p1_m1 = scal[AC_VTXBUF_IDX(i + 1, j - 1, k, mesh_info)];
+        f_p1_p1 = scal[acVertexBufferIdx(i + 1, j + 1, k, mesh_info)];
+        f_m1_p1 = scal[acVertexBufferIdx(i - 1, j + 1, k, mesh_info)];
+        f_m1_m1 = scal[acVertexBufferIdx(i - 1, j - 1, k, mesh_info)];
+        f_p1_m1 = scal[acVertexBufferIdx(i + 1, j - 1, k, mesh_info)];
 
-        f_p2_p2 = scal[AC_VTXBUF_IDX(i + 2, j + 2, k, mesh_info)];
-        f_m2_p2 = scal[AC_VTXBUF_IDX(i - 2, j + 2, k, mesh_info)];
-        f_m2_m2 = scal[AC_VTXBUF_IDX(i - 2, j - 2, k, mesh_info)];
-        f_p2_m2 = scal[AC_VTXBUF_IDX(i + 2, j - 2, k, mesh_info)];
+        f_p2_p2 = scal[acVertexBufferIdx(i + 2, j + 2, k, mesh_info)];
+        f_m2_p2 = scal[acVertexBufferIdx(i - 2, j + 2, k, mesh_info)];
+        f_m2_m2 = scal[acVertexBufferIdx(i - 2, j - 2, k, mesh_info)];
+        f_p2_m2 = scal[acVertexBufferIdx(i + 2, j - 2, k, mesh_info)];
 
-        f_p3_p3 = scal[AC_VTXBUF_IDX(i + 3, j + 3, k, mesh_info)];
-        f_m3_p3 = scal[AC_VTXBUF_IDX(i - 3, j + 3, k, mesh_info)];
-        f_m3_m3 = scal[AC_VTXBUF_IDX(i - 3, j - 3, k, mesh_info)];
-        f_p3_m3 = scal[AC_VTXBUF_IDX(i + 3, j - 3, k, mesh_info)];
+        f_p3_p3 = scal[acVertexBufferIdx(i + 3, j + 3, k, mesh_info)];
+        f_m3_p3 = scal[acVertexBufferIdx(i - 3, j + 3, k, mesh_info)];
+        f_m3_m3 = scal[acVertexBufferIdx(i - 3, j - 3, k, mesh_info)];
+        f_p3_m3 = scal[acVertexBufferIdx(i + 3, j - 3, k, mesh_info)];
         break;
     case DERNM_YZ:
         // NOTE this is a bit different from the old one, second is j+1k-1
         // instead of j-1,k+1
         fac     = MODEL_REAL(1. / 720.) * (MODEL_REAL(1.) / dsy) * (MODEL_REAL(1.) / dsz);
-        f_p1_p1 = scal[AC_VTXBUF_IDX(i, j + 1, k + 1, mesh_info)];
-        f_m1_p1 = scal[AC_VTXBUF_IDX(i, j - 1, k + 1, mesh_info)];
-        f_m1_m1 = scal[AC_VTXBUF_IDX(i, j - 1, k - 1, mesh_info)];
-        f_p1_m1 = scal[AC_VTXBUF_IDX(i, j + 1, k - 1, mesh_info)];
+        f_p1_p1 = scal[acVertexBufferIdx(i, j + 1, k + 1, mesh_info)];
+        f_m1_p1 = scal[acVertexBufferIdx(i, j - 1, k + 1, mesh_info)];
+        f_m1_m1 = scal[acVertexBufferIdx(i, j - 1, k - 1, mesh_info)];
+        f_p1_m1 = scal[acVertexBufferIdx(i, j + 1, k - 1, mesh_info)];
 
-        f_p2_p2 = scal[AC_VTXBUF_IDX(i, j + 2, k + 2, mesh_info)];
-        f_m2_p2 = scal[AC_VTXBUF_IDX(i, j - 2, k + 2, mesh_info)];
-        f_m2_m2 = scal[AC_VTXBUF_IDX(i, j - 2, k - 2, mesh_info)];
-        f_p2_m2 = scal[AC_VTXBUF_IDX(i, j + 2, k - 2, mesh_info)];
+        f_p2_p2 = scal[acVertexBufferIdx(i, j + 2, k + 2, mesh_info)];
+        f_m2_p2 = scal[acVertexBufferIdx(i, j - 2, k + 2, mesh_info)];
+        f_m2_m2 = scal[acVertexBufferIdx(i, j - 2, k - 2, mesh_info)];
+        f_p2_m2 = scal[acVertexBufferIdx(i, j + 2, k - 2, mesh_info)];
 
-        f_p3_p3 = scal[AC_VTXBUF_IDX(i, j + 3, k + 3, mesh_info)];
-        f_m3_p3 = scal[AC_VTXBUF_IDX(i, j - 3, k + 3, mesh_info)];
-        f_m3_m3 = scal[AC_VTXBUF_IDX(i, j - 3, k - 3, mesh_info)];
-        f_p3_m3 = scal[AC_VTXBUF_IDX(i, j + 3, k - 3, mesh_info)];
+        f_p3_p3 = scal[acVertexBufferIdx(i, j + 3, k + 3, mesh_info)];
+        f_m3_p3 = scal[acVertexBufferIdx(i, j - 3, k + 3, mesh_info)];
+        f_m3_m3 = scal[acVertexBufferIdx(i, j - 3, k - 3, mesh_info)];
+        f_p3_m3 = scal[acVertexBufferIdx(i, j + 3, k - 3, mesh_info)];
         break;
     case DERNM_XZ:
         fac     = MODEL_REAL(1. / 720.) * (MODEL_REAL(1.) / dsx) * (MODEL_REAL(1.) / dsz);
-        f_p1_p1 = scal[AC_VTXBUF_IDX(i + 1, j, k + 1, mesh_info)];
-        f_m1_p1 = scal[AC_VTXBUF_IDX(i - 1, j, k + 1, mesh_info)];
-        f_m1_m1 = scal[AC_VTXBUF_IDX(i - 1, j, k - 1, mesh_info)];
-        f_p1_m1 = scal[AC_VTXBUF_IDX(i + 1, j, k - 1, mesh_info)];
+        f_p1_p1 = scal[acVertexBufferIdx(i + 1, j, k + 1, mesh_info)];
+        f_m1_p1 = scal[acVertexBufferIdx(i - 1, j, k + 1, mesh_info)];
+        f_m1_m1 = scal[acVertexBufferIdx(i - 1, j, k - 1, mesh_info)];
+        f_p1_m1 = scal[acVertexBufferIdx(i + 1, j, k - 1, mesh_info)];
 
-        f_p2_p2 = scal[AC_VTXBUF_IDX(i + 2, j, k + 2, mesh_info)];
-        f_m2_p2 = scal[AC_VTXBUF_IDX(i - 2, j, k + 2, mesh_info)];
-        f_m2_m2 = scal[AC_VTXBUF_IDX(i - 2, j, k - 2, mesh_info)];
-        f_p2_m2 = scal[AC_VTXBUF_IDX(i + 2, j, k - 2, mesh_info)];
+        f_p2_p2 = scal[acVertexBufferIdx(i + 2, j, k + 2, mesh_info)];
+        f_m2_p2 = scal[acVertexBufferIdx(i - 2, j, k + 2, mesh_info)];
+        f_m2_m2 = scal[acVertexBufferIdx(i - 2, j, k - 2, mesh_info)];
+        f_p2_m2 = scal[acVertexBufferIdx(i + 2, j, k - 2, mesh_info)];
 
-        f_p3_p3 = scal[AC_VTXBUF_IDX(i + 3, j, k + 3, mesh_info)];
-        f_m3_p3 = scal[AC_VTXBUF_IDX(i - 3, j, k + 3, mesh_info)];
-        f_m3_m3 = scal[AC_VTXBUF_IDX(i - 3, j, k - 3, mesh_info)];
-        f_p3_m3 = scal[AC_VTXBUF_IDX(i + 3, j, k - 3, mesh_info)];
+        f_p3_p3 = scal[acVertexBufferIdx(i + 3, j, k + 3, mesh_info)];
+        f_m3_p3 = scal[acVertexBufferIdx(i - 3, j, k + 3, mesh_info)];
+        f_m3_m3 = scal[acVertexBufferIdx(i - 3, j, k - 3, mesh_info)];
+        f_p3_m3 = scal[acVertexBufferIdx(i + 3, j, k - 3, mesh_info)];
         break;
     default:
         ERROR("Invalid dernm type");
