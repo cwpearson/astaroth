@@ -2,6 +2,9 @@
 ##  CMakeLists.txt for Astaroth Standalone  ##
 ##############################################
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 ## Files
 file (GLOB SOURCES "*.cc" "model/*.cc")
 
@@ -16,7 +19,6 @@ if (BUILD_RT_VISUALIZATION)
     include_directories(${SDL2_INCLUDE_DIR})
     link_directories(${SDL2_LIBRARY_DIR})
 endif ()
-
 
 ## Compilation flags
 add_compile_options(-march=native -pipe ${OpenMP_CXX_FLAGS})

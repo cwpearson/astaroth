@@ -25,6 +25,13 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_ARCH_FLAGS} ${CUDA_WARNING_FLAGS})
 set(CUDA_NVCC_FLAGS_RELEASE)
 set(CUDA_NVCC_FLAGS_DEBUG --device-debug --generate-line-info --ptxas-options=-v)
 
+## Definitions
+if (MULTIGPU_ENABLED)
+    add_definitions(-DAC_MULTIGPU_ENABLED=1)
+else ()
+    add_definitions(-DAC_MULTIGPU_ENABLED=0)
+endif ()
+
 ## Create and link the library
 include_directories(.)
 cuda_add_library(astaroth_core STATIC astaroth.cu device.cu)
