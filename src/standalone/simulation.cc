@@ -57,44 +57,44 @@ write_mesh_info(const AcMeshInfo* config)
     infotxt = fopen("mesh_info.list", "w");
 
     // Total grid dimensions
-    fprintf(infotxt, "int  AC_mx        %i \n", config->int_params[AC_mx]);
-    fprintf(infotxt, "int  AC_my        %i \n", config->int_params[AC_my]);
-    fprintf(infotxt, "int  AC_mz        %i \n", config->int_params[AC_mz]);
+    fprintf(infotxt, "int  AC_mx         %i \n", config->int_params[AC_mx]);
+    fprintf(infotxt, "int  AC_my         %i \n", config->int_params[AC_my]);
+    fprintf(infotxt, "int  AC_mz         %i \n", config->int_params[AC_mz]);
 
     // Bounds for the computational domain, i.e. nx_min <= i < nx_max
-    fprintf(infotxt, "int  AC_nx_min    %i \n", config->int_params[AC_nx_min]);
-    fprintf(infotxt, "int  AC_nx_max    %i \n", config->int_params[AC_nx_max]);
-    fprintf(infotxt, "int  AC_ny_min    %i \n", config->int_params[AC_ny_min]);
-    fprintf(infotxt, "int  AC_ny_max    %i \n", config->int_params[AC_ny_max]);
-    fprintf(infotxt, "int  AC_nz_min    %i \n", config->int_params[AC_nz_min]);
-    fprintf(infotxt, "int  AC_nz_max    %i \n", config->int_params[AC_nz_max]);
+    fprintf(infotxt, "int  AC_nx_min     %i \n", config->int_params[AC_nx_min]);
+    fprintf(infotxt, "int  AC_nx_max     %i \n", config->int_params[AC_nx_max]);
+    fprintf(infotxt, "int  AC_ny_min     %i \n", config->int_params[AC_ny_min]);
+    fprintf(infotxt, "int  AC_ny_max     %i \n", config->int_params[AC_ny_max]);
+    fprintf(infotxt, "int  AC_nz_min     %i \n", config->int_params[AC_nz_min]);
+    fprintf(infotxt, "int  AC_nz_max     %i \n", config->int_params[AC_nz_max]);
 
     // Spacing
-    fprintf(infotxt, "real AC_dsx       %e \n", (double)config->real_params[AC_dsx]);
-    fprintf(infotxt, "real AC_dsy       %e \n", (double)config->real_params[AC_dsy]);
-    fprintf(infotxt, "real AC_dsz       %e \n", (double)config->real_params[AC_dsz]);
-    fprintf(infotxt, "real AC_inv_dsx   %e \n", (double)config->real_params[AC_inv_dsx]);
-    fprintf(infotxt, "real AC_inv_dsy   %e \n", (double)config->real_params[AC_inv_dsy]);
-    fprintf(infotxt, "real AC_inv_dsz   %e \n", (double)config->real_params[AC_inv_dsz]);
-    fprintf(infotxt, "real AC_dsmin     %e \n", (double)config->real_params[AC_dsmin]);
+    fprintf(infotxt, "real AC_dsx        %e \n", (double)config->real_params[AC_dsx]);
+    fprintf(infotxt, "real AC_dsy        %e \n", (double)config->real_params[AC_dsy]);
+    fprintf(infotxt, "real AC_dsz        %e \n", (double)config->real_params[AC_dsz]);
+    fprintf(infotxt, "real AC_inv_dsx    %e \n", (double)config->real_params[AC_inv_dsx]);
+    fprintf(infotxt, "real AC_inv_dsy    %e \n", (double)config->real_params[AC_inv_dsy]);
+    fprintf(infotxt, "real AC_inv_dsz    %e \n", (double)config->real_params[AC_inv_dsz]);
+    fprintf(infotxt, "real AC_dsmin      %e \n", (double)config->real_params[AC_dsmin]);
 
     /* Additional helper params */
     // Int helpers
-    fprintf(infotxt, "int  AC_mxy       %i \n", config->int_params[AC_mxy]);
-    fprintf(infotxt, "int  AC_nxy       %i \n", config->int_params[AC_nxy]);
-    fprintf(infotxt, "int  AC_nxyz      %i \n", config->int_params[AC_nxyz]);
+    fprintf(infotxt, "int  AC_mxy        %i \n", config->int_params[AC_mxy]);
+    fprintf(infotxt, "int  AC_nxy        %i \n", config->int_params[AC_nxy]);
+    fprintf(infotxt, "int  AC_nxyz       %i \n", config->int_params[AC_nxyz]);
 
     // Real helpers
-    fprintf(infotxt, "real AC_cs2_sound %e \n", (double)config->real_params[AC_cs2_sound]);
-    fprintf(infotxt, "real AC_cv_sound  %e \n", (double)config->real_params[AC_cv_sound]);
+    fprintf(infotxt, "real AC_cs2_sound  %e \n", (double)config->real_params[AC_cs2_sound]);
+    fprintf(infotxt, "real AC_cv_sound   %e \n", (double)config->real_params[AC_cv_sound]);
 
     //Here I'm still trying to copy the structure of the code above, and see if this will work for sink particle. 
     //I haven't fully undertand what these lines do but I'll read up on them soon. This is still yet experimental.
     // Sink particle 
-    fprintf(infotext, "real AC_sink_pos_x %i \n", config->real_params[AC_sink_pos_x]);
-    fprintf(infotext, "real AC_sink_pos_y %i \n", config->real_params[AC_sink_pos_y]);
-    fprintf(infotext, "real AC_sink_pos_z %i \n", config->real_params[AC_sink_pos_z]);
-    fprintf(infotext, "real AC_M_sink %e \n", (double)config->real_params[AC_M_sink]);
+    fprintf(infotxt, "real AC_sink_pos_x %e \n", (double)config->real_params[AC_sink_pos_x]);
+    fprintf(infotxt, "real AC_sink_pos_y %e \n", (double)config->real_params[AC_sink_pos_y]);
+    fprintf(infotxt, "real AC_sink_pos_z %e \n", (double)config->real_params[AC_sink_pos_z]);
+    fprintf(infotxt, "real AC_M_sink     %e \n",     (double)config->real_params[AC_M_sink]);
     
     fclose(infotxt);
 }

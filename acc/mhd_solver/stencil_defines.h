@@ -73,11 +73,10 @@
         FUNC(AC_star_pos_z),\
         FUNC(AC_M_star),\
         /* properties of sink particle*/\
-	FUNC(AC_sink_pos_x),\             
+	FUNC(AC_sink_pos_x),\
 	FUNC(AC_sink_pos_y),\
 	FUNC(AC_sink_pos_z),\
 	FUNC(AC_M_sink),\
-	//The above is function for sink particle, not sure if it's supposed to be here but just a try
         /* Run params */\
         FUNC(AC_cdt), \
         FUNC(AC_cdtv), \
