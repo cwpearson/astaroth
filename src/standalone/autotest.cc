@@ -29,7 +29,7 @@
 #include <stdio.h>
 
 #include "config_loader.h"
-#include "core/math_utils.h"
+#include "src/core/math_utils.h"
 #include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
@@ -37,7 +37,7 @@
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
 
-#include "core/errchk.h"
+#include "src/core/errchk.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

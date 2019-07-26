@@ -28,7 +28,7 @@
 
 #include <math.h>
 
-#include "core/errchk.h"
+#include "src/core/errchk.h"
 
 // Function pointer definitions
 typedef ModelScalar (*ReduceFunc)(const ModelScalar&, const ModelScalar&);

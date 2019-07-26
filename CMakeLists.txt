@@ -55,9 +55,8 @@ else ()
 endif ()
 
 ## Include directories
+include_directories(.)
 include_directories(include)
-include_directories(.) # TODO remove
-include_directories(src) # TODO remove
 
 ## Subdirectories
 add_subdirectory(src/core)

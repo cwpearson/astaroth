@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2018, Johannes Pekkilae, Miikka Vaeisalae.
 
     This file is part of Astaroth.
 
@@ -26,7 +26,7 @@
  */
 #include "host_timestep.h"
 
-#include "core/math_utils.h"
+#include "src/core/math_utils.h"
 
 static AcReal timescale = AcReal(1.0);
 

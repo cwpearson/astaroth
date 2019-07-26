@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2018, Johannes Pekkilae, Miikka Vaeisalae.
 
     This file is part of Astaroth.
 
@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/errchk.h"
+#include "src/core/errchk.h"
 #include "run.h"
 
 // Write all errors from stderr to an <errorlog_name> in the current working
