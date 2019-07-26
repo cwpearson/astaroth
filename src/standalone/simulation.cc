@@ -88,6 +88,14 @@ write_mesh_info(const AcMeshInfo* config)
     fprintf(infotxt, "real AC_cs2_sound %e \n", (double)config->real_params[AC_cs2_sound]);
     fprintf(infotxt, "real AC_cv_sound  %e \n", (double)config->real_params[AC_cv_sound]);
 
+    //Here I'm still trying to copy the structure of the code above, and see if this will work for sink particle. 
+    //I haven't fully undertand what these lines do but I'll read up on them soon. This is still yet experimental.
+    // Sink particle 
+    fprintf(infotext, "real AC_sink_pos_x %i \n", config->real_params[AC_sink_pos_x]);
+    fprintf(infotext, "real AC_sink_pos_y %i \n", config->real_params[AC_sink_pos_y]);
+    fprintf(infotext, "real AC_sink_pos_z %i \n", config->real_params[AC_sink_pos_z]);
+    fprintf(infotext, "real AC_M_sink %e \n", (double)config->real_params[AC_M_sink]);
+    
     fclose(infotxt);
 }
 
