@@ -12,7 +12,7 @@ set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
                     -gencode arch=compute_61,code=sm_61
                     -lineinfo
                     -ftz=true # Flush denormalized floats to zero
-                    -std=c++11,
+                    -std=c++11
                     --compiler-options -march=native) # Native host machine code
                     #--maxrregcount=255
                     # -Xptxas -dlcm=ca opt-in to cache all global loads to L1/texture cache
