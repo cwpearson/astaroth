@@ -61,7 +61,7 @@ done
 
 echo "Creating build directory: ${BUILD_DIR}"
 
-mkdir ${BUILD_DIR}
+mkdir -p ${BUILD_DIR}
 
 cd ${BUILD_DIR}
 
