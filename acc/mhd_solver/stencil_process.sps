@@ -4,7 +4,7 @@ uniform Scalar nu_visc;
 uniform Scalar cp_sound;
 uniform Scalar cv_sound;
 uniform Scalar mu0;
-unicalar eta;
+uniform Scalar eta;
 uniform Scalar gamma;
 uniform Scalar zeta;
 
