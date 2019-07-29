@@ -32,6 +32,7 @@
 #define LTEMPERATURE (0)
 #define LFORCING (0)
 #define LUPWD (0)
+#define LSINK (1)
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
 

@@ -4,7 +4,7 @@ uniform Scalar nu_visc;
 uniform Scalar cp_sound;
 uniform Scalar cv_sound;
 uniform Scalar mu0;
-uniform Scalar eta;
+unicalar eta;
 uniform Scalar gamma;
 uniform Scalar zeta;
 
@@ -60,13 +60,22 @@ continuity(in Vector uu, in Scalar lnrho) {
            - divergence(uu);
 }
 
-//#if SINK 
-//Here I'm more or less copying the format of the LENTROPY module below
-//Vector
-//gravity(in Vector xx, in Vector yy, in Vector zz) {
-    //Here I need to define how gravity works for sink particle, probably based on the distance to the sink particle and its mass.
-    //Then apply Newton's equation for force, and also remember to consider xyz directions.
-//}
+#if LSINK 
+
+Vector
+gravity() {
+    vector force_gravity;
+    const int3 grid_pos = (int3){threadIdx.x + blockIdx.x * blockDim.x + start.x,           
+                                 threadIdx.y + blockIdx.y * blockDim.y + start.y,           
+                                 threadIdx.z + blockIdx.z * blockDim.z + start.z};
+    const sink_mass = DCONST(AC_M_sink);
+    const sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
+                              DCONST_REAL(AC_sink_pos_y),
+                              DCONST_REAL(AC_sink_pos_z)}; 
+    const distance = dlength_vec(grid_pos - sink_pos);
+    force_gravity = (6.67e-8 * sink_mass) / (distance * distance);
+    return force_gravity;
+}//first attempt to do a self-containing LSINK module
     
 #if LENTROPY
 Vector
