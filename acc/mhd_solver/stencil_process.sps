@@ -21,8 +21,11 @@ uniform int nz_min;
 uniform int nx;
 uniform int ny;
 uniform int nz;
-
-
+uniform Scalar AC_sink_pos_x;
+uniform Scalar AC_sink_pos_y;
+uniform Scalar AC_sink_pos_z;
+uniform Scalar AC_M_sink;
+//Added declaration for constants used for sink particle.
 
 Vector
 value(in Vector uu)
@@ -57,6 +60,14 @@ continuity(in Vector uu, in Scalar lnrho) {
            - divergence(uu);
 }
 
+//#if SINK 
+//Here I'm more or less copying the format of the LENTROPY module below
+//Vector
+//gravity(in Vector xx, in Vector yy, in Vector zz) {
+    //Here I need to define how gravity works for sink particle, probably based on the distance to the sink particle and its mass.
+    //Then apply Newton's equation for force, and also remember to consider xyz directions.
+//}
+    
 #if LENTROPY
 Vector
 momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
