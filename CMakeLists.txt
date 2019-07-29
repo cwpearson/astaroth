@@ -12,6 +12,8 @@
 
 ## CMake settings
 cmake_minimum_required (VERSION 3.5.1) # Need >= 3.8 for first-class CUDA support
+find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
+find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
 
 ## Project settings
 project(astaroth C CXX)
