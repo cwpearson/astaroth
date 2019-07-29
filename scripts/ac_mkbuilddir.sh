@@ -73,10 +73,7 @@ cd ${BUILD_DIR}
 echo "cp ${AC_HOME}/config/astaroth.conf ${PWD}"
 cp ${AC_HOME}/config/astaroth.conf .
 
-CONF_DIR="-D ASTAROTH_CONF_PATH=${PWD}" # JP: Warning, not used in src/standalone/CMakeLists.txt.
-                                        # The config path supplied by cmake and this define
-                                        # is redundant.
-
+CONF_DIR="-D ASTAROTH_CONF_PATH=${PWD}"
 
 #cmake -D CMAKE_C_COMPILER=icc -D CMAKE_CXX_COMPILER=icpc -DDOUBLE_PRECISION=OFF -DBUILD_DEBUG=OFF ${AC_HOME}
 

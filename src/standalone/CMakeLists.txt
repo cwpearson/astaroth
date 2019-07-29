@@ -32,7 +32,8 @@ target_link_libraries(ac_run PRIVATE astaroth_standalone astaroth_core "${OpenMP
 
 # Define the config directory
 if (ALTER_CONF)
-    target_compile_definitions(astaroth_standalone PRIVATE CONFIG_PATH="${CMAKE_BINARY_DIR}/")
+    # ASTAROTH_CONF_PATH supplied by ac_mkbuilddir.sh
+    target_compile_definitions(astaroth_standalone PRIVATE CONFIG_PATH="${ASTAROTH_CONF_PATH}/")
 else()
     target_compile_definitions(astaroth_standalone PRIVATE CONFIG_PATH="${CMAKE_SOURCE_DIR}/config/")
 endif()
