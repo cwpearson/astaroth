@@ -77,7 +77,14 @@ typedef struct {
 
 typedef enum { AC_SUCCESS = 0, AC_FAILURE = 1 } AcResult;
 
-typedef enum { RTYPE_MAX, RTYPE_MIN, RTYPE_RMS, RTYPE_RMS_EXP, NUM_REDUCTION_TYPES } ReductionType;
+typedef enum {
+    RTYPE_MAX,
+    RTYPE_MIN,
+    RTYPE_RMS,
+    RTYPE_RMS_EXP,
+    RTYPE_SUM,
+    NUM_REDUCTION_TYPES
+} ReductionType;
 
 typedef enum {
     STREAM_DEFAULT,

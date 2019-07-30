@@ -474,7 +474,7 @@ simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, cons
         else if (rtype == RTYPE_MIN) {
             res = min(res, results[i]);
         }
-        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP || rtype == RTYPE_SUM) {
             res = sum(res, results[i]);
         }
         else {
@@ -486,7 +486,6 @@ simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, cons
         const AcReal inv_n = AcReal(1.) / (grid.n.x * grid.n.y * grid.n.z);
         res                = sqrt(inv_n * res);
     }
-
     return res;
 }
 
