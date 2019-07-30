@@ -181,6 +181,9 @@ heat_conduction( in Scalar ss, in Scalar lnrho) {
     (gamma - AcReal(1.)) * laplace(lnrho);
   const Vector second_term = gamma * inv_cp_sound * gradient(ss) +
     (gamma - AcReal(1.)) * gradient(lnrho);
+  const Vector third_term = gamma * (inv_cp_sound * gradient(ss) +
+    gradient(lnrho)) + grad_ln_chi;
+
 
   const Scalar chi = AC_THERMAL_CONDUCTIVITY / (exp(value(lnrho)) * cp_sound);
   return cp_sound * chi * (first_term + dot(second_term, third_term));
