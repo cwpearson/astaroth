@@ -68,8 +68,7 @@ exp_squared(const ModelScalar& a, const ModelScalar& b, const ModelScalar& c) { 
 // clang-format on
 
 ModelScalar
-model_reduce_scal(const ModelMesh& mesh, const ReductionType& rtype,
-                  const VertexBufferHandle& a)
+model_reduce_scal(const ModelMesh& mesh, const ReductionType& rtype, const VertexBufferHandle& a)
 {
     ReduceInitialScalFunc reduce_initial;
     ReduceFunc reduce;
@@ -95,30 +94,31 @@ model_reduce_scal(const ModelMesh& mesh, const ReductionType& rtype,
         reduce         = sum;
         solve_mean     = true;
         break;
+    case RTYPE_SUM:
+        reduce_initial = length;
+        reduce         = sum;
+        break;
     default:
         ERROR("Unrecognized RTYPE");
     }
 
-    const int initial_idx = acVertexBufferIdx(
-        mesh.info.int_params[AC_nx_min], mesh.info.int_params[AC_ny_min],
-        mesh.info.int_params[AC_nz_min], mesh.info);
+    const int initial_idx = acVertexBufferIdx(mesh.info.int_params[AC_nx_min],
+                                              mesh.info.int_params[AC_ny_min],
+                                              mesh.info.int_params[AC_nz_min], mesh.info);
 
     ModelScalar res;
     if (rtype == RTYPE_MAX || rtype == RTYPE_MIN)
         res = reduce_initial(mesh.vertex_buffer[a][initial_idx]);
     else
-        res = .0f;
+        res = 0;
 
-    for (int k = mesh.info.int_params[AC_nz_min];
-         k < mesh.info.int_params[AC_nz_max]; ++k) {
-        for (int j = mesh.info.int_params[AC_ny_min];
-             j < mesh.info.int_params[AC_ny_max]; ++j) {
-            for (int i = mesh.info.int_params[AC_nx_min];
-                 i < mesh.info.int_params[AC_nx_max]; ++i) {
+    for (int k = mesh.info.int_params[AC_nz_min]; k < mesh.info.int_params[AC_nz_max]; ++k) {
+        for (int j = mesh.info.int_params[AC_ny_min]; j < mesh.info.int_params[AC_ny_max]; ++j) {
+            for (int i = mesh.info.int_params[AC_nx_min]; i < mesh.info.int_params[AC_nx_max];
+                 ++i) {
                 const int idx              = acVertexBufferIdx(i, j, k, mesh.info);
-                const ModelScalar curr_val = reduce_initial(
-                    mesh.vertex_buffer[a][idx]);
-                res = reduce(res, curr_val);
+                const ModelScalar curr_val = reduce_initial(mesh.vertex_buffer[a][idx]);
+                res                        = reduce(res, curr_val);
             }
         }
     }
@@ -133,9 +133,8 @@ model_reduce_scal(const ModelMesh& mesh, const ReductionType& rtype,
 }
 
 ModelScalar
-model_reduce_vec(const ModelMesh& mesh, const ReductionType& rtype,
-                 const VertexBufferHandle& a, const VertexBufferHandle& b,
-                 const VertexBufferHandle& c)
+model_reduce_vec(const ModelMesh& mesh, const ReductionType& rtype, const VertexBufferHandle& a,
+                 const VertexBufferHandle& b, const VertexBufferHandle& c)
 {
     // ModelScalar (*reduce_initial)(ModelScalar, ModelScalar, ModelScalar);
     ReduceInitialVecFunc reduce_initial;
@@ -162,33 +161,34 @@ model_reduce_vec(const ModelMesh& mesh, const ReductionType& rtype,
         reduce         = sum;
         solve_mean     = true;
         break;
+    case RTYPE_SUM:
+        reduce_initial = length;
+        reduce         = sum;
+        break;
     default:
         ERROR("Unrecognized RTYPE");
     }
 
-    const int initial_idx = acVertexBufferIdx(
-        mesh.info.int_params[AC_nx_min], mesh.info.int_params[AC_ny_min],
-        mesh.info.int_params[AC_nz_min], mesh.info);
+    const int initial_idx = acVertexBufferIdx(mesh.info.int_params[AC_nx_min],
+                                              mesh.info.int_params[AC_ny_min],
+                                              mesh.info.int_params[AC_nz_min], mesh.info);
 
     ModelScalar res;
     if (rtype == RTYPE_MAX || rtype == RTYPE_MIN)
-        res = reduce_initial(mesh.vertex_buffer[a][initial_idx],
-                             mesh.vertex_buffer[b][initial_idx],
+        res = reduce_initial(mesh.vertex_buffer[a][initial_idx], mesh.vertex_buffer[b][initial_idx],
                              mesh.vertex_buffer[c][initial_idx]);
     else
         res = 0;
 
-    for (int k = mesh.info.int_params[AC_nz_min];
-         k < mesh.info.int_params[AC_nz_max]; k++) {
-        for (int j = mesh.info.int_params[AC_ny_min];
-             j < mesh.info.int_params[AC_ny_max]; j++) {
-            for (int i = mesh.info.int_params[AC_nx_min];
-                 i < mesh.info.int_params[AC_nx_max]; i++) {
+    for (int k = mesh.info.int_params[AC_nz_min]; k < mesh.info.int_params[AC_nz_max]; k++) {
+        for (int j = mesh.info.int_params[AC_ny_min]; j < mesh.info.int_params[AC_ny_max]; j++) {
+            for (int i = mesh.info.int_params[AC_nx_min]; i < mesh.info.int_params[AC_nx_max];
+                 i++) {
                 const int idx              = acVertexBufferIdx(i, j, k, mesh.info);
-                const ModelScalar curr_val = reduce_initial(
-                    mesh.vertex_buffer[a][idx], mesh.vertex_buffer[b][idx],
-                    mesh.vertex_buffer[c][idx]);
-                res = reduce(res, curr_val);
+                const ModelScalar curr_val = reduce_initial(mesh.vertex_buffer[a][idx],
+                                                            mesh.vertex_buffer[b][idx],
+                                                            mesh.vertex_buffer[c][idx]);
+                res                        = reduce(res, curr_val);
             }
         }
     }
