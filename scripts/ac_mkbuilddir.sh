@@ -5,6 +5,8 @@ then
        exit 1
 fi
 
+# Exit if any of the following commands fail
+set -e
 
 TIARA_SETUP_DEFAULT=""
 DOUBLE_DEFAULT="OFF"
@@ -61,7 +63,7 @@ done
 
 echo "Creating build directory: ${BUILD_DIR}"
 
-mkdir ${BUILD_DIR}
+mkdir -p ${BUILD_DIR}
 
 cd ${BUILD_DIR}
 
