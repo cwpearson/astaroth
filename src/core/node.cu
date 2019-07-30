@@ -16,18 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
 */
-#pragma once
+// #include "astaroth_node.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "astaroth_defines.h"
-
-#include "astaroth_device.h"
-#include "astaroth_grid.h"
-#include "astaroth_node.h"
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+struct node_s {
+};

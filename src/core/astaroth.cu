@@ -671,3 +671,5 @@ acLoadDeviceConstant(const AcRealParam param, const AcReal value)
  * Revised interface
  * =============================================================================
  */
+=======
+>>>>>>> Stashed changes

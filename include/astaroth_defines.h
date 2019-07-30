@@ -104,11 +104,7 @@ typedef enum {
     NUM_REDUCTION_TYPES
 } ReductionType;
 
-typedef enum {
-    STREAM_DEFAULT,
-    NUM_STREAM_TYPES, //
-    STREAM_ALL
-} StreamType;
+typedef enum { STREAM_DEFAULT, NUM_STREAM_TYPES } Stream;
 
 #define AC_GEN_ID(X) X
 typedef enum {
