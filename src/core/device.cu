@@ -43,7 +43,9 @@ __constant__ AcMeshInfo d_mesh_info;
 __constant__ int3 d_multigpu_offset;
 __constant__ Grid globalGrid;
 #define DCONST_INT(X) (d_mesh_info.int_params[X])
+#define DCONST_INT3(X) (d_mesh_info.int3_params[X])
 #define DCONST_REAL(X) (d_mesh_info.real_params[X])
+#define DCONST_REAL3(X) (d_mesh_info.real3_params[X])
 #define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
 #include "kernels/kernels.cuh"
