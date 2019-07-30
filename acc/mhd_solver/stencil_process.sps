@@ -61,9 +61,9 @@ continuity(in Vector uu, in Scalar lnrho) {
 }
 
 #if LSINK 
-
+//first attempt to do a self-containing LSINK module
 Vector
-gravity() {
+sink_gravity() {
     vector force_gravity;
     const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                                      (globalVertexIdx.y - ny_min) * dsy,
@@ -75,7 +75,7 @@ gravity() {
     const Scalar distance = length(grid_pos - sink_pos);
     force_gravity = (6.67e-8 * sink_mass) / (distance * distance);
     return force_gravity;
-}//first attempt to do a self-containing LSINK module
+}
     
 #if LENTROPY
 Vector
@@ -98,6 +98,9 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
                                                         + Scalar(2.) * mul(S, gradient(lnrho))
                                                         )
                                                         + zeta * gradient_of_divergence(uu);
+    #if LSINK
+    mom = mom + sink_gravity();
+    #endif
     return mom;
 }
 #elif LTEMPERATURE
@@ -116,7 +119,7 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar tt) {
       Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
 
   #if LSINK
-  mom = mom - (Vector){force_gravity};
+  mom = mom + sink_gravity();
   #endif
 
   return mom;
@@ -135,10 +138,10 @@ momentum(in Vector uu, in Scalar lnrho) {
     nu_visc *
     (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
       Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
-
-  #if LSINK
-  mom = mom - (Vector){force_gravity};
-  #endif
+    
+     #if LSINK
+     mom = mom + sink_gravity();
+     #endif
 
   return mom;
 }
