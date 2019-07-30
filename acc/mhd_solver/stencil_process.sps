@@ -72,7 +72,7 @@ gravity() {
     const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
                               DCONST_REAL(AC_sink_pos_y),
                               DCONST_REAL(AC_sink_pos_z)}; 
-    const Scalar distance = length_vec(grid_pos - sink_pos);
+    const Scalar distance = length(grid_pos - sink_pos);
     force_gravity = (6.67e-8 * sink_mass) / (distance * distance);
     return force_gravity;
 }//first attempt to do a self-containing LSINK module
