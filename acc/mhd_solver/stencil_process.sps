@@ -65,14 +65,14 @@ continuity(in Vector uu, in Scalar lnrho) {
 Vector
 gravity() {
     vector force_gravity;
-    const int3 grid_pos = (int3){threadIdx.x + blockIdx.x * blockDim.x + start.x,           
-                                 threadIdx.y + blockIdx.y * blockDim.y + start.y,           
-                                 threadIdx.z + blockIdx.z * blockDim.z + start.z};
-    const sink_mass = DCONST(AC_M_sink);
-    const sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
+    const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                                     (globalVertexIdx.y - ny_min) * dsy,
+                                     (globalVertexIdx.z - nz_min) * dsz};
+    const Scalar sink_mass = DCONST(AC_M_sink);
+    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
                               DCONST_REAL(AC_sink_pos_y),
                               DCONST_REAL(AC_sink_pos_z)}; 
-    const distance = dlength_vec(grid_pos - sink_pos);
+    const Scalar distance = length_vec(grid_pos - sink_pos);
     force_gravity = (6.67e-8 * sink_mass) / (distance * distance);
     return force_gravity;
 }//first attempt to do a self-containing LSINK module
@@ -115,8 +115,8 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar tt) {
     (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
       Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
 
-  #if LGRAVITY
-  mom = mom - (Vector){0, 0, -10.0};
+  #if LSINK
+  mom = mom - (Vector){force_gravity};
   #endif
 
   return mom;
@@ -136,8 +136,8 @@ momentum(in Vector uu, in Scalar lnrho) {
     (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
       Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
 
-  #if LGRAVITY
-  mom = mom - (Vector){0, 0, -10.0};
+  #if LSINK
+  mom = mom - (Vector){force_gravity};
   #endif
 
   return mom;
@@ -181,8 +181,6 @@ heat_conduction( in Scalar ss, in Scalar lnrho) {
     (gamma - AcReal(1.)) * laplace(lnrho);
   const Vector second_term = gamma * inv_cp_sound * gradient(ss) +
     (gamma - AcReal(1.)) * gradient(lnrho);
-  const Vector third_term = gamma * (inv_cp_sound * gradient(ss) +
-    gradient(lnrho)) + grad_ln_chi;
 
   const Scalar chi = AC_THERMAL_CONDUCTIVITY / (exp(value(lnrho)) * cp_sound);
   return cp_sound * chi * (first_term + dot(second_term, third_term));
