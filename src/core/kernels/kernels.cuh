@@ -74,18 +74,6 @@ kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
     vtxbuf[dst_idx]   = vtxbuf[src_idx];
 }
 
-void
-periodic_boundconds(const cudaStream_t stream, const int3& start, const int3& end, AcReal* vtxbuf)
-{
-    const dim3 tpb(8, 2, 8);
-    const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),
-                   (unsigned int)ceil((end.y - start.y) / (float)tpb.y),
-                   (unsigned int)ceil((end.z - start.z) / (float)tpb.z));
-
-    kernel_periodic_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf);
-    ERRCHK_CUDA_KERNEL();
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include <assert.h>
 

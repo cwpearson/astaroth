@@ -88,7 +88,7 @@ AcResult acDeviceStoreMesh(const Device device, const Stream stream, AcMesh* hos
 AcResult acDeviceTransferVertexBufferWithOffset(const Device src_device, const Stream stream,
                                                 const VertexBufferHandle vtxbuf_handle,
                                                 const int3 src, const int3 dst,
-                                                const int num_vertices, Device* dst_device);
+                                                const int num_vertices, Device dst_device);
 
 /** */
 AcResult acDeviceTransferMeshWithOffset(const Device src_device, const Stream stream,
@@ -106,15 +106,21 @@ AcResult acDeviceTransferMesh(const Device src_device, const Stream stream, Devi
 AcResult acDeviceIntegrateSubstep(const Device device, const Stream stream, const int step_number,
                                   const int3 start, const int3 end, const AcReal dt);
 /** */
-AcResult acDevicePeriodicBoundcondStep(const Device device, const Stream stream, const int3 start,
+AcResult acDevicePeriodicBoundcondStep(const Device device, const Stream stream,
+                                       const VertexBufferHandle vtxbuf_handle, const int3 start,
                                        const int3 end);
+
+/** */
+AcResult acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 start,
+                                    const int3 end);
+
 /** */
 AcResult acDeviceReduceScal(const Device device, const Stream stream, const ReductionType rtype,
                             const VertexBufferHandle vtxbuf_handle, AcReal* result);
 /** */
-AcResult acDeviceReduceVec(const Device device, const Stream stream, const ReductionType rtype,
-                           const VertexBufferHandle vec0, const VertexBufferHandle vec1,
-                           const VertexBufferHandle vec2, AcReal* result);
+AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const ReductionType rtype,
+                           const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                           const VertexBufferHandle vtxbuf2, AcReal* result);
 
 #ifdef __cplusplus
 } // extern "C"
