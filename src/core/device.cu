@@ -73,10 +73,9 @@ struct device_s {
 #endif
 };
 
-static __global__ void
-dummy_kernel(void)
-{
-}
+// clang-format off
+static __global__ void dummy_kernel(void) {}
+// clang-format on
 
 AcResult
 acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_handle)
