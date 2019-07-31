@@ -24,7 +24,7 @@
  * Detailed info.
  *
  */
-#include "astaroth_device.cuh"
+#include "astaroth_device.h"
 
 #include "errchk.h"
 
@@ -41,7 +41,6 @@ typedef struct {
 
 __constant__ AcMeshInfo d_mesh_info;
 __constant__ int3 d_multigpu_offset;
-__constant__ Grid globalGrid;
 #define DCONST_INT(X) (d_mesh_info.int_params[X])
 #define DCONST_INT3(X) (d_mesh_info.int3_params[X])
 #define DCONST_REAL(X) (d_mesh_info.real_params[X])
@@ -50,7 +49,7 @@ __constant__ Grid globalGrid;
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
 #include "kernels/kernels.cuh"
 
-static dim3 rk3_tpb = (dim3){32, 1, 4};
+static dim3 rk3_tpb(32, 1, 4);
 
 #if PACKED_DATA_TRANSFERS // Defined in device.cuh
 // #include "kernels/pack_unpack.cuh"
@@ -136,7 +135,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
 
     // Autoptimize
     if (id == 0) {
-        autoOptimize(device);
+        acDeviceAutoOptimize(device);
     }
 
     return AC_SUCCESS;
@@ -346,34 +345,29 @@ acDeviceLoadConstant(const Device device, const Stream stream, const AcRealParam
     return AC_SUCCESS;
 }
 
-static AcResult
-load_with_offset(const Device device, const Stream stream, const AcReal* src, const size_t bytes,
-                 AcReal* dst)
-{
-    cudaSetDevice(device->id);
-    ERRCHK_CUDA(                                                                          //
-        cudaMemcpyAsync(dst, src, bytes, cudaMemcpyHostToDevice, device->streams[stream]) //
-    );
-    return AC_SUCCESS;
-}
-
 AcResult
-acDeviceLoadVertexBufferWithOffset(const Device device, const Stream stream, const AcMeshhost_mesh,
-                                   const VertexBufferHandle vtxbuf_handle, const int3src,
-                                   const int3dst, const int num_vertices)
+acDeviceLoadVertexBufferWithOffset(const Device device, const Stream stream, const AcMesh host_mesh,
+                                   const VertexBufferHandle vtxbuf_handle, const int3 src,
+                                   const int3 dst, const int num_vertices)
 {
     cudaSetDevice(device->id);
     const size_t src_idx = acVertexBufferIdx(src.x, src.y, src.z, host_mesh.info);
     const size_t dst_idx = acVertexBufferIdx(dst.x, dst.y, dst.z, device->local_config);
-    load_with_offset(device, stream, &host_mesh.vertex_buffer[vtxbuf_handle][src_idx],
-                     num_vertices * sizeof(AcReal), &device->vba.in[vtxbuf_handle][dst_idx]);
+
+    const AcReal* src_ptr = &host_mesh.vertex_buffer[vtxbuf_handle][src_idx];
+    AcReal* dst_ptr       = &device->vba.in[vtxbuf_handle][dst_idx];
+    const size_t bytes    = num_vertices * sizeof(src_ptr[0]);
+
+    ERRCHK_CUDA(                                                                                  //
+        cudaMemcpyAsync(dst_ptr, src_ptr, bytes, cudaMemcpyHostToDevice, device->streams[stream]) //
+    );
 
     return AC_SUCCESS;
 }
 
 AcResult
-acDeviceLoadMeshWithOffset(const Device device, const Stream stream, const AcMeshhost_mesh,
-                           const int3src, const int3dst, const int num_vertices)
+acDeviceLoadMeshWithOffset(const Device device, const Stream stream, const AcMesh host_mesh,
+                           const int3 src, const int3 dst, const int num_vertices)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acDeviceLoadVertexBufferWithOffset(device, stream, host_mesh, (VertexBufferHandle)i, src,
@@ -386,10 +380,11 @@ AcResult
 acDeviceLoadVertexBuffer(const Device device, const Stream stream, const AcMesh host_mesh,
                          const VertexBufferHandle vtxbuf_handle)
 {
-    int3 src                  = (int3){0, 0, 0};
-    int3 dst                  = src;
+    const int3 src            = (int3){0, 0, 0};
+    const int3 dst            = src;
     const size_t num_vertices = acVertexBufferSize(device->local_config);
-    acLoadVertexBufferWithOffset(device, stream, host_mesh, vtxbuf_handle, src, dst, num_vertices);
+    acDeviceLoadVertexBufferWithOffset(device, stream, host_mesh, vtxbuf_handle, src, dst,
+                                       num_vertices);
 
     return AC_SUCCESS;
 }
@@ -404,17 +399,6 @@ acDeviceLoadMesh(const Device device, const Stream stream, const AcMesh host_mes
     return AC_SUCCESS;
 }
 
-static AcResult
-store_with_offset(const Device device, const Stream stream, const AcReal* src, const size_t bytes,
-                  AcReal* dst)
-{
-    cudaSetDevice(device->id);
-    ERRCHK_CUDA(                                                                          //
-        cudaMemcpyAsync(dst, src, bytes, cudaMemcpyDeviceToHost, device->streams[stream]) //
-    );
-    return AC_SUCCESS;
-}
-
 AcResult
 acDeviceStoreVertexBufferWithOffset(const Device device, const Stream stream,
                                     const VertexBufferHandle vtxbuf_handle, const int3 src,
@@ -423,9 +407,14 @@ acDeviceStoreVertexBufferWithOffset(const Device device, const Stream stream,
     cudaSetDevice(device->id);
     const size_t src_idx = acVertexBufferIdx(src.x, src.y, src.z, device->local_config);
     const size_t dst_idx = acVertexBufferIdx(dst.x, dst.y, dst.z, host_mesh->info);
-    store_with_offset(device, stream, &device->vba.in[vtxbuf_handle][src_idx],
-                      num_vertices * sizeof(AcReal),
-                      &host_mesh->vertex_buffer[vtxbuf_handle][dst_idx]);
+
+    const AcReal* src_ptr = &device->vba.in[vtxbuf_handle][dst_idx];
+    AcReal* dst_ptr       = &host_mesh->vertex_buffer[vtxbuf_handle][src_idx];
+    const size_t bytes    = num_vertices * sizeof(src_ptr[0]);
+
+    ERRCHK_CUDA(                                                                                  //
+        cudaMemcpyAsync(dst_ptr, src_ptr, bytes, cudaMemcpyDeviceToHost, device->streams[stream]) //
+    );
 
     return AC_SUCCESS;
 }
@@ -468,28 +457,28 @@ acDeviceStoreMesh(const Device device, const Stream stream, AcMesh* host_mesh)
 
 AcResult
 acDeviceTransferVertexBufferWithOffset(const Device src_device, const Stream stream,
-                                       const VertexBufferHandle vtxbuf_handle, const int3src,
-                                       const int3dst, const int num_vertices, Device dst_device)
+                                       const VertexBufferHandle vtxbuf_handle, const int3 src,
+                                       const int3 dst, const int num_vertices, Device dst_device)
 {
     cudaSetDevice(src_device->id);
     const size_t src_idx = acVertexBufferIdx(src.x, src.y, src.z, src_device->local_config);
     const size_t dst_idx = acVertexBufferIdx(dst.x, dst.y, dst.z, dst_device->local_config);
 
-    ERRCHK_CUDA( //
-        cudaMemcpyPeerAsync(&dst_device->vba.in[vtxbuf_handle][dst_idx], dst_device->id,
-                            &src_device->vba.in[vtxbuf_handle][src_idx], src_device->id,
-                            sizeof(src_device->vba.in[vtxbuf_handle][0]) * num_vertices,
-                            src_device->streams[stream]) //
-    );
+    const AcReal* src_ptr = &src_device->vba.in[vtxbuf_handle][src_idx];
+    AcReal* dst_ptr       = &dst_device->vba.in[vtxbuf_handle][dst_idx];
+    const size_t bytes    = num_vertices * sizeof(src_ptr[0]);
+
+    ERRCHK_CUDA(cudaMemcpyPeerAsync(dst_ptr, dst_device->id, src_ptr, src_device->id, bytes,
+                                    src_device->streams[stream]));
     return AC_SUCCESS;
 }
 
 AcResult
-acDeviceTransferMeshWithOffset(const Device src_device, const Stream stream, const int3src,
-                               const int3dst, const int num_vertices, Device dst_device)
+acDeviceTransferMeshWithOffset(const Device src_device, const Stream stream, const int3 src,
+                               const int3 dst, const int num_vertices, Device dst_device)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
+        acDeviceTransferVertexBufferWithOffset(src_device, stream, (VertexBufferHandle)i, src, dst,
                                                num_vertices, dst_device);
     }
     return AC_SUCCESS;
@@ -501,7 +490,7 @@ acDeviceTransferVertexBuffer(const Device src_device, const Stream stream,
 {
     int3 src                  = (int3){0, 0, 0};
     int3 dst                  = src;
-    const size_t num_vertices = acVertexBufferSize(device->local_config);
+    const size_t num_vertices = acVertexBufferSize(src_device->local_config);
 
     acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
                                            num_vertices, dst_device);
@@ -512,9 +501,9 @@ AcResult
 acDeviceTransferMesh(const Device src_device, const Stream stream, Device* dst_device)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        acDeviceTransferVertexBuffer(src_device, stream, vtxbuf_handle, (VertexBufferHandle)i, src,
-                                     dst, num_vertices, dst_device);
+        acDeviceTransferVertexBuffer(src_device, stream, (VertexBufferHandle)i, dst_device);
     }
+    return AC_SUCCESS;
 }
 
 AcResult
@@ -522,7 +511,6 @@ acDeviceIntegrateSubstep(const Device device, const Stream stream, const int ste
                          const int3 start, const int3 end, const AcReal dt)
 {
     cudaSetDevice(device->id);
-    const cudaStream_t stream = device->streams[stream];
 
     const dim3 tpb = rk3_tpb;
 
@@ -532,11 +520,11 @@ acDeviceIntegrateSubstep(const Device device, const Stream stream, const int ste
                    (unsigned int)ceil(n.z / AcReal(tpb.z)));
 
     if (step_number == 0)
-        solve<0><<<bpg, tpb, 0, stream>>>(start, end, device->vba, dt);
+        solve<0><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
     else if (step_number == 1)
-        solve<1><<<bpg, tpb, 0, stream>>>(start, end, device->vba, dt);
+        solve<1><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
     else
-        solve<2><<<bpg, tpb, 0, stream>>>(start, end, device->vba, dt);
+        solve<2><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
 
     ERRCHK_CUDA_KERNEL();
 
@@ -544,12 +532,12 @@ acDeviceIntegrateSubstep(const Device device, const Stream stream, const int ste
 }
 
 AcResult
-acDevicePeriodicBoundcondStep(const Device device, const Stream stream,
+acDevicePeriodicBoundcondStep(const Device device, const Stream stream_type,
                               const VertexBufferHandle vtxbuf_handle, const int3 start,
                               const int3 end)
 {
     cudaSetDevice(device->id);
-    const cudaStream_t stream = device->streams[stream];
+    const cudaStream_t stream = device->streams[stream_type];
 
     const dim3 tpb(8, 2, 8);
     const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),
