@@ -81,3 +81,88 @@ Make is possible for the particle to accrete momentum in addition to mass, and t
 Create sink particles dynamically and allow the presence of multiple sinks. 
 
 
+Suggestion writen by JP: 
+
+```
+add to acc/mhd_solver/stencil_defines.h:
+    // Scalar mass
+    #define AC_FOR_USER_REAL_PARAM_TYPES(FUNC) \
+                ...
+                ...
+                FUNC(AC_sink_particle_mass),
+
+    // Vector position
+    // NOTE: This makes an AcReal3 constant parameter
+    // This is a completely new type that has not yet been
+    // tested. Accessible from the DSL with
+    // DCONST_REAL3(AC_sink_particle_pos)
+    #define AC_FOR_USER_REAL3_PARAM_TYPES(FUNC) \
+                ...
+                ...
+                FUNC(AC_sink_particle_pos),
+
+    // Vertex buffer for accretion
+    #define AC_FOR_VTXBUF_HANDLES(FUNC) \
+                ...
+                FUNC(VTXBUF_ACCRETION),
+
+
+acc/mhd_solver/stencil_process.sps:
+
+    Scalar
+    your_accretion_function(int3 globalVertexIdx)
+    {
+        Scalar mass = DCONST_REAL(AC_sink_particle_mass);
+        Vector pos0 = DCONST_REAL3(AC_sink_particle_pos);
+        Vector pos1 = (Vector){ (globalVertexIdx.x - nx_min) * dsx), ...};
+        
+        return *accretion from the current cell at globalVertexIdx*
+    }
+
+    // This should have a global scope
+    out Scalar out_accretion = VTXBUF_ACCRETION;
+
+    Kernel void
+    solve(Scalar dt) {
+
+        ...
+        ...
+
+        out_accretion = your_accretion_function(globalVertexIdx);            
+    }
+
+
+src/standalone/model/host_accretion.cc: <- new file
+    #include "astaroth.h"
+
+    void
+    updateAccretion(AcMeshInfo* info)
+    {
+        AcReal previous_mass = info->real_params[AC_sink_particle_mass];
+        AcReal accreted_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
+        // Note: RTYPE_SUM does not yet exist (but is easy to add)
+       
+        AcReal mass = previous_mass + accreted_mass;
+        info->real_params[AC_sink_particle_mass] = mass; // Save for the next iteration
+        acLoadDeviceConstant(AC_sink_particle_mass, mass); // Load to the GPUs
+    }
+
+
+src/standalone/simulation.cc:
+    
+    #include "model/host_accretion.h"
+    
+    int
+    run_simulation(void)
+    {
+        ...
+
+        while (simulation_running) {
+            ...
+            ...
+
+            updateAccretion(&mesh_info);
+        }
+    }
+```
+
