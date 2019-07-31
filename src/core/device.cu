@@ -368,6 +368,7 @@ AcResult
 acDeviceLoadMeshWithOffset(const Device device, const Stream stream, const AcMesh host_mesh,
                            const int3 src, const int3 dst, const int num_vertices)
 {
+    WARNING("This function is deprecated");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acDeviceLoadVertexBufferWithOffset(device, stream, host_mesh, (VertexBufferHandle)i, src,
                                            dst, num_vertices);
@@ -391,6 +392,7 @@ acDeviceLoadVertexBuffer(const Device device, const Stream stream, const AcMesh 
 AcResult
 acDeviceLoadMesh(const Device device, const Stream stream, const AcMesh host_mesh)
 {
+    WARNING("This function is deprecated");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acDeviceLoadVertexBuffer(device, stream, host_mesh, (VertexBufferHandle)i);
     }
@@ -422,6 +424,7 @@ AcResult
 acDeviceStoreMeshWithOffset(const Device device, const Stream stream, const int3 src,
                             const int3 dst, const int num_vertices, AcMesh* host_mesh)
 {
+    WARNING("This function is deprecated");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acDeviceStoreVertexBufferWithOffset(device, stream, (VertexBufferHandle)i, src, dst,
                                             num_vertices, host_mesh);
@@ -447,6 +450,7 @@ acDeviceStoreVertexBuffer(const Device device, const Stream stream,
 AcResult
 acDeviceStoreMesh(const Device device, const Stream stream, AcMesh* host_mesh)
 {
+    WARNING("This function is deprecated");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acDeviceStoreVertexBuffer(device, stream, (VertexBufferHandle)i, host_mesh);
     }
@@ -476,6 +480,7 @@ AcResult
 acDeviceTransferMeshWithOffset(const Device src_device, const Stream stream, const int3 src,
                                const int3 dst, const int num_vertices, Device dst_device)
 {
+    WARNING("This function is deprecated");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acDeviceTransferVertexBufferWithOffset(src_device, stream, (VertexBufferHandle)i, src, dst,
                                                num_vertices, dst_device);
@@ -499,6 +504,7 @@ acDeviceTransferVertexBuffer(const Device src_device, const Stream stream,
 AcResult
 acDeviceTransferMesh(const Device src_device, const Stream stream, Device* dst_device)
 {
+    WARNING("This function is deprecated");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acDeviceTransferVertexBuffer(src_device, stream, (VertexBufferHandle)i, dst_device);
     }

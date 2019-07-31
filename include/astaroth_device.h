@@ -55,7 +55,7 @@ AcResult acDeviceLoadVertexBufferWithOffset(const Device device, const Stream st
                                             const VertexBufferHandle vtxbuf_handle, const int3 src,
                                             const int3 dst, const int num_vertices);
 
-/** */
+/** Deprecated */
 AcResult acDeviceLoadMeshWithOffset(const Device device, const Stream stream,
                                     const AcMesh host_mesh, const int3 src, const int3 dst,
                                     const int num_vertices);
@@ -64,7 +64,7 @@ AcResult acDeviceLoadMeshWithOffset(const Device device, const Stream stream,
 AcResult acDeviceLoadVertexBuffer(const Device device, const Stream stream, const AcMesh host_mesh,
                                   const VertexBufferHandle vtxbuf_handle);
 
-/** */
+/** Deprecated */
 AcResult acDeviceLoadMesh(const Device device, const Stream stream, const AcMesh host_mesh);
 
 /** */
@@ -73,7 +73,7 @@ AcResult acDeviceStoreVertexBufferWithOffset(const Device device, const Stream s
                                              const int3 dst, const int num_vertices,
                                              AcMesh* host_mesh);
 
-/** */
+/** Deprecated */
 AcResult acDeviceStoreMeshWithOffset(const Device device, const Stream stream, const int3 src,
                                      const int3 dst, const int num_vertices, AcMesh* host_mesh);
 
@@ -81,7 +81,7 @@ AcResult acDeviceStoreMeshWithOffset(const Device device, const Stream stream, c
 AcResult acDeviceStoreVertexBuffer(const Device device, const Stream stream,
                                    const VertexBufferHandle vtxbuf_handle, AcMesh* host_mesh);
 
-/** */
+/** Deprecated */
 AcResult acDeviceStoreMesh(const Device device, const Stream stream, AcMesh* host_mesh);
 
 /** */
@@ -90,7 +90,7 @@ AcResult acDeviceTransferVertexBufferWithOffset(const Device src_device, const S
                                                 const int3 src, const int3 dst,
                                                 const int num_vertices, Device dst_device);
 
-/** */
+/** Deprecated */
 AcResult acDeviceTransferMeshWithOffset(const Device src_device, const Stream stream,
                                         const int3 src, const int3 dst, const int num_vertices,
                                         Device* dst_device);
@@ -99,7 +99,7 @@ AcResult acDeviceTransferMeshWithOffset(const Device src_device, const Stream st
 AcResult acDeviceTransferVertexBuffer(const Device src_device, const Stream stream,
                                       const VertexBufferHandle vtxbuf_handle, Device* dst_device);
 
-/** */
+/** Deprecated */
 AcResult acDeviceTransferMesh(const Device src_device, const Stream stream, Device* dst_device);
 
 /** */

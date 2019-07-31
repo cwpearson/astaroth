@@ -24,26 +24,36 @@ extern "C" {
 
 #include "astaroth_defines.h"
 
-typedef struct node_s* Node;
+typedef struct node_s* Node; // Opaque pointer to node_s.
+
+typedef struct {
+
+} DeviceConfiguration;
 
 /** */
-AcResult acNodeCreate(const AcMeshInfo node_config, Node* node);
+AcResult acNodeCreate(const int id, const AcMeshInfo node_config, Node* node);
 
 /** */
 AcResult acNodeDestroy(Node node);
 
 /** */
+AcResult acNodePrintInfo(const Node node);
+
+/** */
 AcResult acNodeQueryDeviceConfiguration(const Node node, DeviceConfiguration* config);
+
+/** */
+AcResult acNodeAutoOptimize(const Node node);
 
 /** */
 AcResult acNodeSynchronizeStream(const Node node, const Stream stream);
 
 /** */
 AcResult acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
-                                       const VertexBufferHandle vtxbuf_handle);
+                                       const VertexBufferHandle vtxbuf_handle); // Not in Device
 
 /** */
-AcResult acNodeSynchronizeMesh(const Node node, const Stream stream);
+AcResult acNodeSynchronizeMesh(const Node node, const Stream stream); // Not in Device
 
 /** */
 AcResult acNodeSwapBuffers(const Node node);
@@ -90,7 +100,7 @@ AcResult acNodeStoreMesh(const Node node, const Stream stream, AcMesh* host_mesh
 AcResult acNodeTransferVertexBufferWithOffset(const Node src_node, const Stream stream,
                                               const VertexBufferHandle vtxbuf_handle,
                                               const int3 src, const int3 dst,
-                                              const int num_vertices, Node* dst_node);
+                                              const int num_vertices, Node dst_node);
 
 /** */
 AcResult acNodeTransferMeshWithOffset(const Node src_node, const Stream stream, const int3 src,
@@ -107,15 +117,21 @@ AcResult acNodeTransferMesh(const Node src_node, const Stream stream, Node* dst_
 AcResult acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_number,
                                 const int3 start, const int3 end, const AcReal dt);
 /** */
-AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream, const int3 start,
+AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream,
+                                     const VertexBufferHandle vtxbuf_handle, const int3 start,
                                      const int3 end);
+
+/** */
+AcResult acNodePeriodicBoundconds(const Node node, const Stream stream, const int3 start,
+                                  const int3 end);
+
 /** */
 AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
                           const VertexBufferHandle vtxbuf_handle, AcReal* result);
 /** */
-AcResult acNodeReduceVec(const Node node, const Stream stream, const ReductionType rtype,
-                         const VertexBufferHandle vec0, const VertexBufferHandle vec1,
-                         const VertexBufferHandle vec2, AcReal* result);
+AcResult acNodeReduceVec(const Node node, const Stream stream_type, const ReductionType rtype,
+                         const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                         const VertexBufferHandle vtxbuf2, AcReal* result);
 
 #ifdef __cplusplus
 } // extern "C"
