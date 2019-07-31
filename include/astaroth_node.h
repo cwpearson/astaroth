@@ -104,17 +104,16 @@ AcResult acNodeTransferVertexBuffer(const Node src_node, const Stream stream,
 AcResult acNodeTransferMesh(const Node src_node, const Stream stream, Node* dst_node);
 
 /** */
-AcResult acNodeIntegrateSubstep(const Node node, const StreamType stream_type,
-                                const int step_number, const int3 start, const int3 end,
-                                const AcReal dt);
+AcResult acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_number,
+                                const int3 start, const int3 end, const AcReal dt);
 /** */
-AcResult acNodePeriodicBoundcondStep(const Node node, const StreamType stream_type,
-                                     const int3 start, const int3 end);
+AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream, const int3 start,
+                                     const int3 end);
 /** */
-AcResult acNodeReduceScal(const Node node, const StreamType stream_type, const ReductionType rtype,
+AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
                           const VertexBufferHandle vtxbuf_handle, AcReal* result);
 /** */
-AcResult acNodeReduceVec(const Node node, const StreamType stream_type, const ReductionType rtype,
+AcResult acNodeReduceVec(const Node node, const Stream stream, const ReductionType rtype,
                          const VertexBufferHandle vec0, const VertexBufferHandle vec1,
                          const VertexBufferHandle vec2, AcReal* result);
 

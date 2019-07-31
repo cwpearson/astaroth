@@ -89,16 +89,15 @@ AcResult acGridTransferVertexBuffer(const Stream stream, const VertexBufferHandl
 AcResult acGridTransferMesh(const Stream stream);
 
 /** */
-AcResult acGridIntegrateSubstep(const StreamType stream_type, const int step_number,
-                                const int3 start, const int3 end, const AcReal dt);
+AcResult acGridIntegrateSubstep(const Stream stream, const int step_number, const int3 start,
+                                const int3 end, const AcReal dt);
 /** */
-AcResult acGridPeriodicBoundcondStep(const StreamType stream_type, const int3 start,
-                                     const int3 end);
+AcResult acGridPeriodicBoundcondStep(const Stream stream, const int3 start, const int3 end);
 /** */
-AcResult acGridReduceScal(const StreamType stream_type, const ReductionType rtype,
+AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
                           const VertexBufferHandle vtxbuf_handle, AcReal* result);
 /** */
-AcResult acGridReduceVec(const StreamType stream_type, const ReductionType rtype,
+AcResult acGridReduceVec(const Stream stream, const ReductionType rtype,
                          const VertexBufferHandle vec0, const VertexBufferHandle vec1,
                          const VertexBufferHandle vec2, AcReal* result);
 

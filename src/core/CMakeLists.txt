@@ -3,7 +3,7 @@
 ########################################
 
 ## Find packages
-find_package(CUDA 9 REQUIRED)
+find_package(CUDA REQUIRED)
 
 ## Architecture and optimization flags
 set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37

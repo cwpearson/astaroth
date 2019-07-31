@@ -103,21 +103,18 @@ AcResult acDeviceTransferVertexBuffer(const Device src_device, const Stream stre
 AcResult acDeviceTransferMesh(const Device src_device, const Stream stream, Device* dst_device);
 
 /** */
-AcResult acDeviceIntegrateSubstep(const Device device, const StreamType stream_type,
-                                  const int step_number, const int3 start, const int3 end,
-                                  const AcReal dt);
+AcResult acDeviceIntegrateSubstep(const Device device, const Stream stream, const int step_number,
+                                  const int3 start, const int3 end, const AcReal dt);
 /** */
-AcResult acDevicePeriodicBoundcondStep(const Device device, const StreamType stream_type,
-                                       const int3 start, const int3 end);
+AcResult acDevicePeriodicBoundcondStep(const Device device, const Stream stream, const int3 start,
+                                       const int3 end);
 /** */
-AcResult acDeviceReduceScal(const Device device, const StreamType stream_type,
-                            const ReductionType rtype, const VertexBufferHandle vtxbuf_handle,
-                            AcReal* result);
+AcResult acDeviceReduceScal(const Device device, const Stream stream, const ReductionType rtype,
+                            const VertexBufferHandle vtxbuf_handle, AcReal* result);
 /** */
-AcResult acDeviceReduceVec(const Device device, const StreamType stream_type,
-                           const ReductionType rtype, const VertexBufferHandle vec0,
-                           const VertexBufferHandle vec1, const VertexBufferHandle vec2,
-                           AcReal* result);
+AcResult acDeviceReduceVec(const Device device, const Stream stream, const ReductionType rtype,
+                           const VertexBufferHandle vec0, const VertexBufferHandle vec1,
+                           const VertexBufferHandle vec2, AcReal* result);
 
 #ifdef __cplusplus
 } // extern "C"
