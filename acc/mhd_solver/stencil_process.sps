@@ -21,10 +21,6 @@ uniform int nz_min;
 uniform int nx;
 uniform int ny;
 uniform int nz;
-uniform Scalar AC_sink_pos_x;
-uniform Scalar AC_sink_pos_y;
-uniform Scalar AC_sink_pos_z;
-uniform Scalar AC_M_sink;
 //Added declaration for constants used for sink particle.
 
 Vector
@@ -63,23 +59,28 @@ continuity(in Vector uu, in Scalar lnrho) {
 #if LSINK 
 //first attempt to do a self-containing LSINK module
 Vector
-sink_gravity() {
-    vector force_gravity;
+sink_gravity(int3 globalVertexIdx){
+    Vector force_gravity;
     const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                                      (globalVertexIdx.y - ny_min) * dsy,
                                      (globalVertexIdx.z - nz_min) * dsz};
-    const Scalar sink_mass = DCONST(AC_M_sink);
+    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
     const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
                               DCONST_REAL(AC_sink_pos_y),
                               DCONST_REAL(AC_sink_pos_z)}; 
     const Scalar distance = length(grid_pos - sink_pos);
-    force_gravity = (6.67e-8 * sink_mass) / (distance * distance);
+    const Scalar gravity_magnitude = (Scalar(0.01) * sink_mass) / (distance * distance);
+    const Vector direction = (Vector){(sink_pos.x - grid_pos.x) / distance,
+                                      (sink_pos.y - grid_pos.y) / distance,
+                                      (sink_pos.z - grid_pos.z) / distance};
+    force_gravity = gravity_magnitude * direction;
     return force_gravity;
 }
+#endif
     
 #if LENTROPY
 Vector
-momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
+momentum(int3 globalVertexIdx, in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
     const Matrix S = stress_tensor(uu);
     const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - lnrho0));
     const Vector  j = (Scalar(1.) / mu0) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
@@ -97,15 +98,17 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
                                                         + Scalar(1. / 3.) * gradient_of_divergence(uu)
                                                         + Scalar(2.) * mul(S, gradient(lnrho))
                                                         )
-                                                        + zeta * gradient_of_divergence(uu);
+                                                        + zeta * gradient_of_divergence(uu)
     #if LSINK
-    mom = mom + sink_gravity();
+                                                        + sink_gravity(globalVertexIdx);
+    #else
+                                                        ;
     #endif
     return mom;
 }
 #elif LTEMPERATURE
 Vector
-momentum(in Vector uu, in Scalar lnrho, in Scalar tt) {
+momentum(int3 globalVertexIdx, in Vector uu, in Scalar lnrho, in Scalar tt) {
   Vector mom;
 
   const Matrix S = stress_tensor(uu);
@@ -116,17 +119,19 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar tt) {
     pressure_term +
     nu_visc *
     (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
-      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
+      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu)
 
-  #if LSINK
-  mom = mom + sink_gravity();
-  #endif
+    #if LSINK
+                                                        + sink_gravity(globalVertexIdx);
+    #else
+                                                        ;
+    #endif
 
   return mom;
 }
 #else
 Vector
-momentum(in Vector uu, in Scalar lnrho) {
+momentum(int3 globalVertexIdx, in Vector uu, in Scalar lnrho) {
   Vector mom;
 
   const Matrix S = stress_tensor(uu);
@@ -137,11 +142,13 @@ momentum(in Vector uu, in Scalar lnrho) {
     cs2_sound * gradient(lnrho) +
     nu_visc *
     (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
-      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu);
+      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu)
     
-     #if LSINK
-     mom = mom + sink_gravity();
-     #endif
+    #if LSINK
+                                                        + sink_gravity(globalVertexIdx);
+    #else
+                                                        ;
+    #endif
 
   return mom;
 }
@@ -339,13 +346,13 @@ solve(Scalar dt) {
     #endif
 
     #if LENTROPY
-        out_uu  = rk3(out_uu, uu, momentum(uu, lnrho, ss, aa), dt);
+        out_uu  = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, ss, aa), dt);
         out_ss  = rk3(out_ss, ss, entropy(ss, uu, lnrho, aa), dt);
     #elif LTEMPERATURE
-        out_uu = rk3(out_uu, uu, momentum(uu, lnrho, tt), dt);
+        out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, tt), dt);
         out_tt = rk3(out_tt, tt, heat_transfer(uu, lnrho, tt), dt);
     #else
-        out_uu = rk3(out_uu, uu, momentum(uu, lnrho), dt);
+        out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho), dt);
     #endif
 
     #if LFORCING
