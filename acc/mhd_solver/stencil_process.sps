@@ -69,7 +69,8 @@ sink_gravity(int3 globalVertexIdx){
                               DCONST_REAL(AC_sink_pos_y),
                               DCONST_REAL(AC_sink_pos_z)}; 
     const Scalar distance = length(grid_pos - sink_pos);
-    const Scalar gravity_magnitude = (Scalar(0.01) * sink_mass) / (distance * distance);
+    const Scalar soft = 0.12;
+    const Scalar gravity_magnitude = (Scalar(0.01) * sink_mass) / pow(((distance * distance) +  soft*soft), 1.5);
     const Vector direction = (Vector){(sink_pos.x - grid_pos.x) / distance,
                                       (sink_pos.y - grid_pos.y) / distance,
                                       (sink_pos.z - grid_pos.z) / distance};
