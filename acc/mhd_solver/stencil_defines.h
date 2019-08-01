@@ -78,6 +78,7 @@
 	FUNC(AC_sink_pos_y),\
 	FUNC(AC_sink_pos_z),\
 	FUNC(AC_M_sink),\
+        FUNC(AC_soft),\
         /* Run params */\
         FUNC(AC_cdt), \
         FUNC(AC_cdtv), \
@@ -120,7 +121,7 @@
         FUNC(AC_ff_hel_imz),\
         /* Additional helper params */\
         /* (deduced from other params do not set these directly!) */\
-        FUNC(AC_G_CONST),\
+        FUNC(AC_G_const),\
         FUNC(AC_GM_star),\
         FUNC(AC_sq2GM_star),\
         FUNC(AC_cs2_sound), \

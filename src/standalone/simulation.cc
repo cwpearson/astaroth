@@ -95,6 +95,9 @@ write_mesh_info(const AcMeshInfo* config)
     fprintf(infotxt, "real AC_sink_pos_y %e \n", (double)config->real_params[AC_sink_pos_y]);
     fprintf(infotxt, "real AC_sink_pos_z %e \n", (double)config->real_params[AC_sink_pos_z]);
     fprintf(infotxt, "real AC_M_sink     %e \n", (double)config->real_params[AC_M_sink]);
+    fprintf(infotxt, "real AC_soft     %e \n", (double)config->real_params[AC_soft]);
+ 
+    fprintf(infotxt, "real AC_G_const     %e \n", (double)config->real_params[AC_G_const]);
     
     fclose(infotxt);
 }
