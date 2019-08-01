@@ -137,11 +137,11 @@ update_config(AcMeshInfo* config)
         6.674e-8);                   // g/cm3/s GGS definition //TODO define in a separate module
     AcReal M_sun = AcReal(1.989e33); // g solar mass
 
-    config->real_params[AC_M_sink] = config->real_params[AC_M_sink] * M_sun /
-                                     ((config->real_params[AC_unit_length] *
-                                       config->real_params[AC_unit_length] *
-                                       config->real_params[AC_unit_length]) *
-                                      config->real_params[AC_unit_density]);
+    config->real_params[AC_M_sink_Msun] = config->real_params[AC_M_sink] * M_sun /
+                                          ((config->real_params[AC_unit_length] *
+                                            config->real_params[AC_unit_length] *
+                                            config->real_params[AC_unit_length]) *
+                                            config->real_params[AC_unit_density]);
 
     config->real_params[AC_G_const] = G_CONST_CGS / ((config->real_params[AC_unit_velocity] *
                                                       config->real_params[AC_unit_velocity]) /

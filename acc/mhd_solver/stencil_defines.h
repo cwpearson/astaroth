@@ -78,6 +78,7 @@
 	FUNC(AC_sink_pos_y),\
 	FUNC(AC_sink_pos_z),\
 	FUNC(AC_M_sink),\
+	FUNC(AC_M_sink_Msun),\
         FUNC(AC_soft),\
         /* Run params */\
         FUNC(AC_cdt), \
