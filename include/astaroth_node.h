@@ -48,7 +48,7 @@ AcResult acNodeAutoOptimize(const Node node);
 /** */
 AcResult acNodeSynchronizeStream(const Node node, const Stream stream);
 
-/** */
+/** Deprecated ? */
 AcResult acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
                                        const VertexBufferHandle vtxbuf_handle); // Not in Device
 
@@ -62,7 +62,8 @@ AcResult acNodeSwapBuffers(const Node node);
 AcResult acNodeLoadConstant(const Node node, const Stream stream, const AcRealParam param,
                             const AcReal value);
 
-/** */
+/** Deprecated ? Might be useful though if the user wants to load only one vtxbuf. But in this case
+ * the user should supply a AcReal* instead of vtxbuf_handle */
 AcResult acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream,
                                           const AcMesh host_mesh,
                                           const VertexBufferHandle vtxbuf_handle, const int3 src,
@@ -72,14 +73,14 @@ AcResult acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream,
 AcResult acNodeLoadMeshWithOffset(const Node node, const Stream stream, const AcMesh host_mesh,
                                   const int3 src, const int3 dst, const int num_vertices);
 
-/** */
+/** Deprecated ? */
 AcResult acNodeLoadVertexBuffer(const Node node, const Stream stream, const AcMesh host_mesh,
                                 const VertexBufferHandle vtxbuf_handle);
 
 /** */
 AcResult acNodeLoadMesh(const Node node, const Stream stream, const AcMesh host_mesh);
 
-/** */
+/** Deprecated ? */
 AcResult acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
                                            const VertexBufferHandle vtxbuf_handle, const int3 src,
                                            const int3 dst, const int num_vertices,
@@ -89,7 +90,7 @@ AcResult acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
 AcResult acNodeStoreMeshWithOffset(const Node node, const Stream stream, const int3 src,
                                    const int3 dst, const int num_vertices, AcMesh* host_mesh);
 
-/** */
+/** Deprecated ? */
 AcResult acNodeStoreVertexBuffer(const Node node, const Stream stream,
                                  const VertexBufferHandle vtxbuf_handle, AcMesh* host_mesh);
 
@@ -97,33 +98,18 @@ AcResult acNodeStoreVertexBuffer(const Node node, const Stream stream,
 AcResult acNodeStoreMesh(const Node node, const Stream stream, AcMesh* host_mesh);
 
 /** */
-AcResult acNodeTransferVertexBufferWithOffset(const Node src_node, const Stream stream,
-                                              const VertexBufferHandle vtxbuf_handle,
-                                              const int3 src, const int3 dst,
-                                              const int num_vertices, Node dst_node);
-
-/** */
-AcResult acNodeTransferMeshWithOffset(const Node src_node, const Stream stream, const int3 src,
-                                      const int3 dst, const int num_vertices, Node* dst_node);
-
-/** */
-AcResult acNodeTransferVertexBuffer(const Node src_node, const Stream stream,
-                                    const VertexBufferHandle vtxbuf_handle, Node* dst_node);
-
-/** */
-AcResult acNodeTransferMesh(const Node src_node, const Stream stream, Node* dst_node);
-
-/** */
 AcResult acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_number,
                                 const int3 start, const int3 end, const AcReal dt);
-/** */
-AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream,
-                                     const VertexBufferHandle vtxbuf_handle, const int3 start,
-                                     const int3 end);
 
 /** */
-AcResult acNodePeriodicBoundconds(const Node node, const Stream stream, const int3 start,
-                                  const int3 end);
+AcResult acNodeIntegrate(const Node node, const AcReal dt);
+
+/** */
+AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream,
+                                     const VertexBufferHandle vtxbuf_handle);
+
+/** */
+AcResult acNodePeriodicBoundconds(const Node node, const Stream stream);
 
 /** */
 AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,

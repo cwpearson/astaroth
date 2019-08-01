@@ -370,15 +370,22 @@ AcResult
 acNodeLoadVertexBuffer(const Node node, const Stream stream, const AcMesh host_mesh,
                        const VertexBufferHandle vtxbuf_handle)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    const int3 src            = (int3){0, 0, 0};
+    const int3 dst            = src;
+    const size_t num_vertices = acVertexBufferSize(host_mesh.info);
+
+    acNodeLoadVertexBufferWithOffset(node, stream, host_mesh, vtxbuf_handle, src, dst,
+                                     num_vertices);
+    return AC_SUCCESS;
 }
 
 AcResult
 acNodeLoadMesh(const Node node, const Stream stream, const AcMesh host_mesh)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acNodeLoadVertexBuffer(node, stream, host_mesh, (VertexBufferHandle)i);
+    }
+    return AC_SUCCESS;
 }
 
 AcResult
@@ -386,95 +393,199 @@ acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
                                   const VertexBufferHandle vtxbuf_handle, const int3 src,
                                   const int3 dst, const int num_vertices, AcMesh* host_mesh)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    for (int i = 0; i < num_devices; ++i) {
+        const int3 d0 = (int3){0, 0, i * subgrid.n.z}; // DECOMPOSITION OFFSET HERE
+        const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
+
+        const int3 s0 = src;
+        const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0) + num_vertices);
+
+        const int3 da = max(s0, d0);
+        const int3 db = min(s1, d1);
+        if (db.z >= da.z) {
+            const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
+            // DECOMPOSITION OFFSET HERE
+            const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices};
+            acDeviceStoreVertexBufferWithOffset(devices[i], stream, vtxbuf_handle, da_local, da,
+                                                copy_cells, host_mesh);
+        }
+    }
+    return AC_SUCCESS;
 }
 
 AcResult
 acNodeStoreMeshWithOffset(const Node node, const Stream stream, const int3 src, const int3 dst,
                           const int num_vertices, AcMesh* host_mesh)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acNodeStoreVertexBufferWithOffset(node, stream, (VertexBufferHandle)i, src, dst,
+                                          num_vertices, host_mesh);
+    }
+    return AC_SUCCESS;
 }
 
 AcResult
 acNodeStoreVertexBuffer(const Node node, const Stream stream,
                         const VertexBufferHandle vtxbuf_handle, AcMesh* host_mesh)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    const int3 src            = (int3){0, 0, 0};
+    const int3 dst            = src;
+    const size_t num_vertices = acVertexBufferSize(host_mesh.info);
+
+    acNodeStoreVertexBufferWithOffset(node, stream, vtxbuf_handle, src, dst, num_vertices,
+                                      host_mesh);
+
+    return AC_SUCCESS;
 }
 
 AcResult
 acNodeStoreMesh(const Node node, const Stream stream, AcMesh* host_mesh)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
-}
-
-AcResult
-acNodeTransferVertexBufferWithOffset(const Node src_node, const Stream stream,
-                                     const VertexBufferHandle vtxbuf_handle, const int3 src,
-                                     const int3 dst, const int num_vertices, Node dst_node)
-{
-    WARNING("Not implemented");
-    return AC_FAILURE;
-}
-
-AcResult
-acNodeTransferMeshWithOffset(const Node src_node, const Stream stream, const int3 src,
-                             const int3 dst, const int num_vertices, Node* dst_node)
-{
-    WARNING("Not implemented");
-    return AC_FAILURE;
-}
-
-AcResult
-acNodeTransferVertexBuffer(const Node src_node, const Stream stream,
-                           const VertexBufferHandle vtxbuf_handle, Node* dst_node)
-{
-    WARNING("Not implemented");
-    return AC_FAILURE;
-}
-
-AcResult
-acNodeTransferMesh(const Node src_node, const Stream stream, Node* dst_node)
-{
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acNodeStoreVertexBuffer(node, stream, (VertexBufferHandle)i, host_mesh);
+    }
+    return AC_SUCCESS;
 }
 
 AcResult
 acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_number,
                        const int3 start, const int3 end, const AcReal dt)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    for (int i = 0; i < num_devices; ++i) {
+        // DECOMPOSITION OFFSET HERE
+        const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
+        const int3 d1 = d0 + (int3){subgrid.n.x, subgrid.n.y, subgrid.n.z};
+
+        const int3 da = max(start, d0);
+        const int3 db = min(end, d1);
+
+        if (db.z >= da.z) {
+            const int3 da_local = da - (int3){0, 0, i * subgrid.n.z};
+            const int3 db_local = db - (int3){0, 0, i * subgrid.n.z};
+            acDeviceIntegrateSubstep(devices[i], stream, isubstep, da_local, db_local, dt);
+        }
+    }
+    return AC_SUCCESS;
+}
+
+AcResult
+acNodeIntegrate(const Node node, const AcReal dt)
+{
+    acNodeSynchronizeStream(STREAM_ALL);
+
+    WARNING("Not implementad\n");
+
+    acNodeSynchronizeStream(STREAM_ALL);
+    return AC_SUCCESS;
+}
+
+static AcResult
+local_boundcondstep(const Node node, const StreamType stream, const VertexBufferHandle vtxbuf)
+{
+    if (num_devices == 1) {
+        acDeviceBoundcondStep(devices[0], stream, vtxbuf, (int3){0, 0, 0}, subgrid.m);
+    }
+    else {
+        // Local boundary conditions
+        for (int i = 0; i < num_devices; ++i) {
+            const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
+            const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
+            acDeviceBoundcondStep(devices[i], stream, vtxbuf, d0, d1);
+        }
+    }
+    return AC_SUCCESS;
+}
+
+static AcResult
+global_boundcondstep(const Node node, const StreamType stream, const VertexBufferHandle vtxbuf)
+{
+    if (num_devices > 1) {
+        const size_t num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
+        {
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const int3 src = (int3){0, 0, subgrid.n.z};
+            const int3 dst = (int3){0, 0, 0};
+
+            const Device src_device = devices[num_devices - 1];
+            Device dst_device       = devices[0];
+
+            acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
+                                                   num_vertices, dst_device);
+        }
+        {
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const int3 src = (int3){0, 0, NGHOST};
+            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
+
+            const Device src_device = devices[0];
+            Device dst_device       = devices[num_devices - 1];
+
+            acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
+                                                   num_vertices, dst_device);
+        }
+    }
+    return AC_SUCCESS;
 }
 
 AcResult
 acNodePeriodicBoundcondStep(const Node node, const Stream stream,
-                            const VertexBufferHandle vtxbuf_handle, const int3 start,
-                            const int3 end)
+                            const VertexBufferHandle vtxbuf_handle)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    local_boundcondstep(node, stream, vtxbuf_handle);
+    global_boundcondstep(node, stream, vtxbuf_handle);
+    acNodeSynchronizeVertexBuffer(node, stream, vtxbuf_handle);
+
+    return AC_SUCCESS;
 }
 
 AcResult
-acNodePeriodicBoundconds(const Node node, const Stream stream, const int3 start, const int3 end)
+acNodePeriodicBoundconds(const Node node, const Stream stream)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acNodePeriodicBoundcondStep(node, stream, (VertexBufferHandle)i);
+    }
+    return AC_SUCCESS;
+}
+
+static AcReal
+simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, const int& n)
+{
+    AcReal res = results[0];
+    for (int i = 1; i < n; ++i) {
+        if (rtype == RTYPE_MAX) {
+            res = max(res, results[i]);
+        }
+        else if (rtype == RTYPE_MIN) {
+            res = min(res, results[i]);
+        }
+        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+            res = sum(res, results[i]);
+        }
+        else {
+            ERROR("Invalid rtype");
+        }
+    }
+
+    if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+        const AcReal inv_n = AcReal(1.) / (grid.n.x * grid.n.y * grid.n.z);
+        res                = sqrt(inv_n * res);
+    }
+
+    return res;
 }
 
 AcResult
 acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
                  const VertexBufferHandle vtxbuf_handle, AcReal* result)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    acSynchronizeStream(STREAM_ALL);
+
+    AcReal results[num_devices];
+    for (int i = 0; i < num_devices; ++i) {
+        acDeviceReduceScal(devices[i], STREAM_DEFAULT, rtype, vtxbuffer_handle, &results[i]);
+    }
+
+    return simple_final_reduce_scal(rtype, results, num_devices);
 }
 
 AcResult
@@ -482,6 +593,12 @@ acNodeReduceVec(const Node node, const Stream stream_type, const ReductionType r
                 const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
                 const VertexBufferHandle vtxbuf2, AcReal* result)
 {
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    acSynchronizeStream(STREAM_ALL);
+
+    AcReal results[num_devices];
+    for (int i = 0; i < num_devices; ++i) {
+        acDeviceReduceScal(devices[i], STREAM_DEFAULT, rtype, a, b, c, &results[i]);
+    }
+
+    return simple_final_reduce_scal(rtype, results, num_devices);
 }
