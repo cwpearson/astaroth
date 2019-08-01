@@ -28,6 +28,17 @@ extern "C" {
 #include "astaroth_grid.h"
 #include "astaroth_node.h"
 
+#define acInit(x) acGridInit(x)
+#define acQuit() acGridQuit()
+#define acLoad(x) acGridLoadMesh(STREAM_DEFAULT, x)
+#define acReduceScal(x, y) acGridReduceScal(STREAM_DEFAULT, x, y)
+#define acReduceVec(x, y, z, w) acGridReduceVec(STREAM_DEFAULT, x, y, z, w)
+#define acBoundcondStep() acGridPeriodicBoundcondStep(STREAM_DEFAULT)
+#define acIntegrate(x) acGridIntegrateStep(STREAM_DEFAULT, x)
+#define acStore(x) acGridStoreMesh(STREAM_DEFAULT, x)
+#define acSynchronizeStream(x) acGridSynchronizeStream(x)
+#define acLoadDeviceConstant(x, y) acGridLoadConstant(STREAM_DEFAULT, x, y)
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

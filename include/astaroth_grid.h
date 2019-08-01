@@ -31,7 +31,7 @@ AcResult acGridInit(const AcMeshInfo node_config);
 AcResult acGridQuit(void);
 
 /** */
-AcResult acGridSynchronize(void);
+AcResult acGridSynchronizeStream(const Stream stream);
 
 /** */
 AcResult acGridSwapBuffers(void);
@@ -73,33 +73,26 @@ AcResult acGridStoreVertexBuffer(const Stream stream, const VertexBufferHandle v
 AcResult acGridStoreMesh(const Stream stream, AcMesh* host_mesh);
 
 /** */
-AcResult acGridTransferVertexBufferWithOffset(const Stream stream,
-                                              const VertexBufferHandle vtxbuf_handle,
-                                              const int3 src, const int3 dst,
-                                              const int num_vertices);
-
-/** */
-AcResult acGridTransferMeshWithOffset(const Stream stream, const int3 src, const int3 dst,
-                                      const int num_vertices);
-
-/** */
-AcResult acGridTransferVertexBuffer(const Stream stream, const VertexBufferHandle vtxbuf_handle);
-
-/** */
-AcResult acGridTransferMesh(const Stream stream);
-
-/** */
 AcResult acGridIntegrateSubstep(const Stream stream, const int step_number, const int3 start,
                                 const int3 end, const AcReal dt);
+
 /** */
-AcResult acGridPeriodicBoundcondStep(const Stream stream, const int3 start, const int3 end);
+AcResult acGridIntegrateStep(const Stream stream, const AcReal dt);
+
 /** */
-AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
-                          const VertexBufferHandle vtxbuf_handle, AcReal* result);
+AcResult acGridPeriodicBoundcondStep(const Stream stream);
 /** */
-AcResult acGridReduceVec(const Stream stream, const ReductionType rtype,
+/* acGridReduceScal(const Stream stream, const ReductionType rtype,
+  const VertexBufferHandle vtxbuf_handle, AcReal* result); */
+AcReal acGridReduceScal(const Stream stream, const ReductionType rtype,
+                        const VertexBufferHandle vtxbuf_handle);
+/** */
+/*AcResult acGridReduceVec(const Stream stream, const ReductionType rtype,
                          const VertexBufferHandle vec0, const VertexBufferHandle vec1,
-                         const VertexBufferHandle vec2, AcReal* result);
+                         const VertexBufferHandle vec2, AcReal* result);*/
+AcReal acGridReduceVec(const Stream stream, const ReductionType rtype,
+                       const VertexBufferHandle vec0, const VertexBufferHandle vec1,
+                       const VertexBufferHandle vec2);
 
 #ifdef __cplusplus
 } // extern "C"

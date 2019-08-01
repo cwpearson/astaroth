@@ -22,18 +22,6 @@
 #include "errchk.h"
 #include "math_utils.h" // sum for reductions
 
-#define AC_GEN_STR(X) #X
-const char* intparam_names[]   = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
-                                AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
-const char* int3param_names[]  = {AC_FOR_BUILTIN_INT3_PARAM_TYPES(AC_GEN_STR) //
-                                 AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR)};
-const char* realparam_names[]  = {AC_FOR_BUILTIN_REAL_PARAM_TYPES(AC_GEN_STR) //
-                                 AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR)};
-const char* real3param_names[] = {AC_FOR_BUILTIN_REAL3_PARAM_TYPES(AC_GEN_STR) //
-                                  AC_FOR_USER_REAL3_PARAM_TYPES(AC_GEN_STR)};
-const char* vtxbuf_names[]     = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
-#undef AC_GEN_STR
-
 static const int MAX_NUM_DEVICES = 32;
 static Node node                 = NULL;
 
@@ -482,16 +470,16 @@ acNodeIntegrate(const Node node, const AcReal dt)
 static AcResult
 local_boundcondstep(const Node node, const StreamType stream, const VertexBufferHandle vtxbuf)
 {
-    if (num_devices == 1) {
-        acDeviceBoundcondStep(devices[0], stream, vtxbuf, (int3){0, 0, 0}, subgrid.m);
-    }
-    else {
+    if (num_devices > 1) {
         // Local boundary conditions
         for (int i = 0; i < num_devices; ++i) {
             const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
             acDeviceBoundcondStep(devices[i], stream, vtxbuf, d0, d1);
         }
+    }
+    else {
+        acDeviceBoundcondStep(devices[0], stream, vtxbuf, (int3){0, 0, 0}, subgrid.m);
     }
     return AC_SUCCESS;
 }
@@ -532,8 +520,11 @@ acNodePeriodicBoundcondStep(const Node node, const Stream stream,
                             const VertexBufferHandle vtxbuf_handle)
 {
     local_boundcondstep(node, stream, vtxbuf_handle);
-    global_boundcondstep(node, stream, vtxbuf_handle);
     acNodeSynchronizeVertexBuffer(node, stream, vtxbuf_handle);
+
+    // TODO NOTE GLOBAL BOUNDCONDS NOT DONE HERE IF MORE THAN 1 NODE
+    global_boundcondstep(node, stream, vtxbuf_handle);
+    WARNING("Global boundconds should not be done here with multinode");
 
     return AC_SUCCESS;
 }
