@@ -564,6 +564,7 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
     }
     case INIT_TYPE_GAUSSIAN_RADIAL_EXPL:
         acmesh_clear(mesh);
+        vertex_buffer_set(VTXBUF_LNRHO, mesh->info.real_params[AC_ampl_lnrho], mesh);
         // acmesh_init_to(INIT_TYPE_RANDOM, mesh);
         gaussian_radial_explosion(mesh);
 
