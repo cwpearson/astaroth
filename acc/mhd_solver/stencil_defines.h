@@ -123,6 +123,7 @@
         /* Additional helper params */\
         /* (deduced from other params do not set these directly!) */\
         FUNC(AC_G_const),\
+        FUNC(AC_unit_mass),\
         FUNC(AC_GM_star),\
         FUNC(AC_sq2GM_star),\
         FUNC(AC_cs2_sound), \
