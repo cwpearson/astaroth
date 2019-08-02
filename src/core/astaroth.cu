@@ -16,7 +16,8 @@
     You should have received a copy of the GNU General Public License
     along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "astaroth_defines.h"
+// #include "astaroth_defines.h"
+#include "astaroth.h"
 
 #define AC_GEN_STR(X) #X
 const char* intparam_names[]   = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
@@ -29,3 +30,71 @@ const char* real3param_names[] = {AC_FOR_BUILTIN_REAL3_PARAM_TYPES(AC_GEN_STR) /
                                   AC_FOR_USER_REAL3_PARAM_TYPES(AC_GEN_STR)};
 const char* vtxbuf_names[]     = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 #undef AC_GEN_STR
+
+static const int num_nodes = 1;
+static Node nodes[num_nodes];
+
+AcResult
+acInit(const AcMeshInfo mesh_info)
+{
+    return acNodeCreate(0, mesh_info, &nodes[0]);
+}
+
+AcResult
+acQuit(void)
+{
+    return acNodeDestroy(nodes[0]);
+}
+
+AcResult
+acSynchronizeStream(const Stream stream)
+{
+    return acNodeSynchronizeStream(nodes[0], stream);
+}
+
+AcResult
+acLoadDeviceConstant(const AcRealParam param, const AcReal value)
+{
+    return acNodeLoadConstant(nodes[0], STREAM_DEFAULT, param, value);
+}
+
+AcResult
+acLoad(const AcMesh host_mesh)
+{
+    return acNodeLoadMesh(nodes[0], STREAM_DEFAULT, host_mesh);
+}
+
+AcResult
+acStore(AcMesh* host_mesh)
+{
+    return acNodeStoreMesh(nodes[0], STREAM_DEFAULT, host_mesh);
+}
+
+AcResult
+acIntegrate(const AcReal dt)
+{
+    return acNodeIntegrate(nodes[0], dt);
+}
+
+AcResult
+acBoundcondStep(void)
+{
+    return acNodePeriodicBoundconds(nodes[0], STREAM_DEFAULT);
+}
+
+AcReal
+acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuf_handle)
+{
+    AcReal result;
+    acNodeReduceScal(nodes[0], STREAM_DEFAULT, rtype, vtxbuf_handle, &result);
+    return result;
+}
+
+AcReal
+acReduceVec(const ReductionType rtype, const VertexBufferHandle a, const VertexBufferHandle b,
+            const VertexBufferHandle c)
+{
+    AcReal result;
+    acNodeReduceVec(nodes[0], STREAM_DEFAULT, rtype, a, b, c, &result);
+    return result;
+}

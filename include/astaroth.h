@@ -25,9 +25,10 @@ extern "C" {
 #include "astaroth_defines.h"
 
 #include "astaroth_device.h"
-#include "astaroth_grid.h"
 #include "astaroth_node.h"
 
+/*
+#include "astaroth_grid.h"
 #define acInit(x) acGridInit(x)
 #define acQuit() acGridQuit()
 #define acLoad(x) acGridLoadMesh(STREAM_DEFAULT, x)
@@ -38,6 +39,28 @@ extern "C" {
 #define acStore(x) acGridStoreMesh(STREAM_DEFAULT, x)
 #define acSynchronizeStream(x) acGridSynchronizeStream(x)
 #define acLoadDeviceConstant(x, y) acGridLoadConstant(STREAM_DEFAULT, x, y)
+*/
+
+AcResult acInit(const AcMeshInfo mesh_info);
+
+AcResult acQuit(void);
+
+AcResult acSynchronizeStream(const Stream stream);
+
+AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
+
+AcResult acLoad(const AcMesh host_mesh);
+
+AcResult acStore(AcMesh* host_mesh);
+
+AcResult acIntegrate(const AcReal dt);
+
+AcResult acBoundcondStep(void);
+
+AcReal acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuf_handle);
+
+AcReal acReduceVec(const ReductionType rtype, const VertexBufferHandle a,
+                   const VertexBufferHandle b, const VertexBufferHandle c);
 
 #ifdef __cplusplus
 } // extern "C"

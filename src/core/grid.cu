@@ -30,6 +30,7 @@ acGridInit(const AcMeshInfo node_config)
 {
     acNodeCreate(0, node_config, &nodes[0]);
     ++num_nodes;
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
@@ -39,6 +40,7 @@ acGridQuit(void)
 {
     acNodeDestroy(nodes[0]);
     --num_nodes;
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
@@ -46,7 +48,10 @@ acGridQuit(void)
 AcResult
 acGridSynchronizeStream(const Stream stream)
 {
-    WARNING("Not implemented");
+    for (int i = 0; i < num_nodes; ++i) {
+        acNodeSynchronizeStream(nodes[i], stream);
+    }
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
@@ -54,7 +59,10 @@ acGridSynchronizeStream(const Stream stream)
 AcResult
 acGridSwapBuffers(void)
 {
-    WARNING("Not implemented");
+    for (int i = 0; i < num_nodes; ++i) {
+        acNodeSwapBuffers(nodes[i]);
+    }
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
@@ -62,7 +70,10 @@ acGridSwapBuffers(void)
 AcResult
 acGridLoadConstant(const Stream stream, const AcRealParam param, const AcReal value)
 {
-    WARNING("Not implemented");
+    for (int i = 0; i < num_nodes; ++i) {
+        acNodeLoadConstant(node, stream, param, value);
+    }
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
@@ -72,7 +83,10 @@ acGridLoadVertexBufferWithOffset(const Stream stream, const AcMesh host_mesh,
                                  const VertexBufferHandle vtxbuf_handle, const int3 src,
                                  const int3 dst, const int num_vertices)
 {
-    WARNING("Not implemented");
+    for (int i = 0; i < num_nodes; ++i) {
+        acNodeLoadVertexBufferWithOffset(node, stream, host_mesh, vtxbuf_handle)
+    }
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
@@ -81,7 +95,10 @@ AcResult
 acGridLoadMeshWithOffset(const Stream stream, const AcMesh host_mesh, const int3 src,
                          const int3 dst, const int num_vertices)
 {
-    WARNING("Not implemented");
+    for (int i = 0; i < num_nodes; ++i) {
+        acNodeLoadMeshWithOffset(nodes[i], stream, host_mesh, src, dst, num_vertices);
+    }
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
@@ -90,7 +107,10 @@ AcResult
 acGridLoadVertexBuffer(const Stream stream, const AcMesh host_mesh,
                        const VertexBufferHandle vtxbuf_handle)
 {
-    WARNING("Not implemented");
+    for (int i = 0; i < num_nodes; ++i) {
+        acNodeLoadVertexBuffer(node, stream, host_mesh, vtxbuf_handle);
+    }
+    WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
