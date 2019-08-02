@@ -61,12 +61,12 @@ printInt3(const int3 vec)
 }
 
 static inline void
-print(const Node node)
+print(const AcMeshInfo config)
 {
     for (int i = 0; i < NUM_INT_PARAMS; ++i)
-        printf("[%s]: %d\n", intparam_names[i], node->config.int_params[i]);
+        printf("[%s]: %d\n", intparam_names[i], config.int_params[i]);
     for (int i = 0; i < NUM_REAL_PARAMS; ++i)
-        printf("[%s]: %g\n", realparam_names[i], double(node->config.real_params[i]));
+        printf("[%s]: %g\n", realparam_names[i], double(config.real_params[i]));
 }
 
 static void
@@ -142,7 +142,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
 #if VERBOSE_PRINTING // Defined in astaroth.h
     printf("###############################################################\n");
     printf("Config dimensions recalculated:\n");
-    print(node);
+    print(subgrid_config);
     printf("###############################################################\n");
 #endif
     node->subgrid = createGrid(subgrid_config);
@@ -329,7 +329,8 @@ acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream, const AcM
         const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
         const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
 
-        const int3 s0 = dst;
+        const int3 s0 = src; // dst; // TODO fix
+        (void)dst;           // TODO fix
         const int3 s1 = gridIdx3d(node->grid, gridIdx(node->grid, s0) + num_vertices);
 
         const int3 da = max(s0, d0);
@@ -347,7 +348,7 @@ acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream, const AcM
         if (db.z >= da.z) {
             const int copy_cells = gridIdx(node->subgrid, db) - gridIdx(node->subgrid, da);
             // DECOMPOSITION OFFSET HERE
-            const int3 da_global = src + da - dst;
+            const int3 da_global = da; // src + da - dst; // TODO fix
             const int3 da_local = (int3){da.x, da.y, da.z - i * node->grid.n.z / node->num_devices};
             // printf("\t\tcopy %d cells to local index ", copy_cells); printInt3(da_local);
             // printf("\n");
@@ -402,7 +403,8 @@ acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
         const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
         const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
 
-        const int3 s0 = src;
+        const int3 s0 = src; // TODO fix
+        (void)dst;           // TODO fix
         const int3 s1 = gridIdx3d(node->grid, gridIdx(node->grid, s0) + num_vertices);
 
         const int3 da = max(s0, d0);
@@ -411,7 +413,7 @@ acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
             const int copy_cells = gridIdx(node->subgrid, db) - gridIdx(node->subgrid, da);
             // DECOMPOSITION OFFSET HERE
             const int3 da_local = (int3){da.x, da.y, da.z - i * node->grid.n.z / node->num_devices};
-            const int3 da_global = dst + da - src;
+            const int3 da_global = da; // dst + da - src; // TODO fix
             acDeviceStoreVertexBufferWithOffset(node->devices[i], stream, vtxbuf_handle, da_local,
                                                 da_global, copy_cells, host_mesh);
         }
@@ -483,12 +485,14 @@ acNodeIntegrate(const Node node, const AcReal dt)
 
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
         acNodePeriodicBoundconds(node, STREAM_DEFAULT);
+        acNodeSynchronizeStream(node, STREAM_DEFAULT); // DEBUG
         const int3 start = (int3){NGHOST, NGHOST, NGHOST};
         const int3 end   = start + node->grid.n;
         acNodeIntegrateSubstep(node, STREAM_DEFAULT, isubstep, start, end, dt);
         acNodeSwapBuffers(node);
+        acNodeSynchronizeStream(node, STREAM_DEFAULT); // DEBUG
     }
-
+    acNodePeriodicBoundconds(node, STREAM_DEFAULT); // DEBUG
     acNodeSynchronizeStream(node, STREAM_ALL);
     return AC_SUCCESS;
 }
@@ -555,7 +559,7 @@ acNodePeriodicBoundcondStep(const Node node, const Stream stream,
 
     // TODO NOTE GLOBAL BOUNDCONDS NOT DONE HERE IF MORE THAN 1 NODE
     global_boundcondstep(node, stream, vtxbuf_handle);
-    WARNING("Global boundconds should not be done here with multinode");
+    // WARNING("Global boundconds should not be done here with multinode");
 
     return AC_SUCCESS;
 }
