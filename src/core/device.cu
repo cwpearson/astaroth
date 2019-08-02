@@ -229,7 +229,7 @@ acDevicePrintInfo(const Device device)
 }
 
 AcResult
-autoOptimize(const Device device)
+acDeviceAutoOptimize(const Device device)
 {
     cudaSetDevice(device->id);
 
@@ -502,7 +502,7 @@ acDeviceTransferVertexBuffer(const Device src_device, const Stream stream,
 }
 
 AcResult
-acDeviceTransferMesh(const Device src_device, const Stream stream, Device* dst_device)
+acDeviceTransferMesh(const Device src_device, const Stream stream, Device dst_device)
 {
     WARNING("This function is deprecated");
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {

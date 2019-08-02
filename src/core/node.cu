@@ -23,7 +23,11 @@
 #include "math_utils.h" // sum for reductions
 
 static const int MAX_NUM_DEVICES = 32;
-static Node node                 = NULL;
+
+typedef struct {
+    int3 m;
+    int3 n;
+} Grid;
 
 struct node_s {
     int id;
@@ -33,6 +37,8 @@ struct node_s {
 
     Grid grid;
     Grid subgrid;
+
+    AcMeshInfo config;
 };
 
 static int
@@ -55,12 +61,12 @@ printInt3(const int3 vec)
 }
 
 static inline void
-print(const AcMeshInfo config)
+print(const Node node)
 {
     for (int i = 0; i < NUM_INT_PARAMS; ++i)
-        printf("[%s]: %d\n", intparam_names[i], config.int_params[i]);
+        printf("[%s]: %d\n", intparam_names[i], node->config.int_params[i]);
     for (int i = 0; i < NUM_REAL_PARAMS; ++i)
-        printf("[%s]: %g\n", realparam_names[i], double(config.real_params[i]));
+        printf("[%s]: %g\n", realparam_names[i], double(node->config.real_params[i]));
 }
 
 static void
@@ -86,13 +92,6 @@ update_builtin_params(AcMeshInfo* config)
     config->int_params[AC_mxy]  = config->int_params[AC_mx] * config->int_params[AC_my];
     config->int_params[AC_nxy]  = config->int_params[AC_nx] * config->int_params[AC_ny];
     config->int_params[AC_nxyz] = config->int_params[AC_nxy] * config->int_params[AC_nz];
-
-#if VERBOSE_PRINTING // Defined in astaroth.h
-    printf("###############################################################\n");
-    printf("Config dimensions recalculated:\n");
-    print(*config);
-    printf("###############################################################\n");
-#endif
 }
 
 static Grid
@@ -109,61 +108,69 @@ createGrid(const AcMeshInfo config)
 AcResult
 acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
 {
-    struct node_s* node = (struct device_s*)malloc(sizeof(*node));
+    struct node_s* node = (struct node_s*)malloc(sizeof(*node));
+    node->id            = id;
+    node->config        = node_config;
 
-    // Get num_devices
-    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&num_devices));
-    if (num_devices < 1) {
+    // Get node->num_devices
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&node->num_devices));
+    if (node->num_devices < 1) {
         ERROR("No CUDA devices found!");
         return AC_FAILURE;
     }
-    if (num_devices > MAX_NUM_DEVICES) {
+    if (node->num_devices > MAX_NUM_DEVICES) {
         WARNING("More devices found than MAX_NUM_DEVICES. Using only MAX_NUM_DEVICES");
-        num_devices = MAX_NUM_DEVICES;
+        node->num_devices = MAX_NUM_DEVICES;
     }
     if (!AC_MULTIGPU_ENABLED) {
         WARNING("MULTIGPU_ENABLED was false. Using only one device");
-        num_devices = 1; // Use only one device if multi-GPU is not enabled
+        node->num_devices = 1; // Use only one device if multi-GPU is not enabled
     }
-    // Check that num_devices is divisible with AC_nz. This makes decomposing the
+    // Check that node->num_devices is divisible with AC_nz. This makes decomposing the
     // problem domain to multiple GPUs much easier since we do not have to worry
     // about remainders
-    ERRCHK_ALWAYS(config.int_params[AC_nz] % num_devices == 0);
+    ERRCHK_ALWAYS(node->config.int_params[AC_nz] % node->num_devices == 0);
 
     // Decompose the problem domain
     // The main grid
-    grid = createGrid(config);
+    node->grid = createGrid(node->config);
 
     // Subgrids
-    AcMeshInfo subgrid_config = config;
-    subgrid_config.int_params[AC_nz] /= num_devices;
+    AcMeshInfo subgrid_config = node->config;
+    subgrid_config.int_params[AC_nz] /= node->num_devices;
     update_builtin_params(&subgrid_config);
-    subgrid = createGrid(subgrid_config);
+#if VERBOSE_PRINTING // Defined in astaroth.h
+    printf("###############################################################\n");
+    printf("Config dimensions recalculated:\n");
+    print(node);
+    printf("###############################################################\n");
+#endif
+    node->subgrid = createGrid(subgrid_config);
 
     // Periodic boundary conditions become weird if the system can "fold unto itself".
-    ERRCHK_ALWAYS(subgrid.n.x >= STENCIL_ORDER);
-    ERRCHK_ALWAYS(subgrid.n.y >= STENCIL_ORDER);
-    ERRCHK_ALWAYS(subgrid.n.z >= STENCIL_ORDER);
+    ERRCHK_ALWAYS(node->subgrid.n.x >= STENCIL_ORDER);
+    ERRCHK_ALWAYS(node->subgrid.n.y >= STENCIL_ORDER);
+    ERRCHK_ALWAYS(node->subgrid.n.z >= STENCIL_ORDER);
 
 #if VERBOSE_PRINTING
     // clang-format off
-    printf("Grid m ");   printInt3(grid.m);    printf("\n");
-    printf("Grid n ");   printInt3(grid.n);    printf("\n");
-    printf("Subrid m "); printInt3(subgrid.m); printf("\n");
-    printf("Subrid n "); printInt3(subgrid.n); printf("\n");
+    printf("Grid m ");   printInt3(node->grid.m);    printf("\n");
+    printf("Grid n ");   printInt3(node->grid.n);    printf("\n");
+    printf("Subrid m "); printInt3(node->subgrid.m); printf("\n");
+    printf("Subrid n "); printInt3(node->subgrid.n); printf("\n");
     // clang-format on
 #endif
 
     // Initialize the devices
-    for (int i = 0; i < num_devices; ++i) {
-        createDevice(i, subgrid_config, &devices[i]);
-        printDeviceInfo(devices[i]);
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceCreate(i, subgrid_config, &node->devices[i]);
+        acDevicePrintInfo(node->devices[i]);
     }
 
     // Enable peer access
-    for (int i = 0; i < num_devices; ++i) {
-        const int front = (i + 1) % num_devices;
-        const int back  = (i - 1 + num_devices) % num_devices;
+    for (int i = 0; i < node->num_devices; ++i) {
+        const int front = (i + 1) % node->num_devices;
+        const int back  = (i - 1 + node->num_devices) % node->num_devices;
 
         int can_access_front, can_access_back;
         cudaDeviceCanAccessPeer(&can_access_front, i, front);
@@ -182,7 +189,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
             ERRCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(back, 0));
         }
     }
-    acNodeSynchronizeStream(STREAM_ALL);
+    acNodeSynchronizeStream(node, STREAM_ALL);
 
     *node_handle = node;
     return AC_SUCCESS;
@@ -191,10 +198,10 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
 AcResult
 acNodeDestroy(Node node)
 {
-    acSynchronizeStream(STREAM_ALL);
+    acNodeSynchronizeStream(node, STREAM_ALL);
 
-    for (int i = 0; i < num_devices; ++i) {
-        destroyDevice(devices[i]);
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceDestroy(node->devices[i]);
     }
     free(node);
 
@@ -204,6 +211,7 @@ acNodeDestroy(Node node)
 AcResult
 acNodePrintInfo(const Node node)
 {
+    (void)node;
     WARNING("Not implemented");
     return AC_FAILURE;
 }
@@ -211,6 +219,8 @@ acNodePrintInfo(const Node node)
 AcResult
 acNodeQueryDeviceConfiguration(const Node node, DeviceConfiguration* config)
 {
+    (void)node;
+    (void)config;
     WARNING("Not implemented");
     return AC_FAILURE;
 }
@@ -218,6 +228,7 @@ acNodeQueryDeviceConfiguration(const Node node, DeviceConfiguration* config)
 AcResult
 acNodeAutoOptimize(const Node node)
 {
+    (void)node;
     WARNING("Not implemented");
     return AC_FAILURE;
 }
@@ -225,8 +236,8 @@ acNodeAutoOptimize(const Node node)
 AcResult
 acNodeSynchronizeStream(const Node node, const Stream stream)
 {
-    for (int i = 0; i < num_devices; ++i) {
-        synchronize(devices[i], stream);
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceSynchronizeStream(node->devices[i], stream);
     }
 
     return AC_SUCCESS;
@@ -236,37 +247,39 @@ AcResult
 acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
                               const VertexBufferHandle vtxbuf_handle)
 {
+    acNodeSynchronizeStream(node, stream);
     // Exchanges the halos of subgrids
     // After this step, the data within the main grid ranging from
     // (0, 0, NGHOST) -> grid.m.x, grid.m.y, NGHOST + grid.n.z
     // has been synchronized and transferred to appropriate subgrids
 
-    // We loop only to num_devices - 1 since the front and back plate of the grid is not
+    // We loop only to node->num_devices - 1 since the front and back plate of the grid is not
     // transferred because their contents depend on the boundary conditions.
 
-    // IMPORTANT NOTE: the boundary conditions must be applied before calling this function!
-    // I.e. the halos of subgrids must contain up-to-date data!
+    // IMPORTANT NOTE: the boundary conditions must be applied before
+    // callingacNodeSynchronizeStream(node,  this function! I.e. the halos of subgrids must contain
+    // up-to-date data!
 
-    const size_t num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
+    const size_t num_vertices = node->subgrid.m.x * node->subgrid.m.y * NGHOST;
 
-    for (int i = 0; i < num_devices - 1; ++i) {
+    for (int i = 0; i < node->num_devices - 1; ++i) {
         // ...|ooooxxx|... -> xxx|ooooooo|...
-        const int3 src = (int3){0, 0, subgrid.n.z};
+        const int3 src = (int3){0, 0, node->subgrid.n.z};
         const int3 dst = (int3){0, 0, 0};
 
-        const Device src_device = devices[i];
-        Device dst_device       = devices[i + 1];
+        const Device src_device = node->devices[i];
+        Device dst_device       = node->devices[i + 1];
 
         acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
                                                num_vertices, dst_device);
     }
-    for (int i = 1; i < num_devices; ++i) {
+    for (int i = 1; i < node->num_devices; ++i) {
         // ...|ooooooo|xxx <- ...|xxxoooo|...
         const int3 src = (int3){0, 0, NGHOST};
-        const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
+        const int3 dst = (int3){0, 0, NGHOST + node->subgrid.n.z};
 
-        const Device src_device = devices[i];
-        Device dst_device       = devices[i - 1];
+        const Device src_device = node->devices[i];
+        Device dst_device       = node->devices[i - 1];
 
         acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
                                                num_vertices, dst_device);
@@ -287,8 +300,8 @@ acNodeSynchronizeMesh(const Node node, const Stream stream)
 AcResult
 acNodeSwapBuffers(const Node node)
 {
-    for (int i = 0; i < num_devices; ++i) {
-        acDeviceSwapBuffers(devices[i]);
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceSwapBuffers(node->devices[i]);
     }
     return AC_SUCCESS;
 }
@@ -297,8 +310,9 @@ AcResult
 acNodeLoadConstant(const Node node, const Stream stream, const AcRealParam param,
                    const AcReal value)
 {
-    for (int i = 0; i < num_devices; ++i) {
-        acDeviceLoadConstant(devices[i], stream, param, value);
+    acNodeSynchronizeStream(node, stream);
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceLoadConstant(node->devices[i], stream, param, value);
     }
     return AC_SUCCESS;
 }
@@ -308,14 +322,15 @@ acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream, const AcM
                                  const VertexBufferHandle vtxbuf_handle, const int3 src,
                                  const int3 dst, const int num_vertices)
 {
+    acNodeSynchronizeStream(node, stream);
     // See the beginning of the file for an explanation of the index mapping
     // #pragma omp parallel for
-    for (int i = 0; i < num_devices; ++i) {
-        const int3 d0 = (int3){0, 0, i * subgrid.n.z}; // DECOMPOSITION OFFSET HERE
-        const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
+    for (int i = 0; i < node->num_devices; ++i) {
+        const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
+        const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
 
-        const int3 s0 = src;
-        const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0) + num_vertices);
+        const int3 s0 = dst;
+        const int3 s1 = gridIdx3d(node->grid, gridIdx(node->grid, s0) + num_vertices);
 
         const int3 da = max(s0, d0);
         const int3 db = min(s1, d1);
@@ -330,13 +345,14 @@ acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream, const AcM
         printf("\t-> %s to device %d\n", db.z >= da.z ? "Copy" : "Do not copy", i);
         */
         if (db.z >= da.z) {
-            const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
+            const int copy_cells = gridIdx(node->subgrid, db) - gridIdx(node->subgrid, da);
             // DECOMPOSITION OFFSET HERE
-            const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices};
+            const int3 da_global = src + da - dst;
+            const int3 da_local = (int3){da.x, da.y, da.z - i * node->grid.n.z / node->num_devices};
             // printf("\t\tcopy %d cells to local index ", copy_cells); printInt3(da_local);
             // printf("\n");
-            acDeviceLoadVertexBufferWithOffset(devices[i], stream, host_mesh, vtxbuf_handle, da,
-                                               da_local, copy_cells);
+            acDeviceLoadVertexBufferWithOffset(node->devices[i], stream, host_mesh, vtxbuf_handle,
+                                               da_global, da_local, copy_cells);
         }
         // printf("\n");
     }
@@ -381,21 +397,23 @@ acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
                                   const VertexBufferHandle vtxbuf_handle, const int3 src,
                                   const int3 dst, const int num_vertices, AcMesh* host_mesh)
 {
-    for (int i = 0; i < num_devices; ++i) {
-        const int3 d0 = (int3){0, 0, i * subgrid.n.z}; // DECOMPOSITION OFFSET HERE
-        const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.m.z};
+    acNodeSynchronizeStream(node, stream);
+    for (int i = 0; i < node->num_devices; ++i) {
+        const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
+        const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
 
         const int3 s0 = src;
-        const int3 s1 = gridIdx3d(grid, gridIdx(grid, s0) + num_vertices);
+        const int3 s1 = gridIdx3d(node->grid, gridIdx(node->grid, s0) + num_vertices);
 
         const int3 da = max(s0, d0);
         const int3 db = min(s1, d1);
         if (db.z >= da.z) {
-            const int copy_cells = gridIdx(subgrid, db) - gridIdx(subgrid, da);
+            const int copy_cells = gridIdx(node->subgrid, db) - gridIdx(node->subgrid, da);
             // DECOMPOSITION OFFSET HERE
-            const int3 da_local = (int3){da.x, da.y, da.z - i * grid.n.z / num_devices};
-            acDeviceStoreVertexBufferWithOffset(devices[i], stream, vtxbuf_handle, da_local, da,
-                                                copy_cells, host_mesh);
+            const int3 da_local = (int3){da.x, da.y, da.z - i * node->grid.n.z / node->num_devices};
+            const int3 da_global = dst + da - src;
+            acDeviceStoreVertexBufferWithOffset(node->devices[i], stream, vtxbuf_handle, da_local,
+                                                da_global, copy_cells, host_mesh);
         }
     }
     return AC_SUCCESS;
@@ -418,7 +436,7 @@ acNodeStoreVertexBuffer(const Node node, const Stream stream,
 {
     const int3 src            = (int3){0, 0, 0};
     const int3 dst            = src;
-    const size_t num_vertices = acVertexBufferSize(host_mesh.info);
+    const size_t num_vertices = acVertexBufferSize(host_mesh->info);
 
     acNodeStoreVertexBufferWithOffset(node, stream, vtxbuf_handle, src, dst, num_vertices,
                                       host_mesh);
@@ -436,21 +454,23 @@ acNodeStoreMesh(const Node node, const Stream stream, AcMesh* host_mesh)
 }
 
 AcResult
-acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_number,
-                       const int3 start, const int3 end, const AcReal dt)
+acNodeIntegrateSubstep(const Node node, const Stream stream, const int isubstep, const int3 start,
+                       const int3 end, const AcReal dt)
 {
-    for (int i = 0; i < num_devices; ++i) {
+    acNodeSynchronizeStream(node, stream);
+
+    for (int i = 0; i < node->num_devices; ++i) {
         // DECOMPOSITION OFFSET HERE
-        const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * subgrid.n.z};
-        const int3 d1 = d0 + (int3){subgrid.n.x, subgrid.n.y, subgrid.n.z};
+        const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * node->subgrid.n.z};
+        const int3 d1 = d0 + (int3){node->subgrid.n.x, node->subgrid.n.y, node->subgrid.n.z};
 
         const int3 da = max(start, d0);
         const int3 db = min(end, d1);
 
         if (db.z >= da.z) {
-            const int3 da_local = da - (int3){0, 0, i * subgrid.n.z};
-            const int3 db_local = db - (int3){0, 0, i * subgrid.n.z};
-            acDeviceIntegrateSubstep(devices[i], stream, isubstep, da_local, db_local, dt);
+            const int3 da_local = da - (int3){0, 0, i * node->subgrid.n.z};
+            const int3 db_local = db - (int3){0, 0, i * node->subgrid.n.z};
+            acDeviceIntegrateSubstep(node->devices[i], stream, isubstep, da_local, db_local, dt);
         }
     }
     return AC_SUCCESS;
@@ -459,43 +479,54 @@ acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_numb
 AcResult
 acNodeIntegrate(const Node node, const AcReal dt)
 {
-    acNodeSynchronizeStream(STREAM_ALL);
+    acNodeSynchronizeStream(node, STREAM_ALL);
 
-    WARNING("Not implementad\n");
+    for (int isubstep = 0; isubstep < 3; ++isubstep) {
+        acNodePeriodicBoundconds(node, STREAM_DEFAULT);
+        const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+        const int3 end   = start + node->grid.n;
+        acNodeIntegrateSubstep(node, STREAM_DEFAULT, isubstep, start, end, dt);
+        acNodeSwapBuffers(node);
+    }
 
-    acNodeSynchronizeStream(STREAM_ALL);
+    acNodeSynchronizeStream(node, STREAM_ALL);
     return AC_SUCCESS;
 }
 
 static AcResult
-local_boundcondstep(const Node node, const StreamType stream, const VertexBufferHandle vtxbuf)
+local_boundcondstep(const Node node, const Stream stream, const VertexBufferHandle vtxbuf)
 {
-    if (num_devices > 1) {
+    acNodeSynchronizeStream(node, stream);
+
+    if (node->num_devices > 1) {
         // Local boundary conditions
-        for (int i = 0; i < num_devices; ++i) {
+        for (int i = 0; i < node->num_devices; ++i) {
             const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
-            const int3 d1 = (int3){subgrid.m.x, subgrid.m.y, d0.z + subgrid.n.z};
-            acDeviceBoundcondStep(devices[i], stream, vtxbuf, d0, d1);
+            const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.n.z};
+            acDevicePeriodicBoundcondStep(node->devices[i], stream, vtxbuf, d0, d1);
         }
     }
     else {
-        acDeviceBoundcondStep(devices[0], stream, vtxbuf, (int3){0, 0, 0}, subgrid.m);
+        acDevicePeriodicBoundcondStep(node->devices[0], stream, vtxbuf, (int3){0, 0, 0},
+                                      node->subgrid.m);
     }
     return AC_SUCCESS;
 }
 
 static AcResult
-global_boundcondstep(const Node node, const StreamType stream, const VertexBufferHandle vtxbuf)
+global_boundcondstep(const Node node, const Stream stream, const VertexBufferHandle vtxbuf_handle)
 {
-    if (num_devices > 1) {
-        const size_t num_vertices = subgrid.m.x * subgrid.m.y * NGHOST;
+    acNodeSynchronizeStream(node, stream);
+
+    if (node->num_devices > 1) {
+        const size_t num_vertices = node->subgrid.m.x * node->subgrid.m.y * NGHOST;
         {
             // ...|ooooxxx|... -> xxx|ooooooo|...
-            const int3 src = (int3){0, 0, subgrid.n.z};
+            const int3 src = (int3){0, 0, node->subgrid.n.z};
             const int3 dst = (int3){0, 0, 0};
 
-            const Device src_device = devices[num_devices - 1];
-            Device dst_device       = devices[0];
+            const Device src_device = node->devices[node->num_devices - 1];
+            Device dst_device       = node->devices[0];
 
             acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
                                                    num_vertices, dst_device);
@@ -503,10 +534,10 @@ global_boundcondstep(const Node node, const StreamType stream, const VertexBuffe
         {
             // ...|ooooooo|xxx <- ...|xxxoooo|...
             const int3 src = (int3){0, 0, NGHOST};
-            const int3 dst = (int3){0, 0, NGHOST + subgrid.n.z};
+            const int3 dst = (int3){0, 0, NGHOST + node->subgrid.n.z};
 
-            const Device src_device = devices[0];
-            Device dst_device       = devices[num_devices - 1];
+            const Device src_device = node->devices[0];
+            Device dst_device       = node->devices[node->num_devices - 1];
 
             acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
                                                    num_vertices, dst_device);
@@ -539,7 +570,8 @@ acNodePeriodicBoundconds(const Node node, const Stream stream)
 }
 
 static AcReal
-simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, const int& n)
+simple_final_reduce_scal(const Node node, const ReductionType& rtype, const AcReal* results,
+                         const int& n)
 {
     AcReal res = results[0];
     for (int i = 1; i < n; ++i) {
@@ -549,7 +581,7 @@ simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, cons
         else if (rtype == RTYPE_MIN) {
             res = min(res, results[i]);
         }
-        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP || rtype == RTYPE_SUM) {
             res = sum(res, results[i]);
         }
         else {
@@ -558,10 +590,9 @@ simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, cons
     }
 
     if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
-        const AcReal inv_n = AcReal(1.) / (grid.n.x * grid.n.y * grid.n.z);
+        const AcReal inv_n = AcReal(1.) / (node->grid.n.x * node->grid.n.y * node->grid.n.z);
         res                = sqrt(inv_n * res);
     }
-
     return res;
 }
 
@@ -569,27 +600,29 @@ AcResult
 acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
                  const VertexBufferHandle vtxbuf_handle, AcReal* result)
 {
-    acSynchronizeStream(STREAM_ALL);
+    acNodeSynchronizeStream(node, STREAM_ALL);
 
-    AcReal results[num_devices];
-    for (int i = 0; i < num_devices; ++i) {
-        acDeviceReduceScal(devices[i], STREAM_DEFAULT, rtype, vtxbuffer_handle, &results[i]);
+    AcReal results[node->num_devices];
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceReduceScal(node->devices[i], stream, rtype, vtxbuf_handle, &results[i]);
     }
 
-    return simple_final_reduce_scal(rtype, results, num_devices);
+    *result = simple_final_reduce_scal(node, rtype, results, node->num_devices);
+    return AC_SUCCESS;
 }
 
 AcResult
-acNodeReduceVec(const Node node, const Stream stream_type, const ReductionType rtype,
-                const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
-                const VertexBufferHandle vtxbuf2, AcReal* result)
+acNodeReduceVec(const Node node, const Stream stream, const ReductionType rtype,
+                const VertexBufferHandle a, const VertexBufferHandle b, const VertexBufferHandle c,
+                AcReal* result)
 {
-    acSynchronizeStream(STREAM_ALL);
+    acNodeSynchronizeStream(node, STREAM_ALL);
 
-    AcReal results[num_devices];
-    for (int i = 0; i < num_devices; ++i) {
-        acDeviceReduceScal(devices[i], STREAM_DEFAULT, rtype, a, b, c, &results[i]);
+    AcReal results[node->num_devices];
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceReduceVec(node->devices[i], stream, rtype, a, b, c, &results[i]);
     }
 
-    return simple_final_reduce_scal(rtype, results, num_devices);
+    *result = simple_final_reduce_scal(node, rtype, results, node->num_devices);
+    return AC_SUCCESS;
 }

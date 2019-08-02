@@ -97,10 +97,10 @@ AcResult acDeviceTransferMeshWithOffset(const Device src_device, const Stream st
 
 /** */
 AcResult acDeviceTransferVertexBuffer(const Device src_device, const Stream stream,
-                                      const VertexBufferHandle vtxbuf_handle, Device* dst_device);
+                                      const VertexBufferHandle vtxbuf_handle, Device dst_device);
 
 /** Deprecated */
-AcResult acDeviceTransferMesh(const Device src_device, const Stream stream, Device* dst_device);
+AcResult acDeviceTransferMesh(const Device src_device, const Stream stream, Device dst_device);
 
 /** */
 AcResult acDeviceIntegrateSubstep(const Device device, const Stream stream, const int step_number,
