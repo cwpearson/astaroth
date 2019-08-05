@@ -62,6 +62,8 @@ AcReal acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuf_h
 AcReal acReduceVec(const ReductionType rtype, const VertexBufferHandle a,
                    const VertexBufferHandle b, const VertexBufferHandle c);
 
+AcResult acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

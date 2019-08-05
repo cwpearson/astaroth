@@ -98,3 +98,9 @@ acReduceVec(const ReductionType rtype, const VertexBufferHandle a, const VertexB
     acNodeReduceVec(nodes[0], STREAM_DEFAULT, rtype, a, b, c, &result);
     return result;
 }
+
+AcResult
+acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh)
+{
+    return acNodeStoreMeshWithOffset(nodes[0], STREAM_DEFAULT, dst, dst, num_vertices, host_mesh);
+}
