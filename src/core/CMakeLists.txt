@@ -33,6 +33,6 @@ else ()
 endif ()
 
 ## Create and link the library
-include_directories(.)
 cuda_add_library(astaroth_core STATIC astaroth.cu device.cu node.cu)
+target_include_directories(astaroth_core PRIVATE .)
 target_link_libraries(astaroth_core m)
