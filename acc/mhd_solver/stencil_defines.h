@@ -143,6 +143,8 @@
 #if LENTROPY
 #define AC_FOR_VTXBUF_HANDLES(FUNC) \
     FUNC(VTXBUF_LNRHO), \
+    /*Added vertex buffer for sink. TODO: Invoke smarter.*/\
+    FUNC(VTXBUF_ACCRETION), \
     FUNC(VTXBUF_UUX), \
     FUNC(VTXBUF_UUY), \
     FUNC(VTXBUF_UUZ), \
@@ -153,6 +155,8 @@
 #elif LMAGNETIC
 #define AC_FOR_VTXBUF_HANDLES(FUNC) \
     FUNC(VTXBUF_LNRHO), \
+    /*Added vertex buffer for sink. TODO: Invoke smarter.*/\
+    FUNC(VTXBUF_ACCRETION), \
     FUNC(VTXBUF_UUX), \
     FUNC(VTXBUF_UUY), \
     FUNC(VTXBUF_UUZ), \
@@ -162,6 +166,8 @@
 #elif LHYDRO
 #define AC_FOR_VTXBUF_HANDLES(FUNC) \
     FUNC(VTXBUF_LNRHO), \
+    /*Added vertex buffer for sink. TODO: Invoke smarter.*/\
+    FUNC(VTXBUF_ACCRETION), \
     FUNC(VTXBUF_UUX), \
     FUNC(VTXBUF_UUY), \
     FUNC(VTXBUF_UUZ),
