@@ -409,8 +409,8 @@ acDeviceStoreVertexBufferWithOffset(const Device device, const Stream stream,
     const size_t src_idx = acVertexBufferIdx(src.x, src.y, src.z, device->local_config);
     const size_t dst_idx = acVertexBufferIdx(dst.x, dst.y, dst.z, host_mesh->info);
 
-    const AcReal* src_ptr = &device->vba.in[vtxbuf_handle][dst_idx];
-    AcReal* dst_ptr       = &host_mesh->vertex_buffer[vtxbuf_handle][src_idx];
+    const AcReal* src_ptr = &device->vba.in[vtxbuf_handle][src_idx];
+    AcReal* dst_ptr       = &host_mesh->vertex_buffer[vtxbuf_handle][dst_idx];
     const size_t bytes    = num_vertices * sizeof(src_ptr[0]);
 
     ERRCHK_CUDA(                                                                                  //
