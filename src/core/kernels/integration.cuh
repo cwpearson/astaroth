@@ -59,16 +59,17 @@ create_rotz(const AcReal radians)
 }
 
 #if AC_DOUBLE_PRECISION == 0
+/*
+// Fast but inaccurate
 #define sin __sinf
 #define cos __cosf
 #define exp __expf
+*/
+#define sin sinf
+#define cos cosf
+#define exp expf
 #define rsqrt rsqrtf // hardware reciprocal sqrt
 #endif               // AC_DOUBLE_PRECISION == 0
-
-/*
-typedef struct {
-    int i, j, k;
-} int3;*/
 
 /*
  * =============================================================================
