@@ -56,7 +56,6 @@ continuity(in Vector uu, in Scalar lnrho) {
 }
 
 #if LSINK 
-//first attempt to do a self-containing LSINK module
 Vector
 sink_gravity(int3 globalVertexIdx){
     Vector force_gravity;
@@ -65,8 +64,8 @@ sink_gravity(int3 globalVertexIdx){
                                      (globalVertexIdx.z - nz_min) * dsz};
     const Scalar sink_mass = DCONST_REAL(AC_M_sink);
     const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
-                              DCONST_REAL(AC_sink_pos_y),
-                              DCONST_REAL(AC_sink_pos_z)}; 
+                                     DCONST_REAL(AC_sink_pos_y),
+                                     DCONST_REAL(AC_sink_pos_z)}; 
     const Scalar distance = length(grid_pos - sink_pos);
     const Scalar soft = DCONST_REAL(AC_soft);
     const Scalar gravity_magnitude = (AC_G_const * sink_mass) / pow(((distance * distance) +  soft*soft), 1.5);
@@ -77,7 +76,23 @@ sink_gravity(int3 globalVertexIdx){
     return force_gravity;
 }
 #endif
-    
+// Now this is more of a suedo-code, just write out some intuitions. 
+#if LACCRETION
+Scalar
+mass_accrection(int3 globalVertexIdx){
+    Scalar mass = (Scalar){()
+    Scalar Jeans_length = pow(((3.14 * cv_sound * cv_sound) / (AC_G_const * lnrho), 0.5));
+    Scalar Truelove_Jeans_lnrho = ((3.14) * Jeans_length * Jeans_length * cv2_sound) / (AC_G_const * dsx * dsy * dsz);    
+    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
+                                     DCONST_REAL(AC_sink_pos_y),
+                                     DCONST_REAL(AC_sink_pos_z)};
+    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
+    if (lnrho >= Truelove_Jeans_lnrho)
+       {
+        sink_mass = sink_mass + (Truelove_Jeans_lnrho * (dsx * dsy * dsz))      
+       }
+    return sink_mass;
+}
 #if LENTROPY
 Vector
 momentum(int3 globalVertexIdx, in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
