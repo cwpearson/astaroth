@@ -560,11 +560,9 @@ momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
 #else
     // !!!!!!!!!!!!!!!!%JP: NOTE TODO IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!
     // NOT CHECKED FOR CORRECTNESS: USE AT YOUR OWN RISK
-    const ModelMatrix S   = stress_tensor(uu);
-    const ModelScalar cs2 = get(AC_cs2_sound) *
-                            expl((get(AC_gamma) - 1) * (value(lnrho) - get(AC_lnrho0)));
+    const ModelMatrix S = stress_tensor(uu);
 
-    const ModelVector mom = -mul(gradients(uu), value(uu)) - cs2 * gradient(lnrho) +
+    const ModelVector mom = -mul(gradients(uu), value(uu)) - get(AC_cs2_sound) * gradient(lnrho) +
                             get(AC_nu_visc) * (laplace_vec(uu) +
                                                ModelScalar(1. / 3.) * gradient_of_divergence(uu) +
                                                ModelScalar(2.) * mul(S, gradient(lnrho))) +
