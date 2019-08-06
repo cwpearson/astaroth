@@ -659,7 +659,7 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
 }
 
 #define WRITE_OUT(handle, value) (write(buffer.out, handle, idx, value))
-#define READ(handle) (read_data(vertexIdx, buffer.in, handle))
+#define READ(handle) (read_data(vertexIdx, globalVertexIdx, buffer.in, handle))
 #define READ_OUT(handle) (read_out(idx, buffer.out, handle))
 
 // also write for clarity here also, not for the DSL
