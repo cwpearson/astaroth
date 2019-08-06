@@ -76,23 +76,30 @@ sink_gravity(int3 globalVertexIdx){
     return force_gravity;
 }
 #endif
+
+
+
 // Now this is more of a suedo-code, just write out some intuitions. 
-#if LACCRETION
+#if LSINK
 Scalar
-mass_accrection(int3 globalVertexIdx){
-    Scalar mass = (Scalar){()
-    Scalar Jeans_length = pow(((3.14 * cv_sound * cv_sound) / (AC_G_const * lnrho), 0.5));
-    Scalar Truelove_Jeans_lnrho = ((3.14) * Jeans_length * Jeans_length * cv2_sound) / (AC_G_const * dsx * dsy * dsz);    
-    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
-                                     DCONST_REAL(AC_sink_pos_y),
-                                     DCONST_REAL(AC_sink_pos_z)};
-    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
-    if (lnrho >= Truelove_Jeans_lnrho)
-       {
-        sink_mass = sink_mass + (Truelove_Jeans_lnrho * (dsx * dsy * dsz))      
-       }
-    return sink_mass;
+truelove_density(in Scalar lnrho){
+    const Scalar rho = exp(lnrho);
+    const Scalar Jeans_length_squared = (M_PI * cs2_sound) / (AC_G_const * rho);
+    const Scalar TJ_rho = ((M_PI) * ((dsx * dsx) / Jeans_length_squared) * cs2_sound) / (AC_G_const * dsx * dsx);
+       
+ 
+    Scalar accrection_rho = rho - TJ_rho;
+    if (accrection_rho < 0){
+     accrection_rho = Scalar(0);
+    } 
+       
+    return accretion_rho;
 }
+#endif
+//TODO: basic structure of this part is as follows 
+// update_accretion_buffer() <--> accretion_profile() <--> truelove_density()
+
+
 #if LENTROPY
 Vector
 momentum(int3 globalVertexIdx, in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa) {
