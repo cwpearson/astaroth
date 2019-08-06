@@ -48,7 +48,9 @@ __constant__ Grid globalGrid;
 #define DCONST_REAL3(X) (d_mesh_info.real3_params[X])
 #define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
-#include "kernels/kernels.cuh"
+#include "kernels/boundconds.cuh"
+#include "kernels/integration.cuh"
+#include "kernels/reductions.cuh"
 
 static dim3 rk3_tpb = (dim3){32, 1, 4};
 
