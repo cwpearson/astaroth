@@ -48,7 +48,9 @@ __constant__ AcMeshInfo d_mesh_info;
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
 #define globalGridN (d_mesh_info.int3_params[AC_global_grid_n])
 #define d_multigpu_offset (d_mesh_info.int3_params[AC_multigpu_offset])
-#include "kernels/kernels.cuh"
+#include "kernels/boundconds.cuh"
+#include "kernels/integration.cuh"
+#include "kernels/reductions.cuh"
 
 static dim3 rk3_tpb(32, 1, 4);
 
