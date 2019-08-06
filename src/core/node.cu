@@ -152,14 +152,14 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
     ERRCHK_ALWAYS(node->subgrid.n.y >= STENCIL_ORDER);
     ERRCHK_ALWAYS(node->subgrid.n.z >= STENCIL_ORDER);
 
-#if VERBOSE_PRINTING
     // clang-format off
+    #if VERBOSE_PRINTING
     printf("Grid m ");   printInt3(node->grid.m);    printf("\n");
     printf("Grid n ");   printInt3(node->grid.n);    printf("\n");
     printf("Subrid m "); printInt3(node->subgrid.m); printf("\n");
     printf("Subrid n "); printInt3(node->subgrid.n); printf("\n");
+    #endif
     // clang-format on
-#endif
 
     // Initialize the devices
     for (int i = 0; i < node->num_devices; ++i) {
