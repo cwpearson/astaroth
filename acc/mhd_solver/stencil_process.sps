@@ -248,9 +248,9 @@ helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vecto
 Vector
 forcing(int3 globalVertexIdx, Scalar dt)
 {
-    Vector a = Scalar(.5) * (Vector){globalGrid.n.x * dsx,
-                                     globalGrid.n.y * dsy,
-                                     globalGrid.n.z * dsz}; // source (origin)
+    Vector a = Scalar(.5) * (Vector){globalGridN.x * dsx,
+                                     globalGridN.y * dsy,
+                                     globalGridN.z * dsz}; // source (origin)
     Vector xx = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                         (globalVertexIdx.y - ny_min) * dsy,
                         (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)

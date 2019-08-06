@@ -86,7 +86,9 @@ typedef struct {
         FUNC(AC_nxy),\
         FUNC(AC_nxyz),\
 
-#define AC_FOR_BUILTIN_INT3_PARAM_TYPES(FUNC)
+#define AC_FOR_BUILTIN_INT3_PARAM_TYPES(FUNC)\
+        FUNC(AC_global_grid_n),\
+        FUNC(AC_multigpu_offset),
 
 #define AC_FOR_BUILTIN_REAL_PARAM_TYPES(FUNC)
 

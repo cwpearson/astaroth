@@ -152,17 +152,22 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
     ERRCHK_ALWAYS(node->subgrid.n.y >= STENCIL_ORDER);
     ERRCHK_ALWAYS(node->subgrid.n.z >= STENCIL_ORDER);
 
+#if VERBOSE_PRINTING
     // clang-format off
-    #if VERBOSE_PRINTING
     printf("Grid m ");   printInt3(node->grid.m);    printf("\n");
     printf("Grid n ");   printInt3(node->grid.n);    printf("\n");
     printf("Subrid m "); printInt3(node->subgrid.m); printf("\n");
     printf("Subrid n "); printInt3(node->subgrid.n); printf("\n");
-    #endif
     // clang-format on
+#endif
 
     // Initialize the devices
     for (int i = 0; i < node->num_devices; ++i) {
+        const int3 multinode_offset                    = (int3){0, 0, 0}; // Placeholder
+        const int3 multigpu_offset                     = (int3){0, 0, i * node->subgrid.n.z};
+        subgrid_config.int3_params[AC_global_grid_n]   = node->grid.n;
+        subgrid_config.int3_params[AC_multigpu_offset] = multinode_offset + multigpu_offset;
+
         acDeviceCreate(i, subgrid_config, &node->devices[i]);
         acDevicePrintInfo(node->devices[i]);
     }

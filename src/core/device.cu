@@ -40,13 +40,14 @@ typedef struct {
 } VertexBufferArray;
 
 __constant__ AcMeshInfo d_mesh_info;
-__constant__ int3 d_multigpu_offset;
 #define DCONST_INT(X) (d_mesh_info.int_params[X])
 #define DCONST_INT3(X) (d_mesh_info.int3_params[X])
 #define DCONST_REAL(X) (d_mesh_info.real_params[X])
 #define DCONST_REAL3(X) (d_mesh_info.real3_params[X])
 #define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
+#define globalGridN (d_mesh_info.int3_params[AC_global_grid_n])
+#define d_multigpu_offset (d_mesh_info.int3_params[AC_multigpu_offset])
 #include "kernels/kernels.cuh"
 
 static dim3 rk3_tpb(32, 1, 4);
@@ -121,13 +122,6 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     // Device constants
     ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_mesh_info, &device_config, sizeof(device_config), 0,
                                           cudaMemcpyHostToDevice));
-
-    // Multi-GPU offset. This is used to compute globalVertexIdx.
-    // Might be better to calculate this in astaroth.cu instead of here, s.t.
-    // everything related to the decomposition is limited to the multi-GPU layer
-    const int3 multigpu_offset = (int3){0, 0, device->id * device->local_config.int_params[AC_nz]};
-    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_multigpu_offset, &multigpu_offset,
-                                          sizeof(multigpu_offset), 0, cudaMemcpyHostToDevice));
 
     printf("Created device %d (%p)\n", device->id, device);
     *device_handle = device;
