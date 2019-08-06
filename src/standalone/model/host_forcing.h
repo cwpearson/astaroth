@@ -28,6 +28,8 @@
 #pragma once
 #include "astaroth.h"
 
+#include "modelmesh.h"
+
 AcReal get_random_number_01();
 
 AcReal3 cross(const AcReal3& a, const AcReal3& b);
@@ -64,5 +66,6 @@ typedef struct {
 void loadForcingParamsToDevice(const ForcingParams& forcing_params);
 
 void loadForcingParamsToHost(const ForcingParams& forcing_params, AcMesh* mesh);
+void loadForcingParamsToHost(const ForcingParams& forcing_params, ModelMesh* mesh);
 
 ForcingParams generateForcingParams(const AcMeshInfo& mesh_info);

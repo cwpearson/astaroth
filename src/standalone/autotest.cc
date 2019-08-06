@@ -422,6 +422,12 @@ check_rk3(const AcMeshInfo& mesh_info)
             // const AcReal dt   = host_timestep(umax, mesh_info);
             const AcReal dt = AcReal(1e-2); // Use a small constant timestep to avoid instabilities
 
+#if LFORCING
+            const ForcingParams forcing_params = generateForcingParams(model_mesh->info);
+            loadForcingParamsToHost(forcing_params, model_mesh);
+            loadForcingParamsToDevice(forcing_params);
+#endif
+
             acIntegrate(dt);
 
             model_rk3(dt, model_mesh);
