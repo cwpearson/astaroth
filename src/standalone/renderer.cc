@@ -32,12 +32,12 @@
 #include <string.h> // memcpy
 
 #include "config_loader.h"
-#include "src/core/errchk.h"
-#include "src/core/math_utils.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
+#include "src/core/errchk.h"
+#include "src/core/math_utils.h"
 #include "timer_hires.h"
 
 // Window
@@ -105,6 +105,7 @@ renderer_init(const int& mx, const int& my)
     // Setup window
     window = SDL_CreateWindow("Astaroth", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               window_width, window_height, SDL_WINDOW_SHOWN);
+    ERRCHK_ALWAYS(window);
 
     // Setup SDL renderer
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
