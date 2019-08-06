@@ -21,7 +21,7 @@ if (BUILD_RT_VISUALIZATION)
 endif ()
 
 ## Compilation flags
-add_compile_options(-march=native -pipe ${OpenMP_CXX_FLAGS})
+add_compile_options(-O2 -pipe ${OpenMP_CXX_FLAGS})
 add_compile_options(-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion)# -Wshadow)
 
 ## Compile and link
