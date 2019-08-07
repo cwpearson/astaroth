@@ -202,9 +202,6 @@ heat_transfer(in Vector uu, in Scalar lnrho, in Scalar tt)
 
 
 #if LFORCING
-
-
-
 Vector
 simple_vortex_forcing(Vector a, Vector b, Scalar magnitude)
 {
@@ -222,7 +219,13 @@ simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude)
 Vector
 helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vector ff_im, Scalar phi)
 {
-
+    // JP: This looks wrong:
+    //    1) Should it be dsx * nx instead of dsx * ny?
+    //    2) Should you also use globalGrid.n instead of the local n?
+    //    3) Also final point: can we do this with vectors/quaternions instead?
+    //       Tringonometric functions are much more expensive and inaccurate/
+    // Fun related article:
+    // https://randomascii.wordpress.com/2014/10/09/intel-underestimates-error-bounds-by-1-3-quintillion/
     xx.x = xx.x*(2.0*M_PI/(dsx*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
     xx.y = xx.y*(2.0*M_PI/(dsy*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));
     xx.z = xx.z*(2.0*M_PI/(dsz*(DCONST_INT(AC_ny_max) - DCONST_INT(AC_ny_min))));

@@ -32,12 +32,13 @@
 #include <string.h> // memcpy
 
 #include "config_loader.h"
+#include "src/core/errchk.h"
+#include "src/core/math_utils.h"
+#include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
-#include "src/core/errchk.h"
-#include "src/core/math_utils.h"
 #include "timer_hires.h"
 
 // Window
@@ -384,6 +385,12 @@ run_renderer(void)
 #if 1
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
+
+#if LFORCING
+        const ForcingParams forcing_params = generateForcingParams(mesh->info);
+        loadForcingParamsToDevice(forcing_params);
+#endif
+
         acIntegrate(dt);
 #else
         ModelMesh* model_mesh = modelmesh_create(mesh->info);
