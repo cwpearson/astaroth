@@ -28,7 +28,7 @@
 
 #include <math.h>
 
-#include "core/errchk.h"
+#include "src/core/errchk.h"
 
 #define AC_GEN_STR(X) #X
 const char* init_type_names[] = {AC_FOR_INIT_TYPES(AC_GEN_STR)};

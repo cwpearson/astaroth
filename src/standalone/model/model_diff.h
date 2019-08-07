@@ -25,7 +25,7 @@
  *
  */
 #pragma once
-#include "core/errchk.h"
+#include "src/core/errchk.h"
 
 typedef long double MODEL_REAL;
 

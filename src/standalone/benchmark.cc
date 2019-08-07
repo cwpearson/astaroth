@@ -211,7 +211,7 @@ run_benchmark(void)
 #if AUTO_OPTIMIZE
 const char* benchmark_path = "benchmark.out";
 
-#include "core/kernels/rk3_threadblock.conf"
+#include "src/core/kernels/rk3_threadblock.conf"
 static int
 write_result_to_file(const float& ms_per_step)
 {
