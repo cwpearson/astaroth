@@ -545,8 +545,8 @@ acNodeIntegrate(const Node node, const AcReal dt)
     //   n0   n1        n2  n3
     const int3 n0 = (int3){NGHOST, NGHOST, NGHOST};
     const int3 n1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-    const int3 n2 = node->grid.n;
-    const int3 n3 = n0 + node->grid.n;
+    // const int3 n2 = node->grid.n;
+    // const int3 n3 = n0 + node->grid.n;
 
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
         acNodeSynchronizeStream(node, STREAM_ALL);
@@ -556,85 +556,50 @@ acNodeIntegrate(const Node node, const AcReal dt)
         acNodeSynchronizeStream(node, STREAM_ALL);
         // Inner inner
         for (int i = 0; i < node->num_devices; ++i) {
-            const int3 m1 = n1 + (int3){0, 0, i * node->subgrid.n.z};
-            const int3 m2 = m1 + node->subgrid.n - (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            acNodeIntegrateSubstep(node, STREAM_16, isubstep, m1, m2, dt);
+            const int3 m1 = n1;
+            const int3 m2 = node->subgrid.n;
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_16, isubstep, m1, m2, dt);
         }
         for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
-            const int num_vertices = node->subgrid.m.x * node->subgrid.m.y * NGHOST;
-            for (int device_id = 0; device_id < node->num_devices; ++device_id) {
-                // ...|ooooxxx|... -> xxx|ooooooo|...
-                {
-                    const int3 src = (int3){0, 0, node->subgrid.n.z};
-                    const int3 dst = (int3){0, 0, 0};
-                    acDeviceTransferVertexBufferWithOffset(
-                        node->devices[device_id], (Stream)vtxbuf, (VertexBufferHandle)vtxbuf, src,
-                        dst, num_vertices, node->devices[(device_id + 1) % node->num_devices]);
-                }
-                // ...|ooooooo|xxx <- ...|xxxoooo|...
-                {
-                    const int3 src = (int3){0, 0, NGHOST};
-                    const int3 dst = (int3){0, 0, NGHOST + node->subgrid.n.z};
-                    acDeviceTransferVertexBufferWithOffset(
-                        node->devices[device_id], (Stream)vtxbuf, (VertexBufferHandle)vtxbuf, src,
-                        dst, num_vertices,
-                        node->devices[(device_id - 1 + node->num_devices) % node->num_devices]);
-                }
-            }
+            acNodeSynchronizeVertexBuffer(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
+            global_boundcondstep(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
         }
-        for (int vtxbuf = 0; vtxbuf < 2 * NUM_VTXBUF_HANDLES; ++vtxbuf) {
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
             acNodeSynchronizeStream(node, (Stream)vtxbuf);
         }
-        // Inner outer
-        for (int i = 0; i < node->num_devices - 1; ++i) {
-            const int3 m1 = n1 + (int3){0, 0, (i + 1) * node->subgrid.n.z - 2 * NGHOST};
-            const int3 m2 = m1 + (int3){node->subgrid.n.x - 2 * NGHOST,
-                                        node->subgrid.n.y - 2 * NGHOST, 2 * NGHOST};
-            acNodeIntegrateSubstep(node, STREAM_0, isubstep, m1, m2, dt);
-        }
-        // Outer
-        // Front
-        {
-            const int3 m1 = (int3){n0.x, n0.y, n0.z};
-            const int3 m2 = (int3){n3.x, n3.y, n1.z};
-            acNodeIntegrateSubstep(node, STREAM_1, isubstep, m1, m2, dt);
-        }
 
-        // Back
-        {
-            const int3 m1 = (int3){n0.x, n0.y, n2.z};
-            const int3 m2 = (int3){n3.x, n3.y, n3.z};
-            acNodeIntegrateSubstep(node, STREAM_2, isubstep, m1, m2, dt);
+        for (int i = 0; i < node->num_devices; ++i) { // Front
+            const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_0, isubstep, m1, m2, dt);
         }
-
-        // Top
-        {
-            const int3 m1 = (int3){n0.x, n0.y, n1.z};
-            const int3 m2 = (int3){n3.x, n1.y, n2.z};
-            acNodeIntegrateSubstep(node, STREAM_3, isubstep, m1, m2, dt);
+        for (int i = 0; i < node->num_devices; ++i) { // Back
+            const int3 m1 = (int3){NGHOST, NGHOST, node->subgrid.n.z};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_1, isubstep, m1, m2, dt);
         }
-
-        // Bottom
-        {
-            const int3 m1 = (int3){n0.x, n2.y, n1.z};
-            const int3 m2 = (int3){n3.x, n3.y, n2.z};
-            acNodeIntegrateSubstep(node, STREAM_4, isubstep, m1, m2, dt);
+        for (int i = 0; i < node->num_devices; ++i) { // Bottom
+            const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_2, isubstep, m1, m2, dt);
         }
-
-        // Left
-        {
-            const int3 m1 = (int3){n0.x, n1.y, n1.z};
-            const int3 m2 = (int3){n1.x, n2.y, n2.z};
-            acNodeIntegrateSubstep(node, STREAM_5, isubstep, m1, m2, dt);
+        for (int i = 0; i < node->num_devices; ++i) { // Top
+            const int3 m1 = (int3){NGHOST, node->subgrid.n.y, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_3, isubstep, m1, m2, dt);
         }
-
-        // Right
-        {
-            const int3 m1 = (int3){n2.x, n1.y, n1.z};
-            const int3 m2 = (int3){n3.x, n2.y, n2.z};
-            acNodeIntegrateSubstep(node, STREAM_6, isubstep, m1, m2, dt);
+        for (int i = 0; i < node->num_devices; ++i) { // Left
+            const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
+                                        node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_4, isubstep, m1, m2, dt);
         }
-
+        for (int i = 0; i < node->num_devices; ++i) { // Right
+            const int3 m1 = (int3){node->subgrid.n.x, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
+                                        node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_5, isubstep, m1, m2, dt);
+        }
         acNodeSwapBuffers(node);
     }
     acNodeSynchronizeStream(node, STREAM_ALL);
