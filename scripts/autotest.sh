@@ -5,10 +5,13 @@
 # source ./sourceme.sh
 # autotest.sh
 #
-# If you need slurm or to pass something before ./ac_run, set the variable
+# If you need slurm or to pass something before ./ac_run, export the variable
 # SRUN_COMMAND before calling this script.
 #
 # F.ex. on Taito SRUN_COMMAND="srun --gres=gpu:k80:4 --mem=24000 -t 00:14:59 -p gputest --cpus-per-task 1 -n 1"
+# export SRUN_COMMAND
+# autotest.sh
+echo "SRUN_COMMAND: " ${SRUN_COMMAND}
 
 results=()
 
