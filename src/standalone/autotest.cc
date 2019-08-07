@@ -727,6 +727,7 @@ run_autotest(void)
 
                 // Device integration step
                 acIntegrate(dt);
+                acBoundcondStep();
                 acStore(candidate_mesh);
 
                 // Check fields
