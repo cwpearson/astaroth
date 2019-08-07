@@ -90,10 +90,40 @@ truelove_density(in Scalar lnrho){
  
     Scalar accrection_rho = rho - TJ_rho;
     if (accrection_rho < 0){
-     accrection_rho = Scalar(0);
+    accrection_rho = Scalar(0);
     } 
        
     return accretion_rho;
+}
+
+
+accretion_profile(int3 globalVertexIdx){
+     const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                                      (globalVertexIdx.y - ny_min) * dsy,
+                                      (globalVertexIdx.z - nz_min) * dsz};
+     const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
+                                      DCONST_REAL(AC_sink_pos_y),
+                                      DCONST_REAL(AC_sink_pos_z)};
+     // Here I'm trying to make the accretion profile adjustable within astaroth.conf, i.e., making it possible to
+     // choose how many "cells" around the sink particle we want to accrete mass from.
+     const Scalar profile = DCONST_REAL(AC_accretion_range) * dsx;
+     if ((grid_pos - sink_pos) <= profile){
+        
+     }
+// I'm still trying to figure out what to put in if statement when the cell is within the range we set
+// and what should this kernel return.
+     return
+}
+
+
+update_accretion_buffer(){
+
+
+
+
+
+
+
 }
 #endif
 //TODO: basic structure of this part is as follows 
