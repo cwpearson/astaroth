@@ -229,9 +229,9 @@ helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vecto
     //    MV: Good idea. No an immediate priority.
     // Fun related article:
     // https://randomascii.wordpress.com/2014/10/09/intel-underestimates-error-bounds-by-1-3-quintillion/
-    xx.x = xx.x*(2.0*M_PI/(dsx*globalGrid.n.x));
-    xx.y = xx.y*(2.0*M_PI/(dsy*globalGrid.n.y));
-    xx.z = xx.z*(2.0*M_PI/(dsz*globalGrid.n.z));
+    xx.x = xx.x*(2.0*M_PI/(dsx*globalGridN.x));
+    xx.y = xx.y*(2.0*M_PI/(dsy*globalGridN.y));
+    xx.z = xx.z*(2.0*M_PI/(dsz*globalGridN.z));
 
     Scalar cos_phi = cos(phi);
     Scalar sin_phi = sin(phi);
