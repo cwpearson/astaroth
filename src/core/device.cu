@@ -516,3 +516,9 @@ autoOptimize(const Device device)
 #if PACKED_DATA_TRANSFERS
 // Functions for calling packed data transfers
 #endif
+
+/*
+ * =============================================================================
+ * Revised interface
+ * =============================================================================
+ */

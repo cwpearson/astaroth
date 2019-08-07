@@ -127,8 +127,8 @@
 #include "errchk.h"
 
 #include "device.cuh"
-#include "math_utils.h"               // sum for reductions
-#include "standalone/config_loader.h" // update_config
+#include "math_utils.h" // sum for reductions
+// #include "standalone/config_loader.h" // update_config
 
 #define AC_GEN_STR(X) #X
 const char* intparam_names[]   = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
@@ -156,7 +156,7 @@ gridIdx(const Grid grid, const int3 idx)
 }
 
 static int3
-gridIdx3d(const Grid& grid, const int idx)
+gridIdx3d(const Grid grid, const int idx)
 {
     return (int3){idx % grid.m.x, (idx % (grid.m.x * grid.m.y)) / grid.m.x,
                   idx / (grid.m.x * grid.m.y)};
@@ -168,8 +168,49 @@ printInt3(const int3 vec)
     printf("(%d, %d, %d)", vec.x, vec.y, vec.z);
 }
 
+static inline void
+print(const AcMeshInfo config)
+{
+    for (int i = 0; i < NUM_INT_PARAMS; ++i)
+        printf("[%s]: %d\n", intparam_names[i], config.int_params[i]);
+    for (int i = 0; i < NUM_REAL_PARAMS; ++i)
+        printf("[%s]: %g\n", realparam_names[i], double(config.real_params[i]));
+}
+
+static void
+update_builtin_params(AcMeshInfo* config)
+{
+    config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER;
+    ///////////// PAD TEST
+    // config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER + PAD_SIZE;
+    ///////////// PAD TEST
+    config->int_params[AC_my] = config->int_params[AC_ny] + STENCIL_ORDER;
+    config->int_params[AC_mz] = config->int_params[AC_nz] + STENCIL_ORDER;
+
+    // Bounds for the computational domain, i.e. nx_min <= i < nx_max
+    config->int_params[AC_nx_min] = NGHOST;
+    config->int_params[AC_nx_max] = config->int_params[AC_nx_min] + config->int_params[AC_nx];
+    config->int_params[AC_ny_min] = NGHOST;
+    config->int_params[AC_ny_max] = config->int_params[AC_ny] + NGHOST;
+    config->int_params[AC_nz_min] = NGHOST;
+    config->int_params[AC_nz_max] = config->int_params[AC_nz] + NGHOST;
+
+    /* Additional helper params */
+    // Int helpers
+    config->int_params[AC_mxy]  = config->int_params[AC_mx] * config->int_params[AC_my];
+    config->int_params[AC_nxy]  = config->int_params[AC_nx] * config->int_params[AC_ny];
+    config->int_params[AC_nxyz] = config->int_params[AC_nxy] * config->int_params[AC_nz];
+
+#if VERBOSE_PRINTING // Defined in astaroth.h
+    printf("###############################################################\n");
+    printf("Config dimensions recalculated:\n");
+    print(*config);
+    printf("###############################################################\n");
+#endif
+}
+
 static Grid
-createGrid(const AcMeshInfo& config)
+createGrid(const AcMeshInfo config)
 {
     Grid grid;
 
@@ -246,7 +287,7 @@ acSynchronizeMesh(void)
 }
 
 AcResult
-acInit(const AcMeshInfo& config)
+acInit(const AcMeshInfo config)
 {
     // Get num_devices
     ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&num_devices));
@@ -274,7 +315,7 @@ acInit(const AcMeshInfo& config)
     // Subgrids
     AcMeshInfo subgrid_config = config;
     subgrid_config.int_params[AC_nz] /= num_devices;
-    update_config(&subgrid_config);
+    update_builtin_params(&subgrid_config);
     subgrid = createGrid(subgrid_config);
 
     // Periodic boundary conditions become weird if the system can "fold unto itself".
@@ -337,8 +378,8 @@ acQuit(void)
 }
 
 AcResult
-acIntegrateStepWithOffsetAsync(const int& isubstep, const AcReal& dt, const int3& start,
-                               const int3& end, const StreamType stream)
+acIntegrateStepWithOffsetAsync(const int isubstep, const AcReal dt, const int3 start,
+                               const int3 end, const StreamType stream)
 {
     // See the beginning of the file for an explanation of the index mapping
     // #pragma omp parallel for
@@ -360,13 +401,13 @@ acIntegrateStepWithOffsetAsync(const int& isubstep, const AcReal& dt, const int3
 }
 
 AcResult
-acIntegrateStepWithOffset(const int& isubstep, const AcReal& dt, const int3& start, const int3& end)
+acIntegrateStepWithOffset(const int isubstep, const AcReal dt, const int3 start, const int3 end)
 {
     return acIntegrateStepWithOffsetAsync(isubstep, dt, start, end, STREAM_DEFAULT);
 }
 
 AcResult
-acIntegrateStepAsync(const int& isubstep, const AcReal& dt, const StreamType stream)
+acIntegrateStepAsync(const int isubstep, const AcReal dt, const StreamType stream)
 {
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
     const int3 end   = start + grid.n;
@@ -374,7 +415,7 @@ acIntegrateStepAsync(const int& isubstep, const AcReal& dt, const StreamType str
 }
 
 AcResult
-acIntegrateStep(const int& isubstep, const AcReal& dt)
+acIntegrateStep(const int isubstep, const AcReal dt)
 {
     return acIntegrateStepAsync(isubstep, dt, STREAM_DEFAULT);
 }
@@ -452,7 +493,7 @@ swap_buffers(void)
 }
 
 AcResult
-acIntegrate(const AcReal& dt)
+acIntegrate(const AcReal dt)
 {
     acSynchronizeStream(STREAM_ALL);
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
@@ -464,7 +505,7 @@ acIntegrate(const AcReal& dt)
 }
 
 static AcReal
-simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, const int& n)
+simple_final_reduce_scal(const ReductionType rtype, const AcReal* results, const int n)
 {
     AcReal res = results[0];
     for (int i = 1; i < n; ++i) {
@@ -490,7 +531,7 @@ simple_final_reduce_scal(const ReductionType& rtype, const AcReal* results, cons
 }
 
 AcReal
-acReduceScal(const ReductionType& rtype, const VertexBufferHandle& vtxbuffer_handle)
+acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuffer_handle)
 {
     acSynchronizeStream(STREAM_ALL);
 
@@ -504,8 +545,8 @@ acReduceScal(const ReductionType& rtype, const VertexBufferHandle& vtxbuffer_han
 }
 
 AcReal
-acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a, const VertexBufferHandle& b,
-            const VertexBufferHandle& c)
+acReduceVec(const ReductionType rtype, const VertexBufferHandle a, const VertexBufferHandle b,
+            const VertexBufferHandle c)
 {
     acSynchronizeStream(STREAM_ALL);
 
@@ -519,7 +560,7 @@ acReduceVec(const ReductionType& rtype, const VertexBufferHandle& a, const Verte
 }
 
 AcResult
-acLoadWithOffsetAsync(const AcMesh& host_mesh, const int3& src, const int num_vertices,
+acLoadWithOffsetAsync(const AcMesh host_mesh, const int3 src, const int num_vertices,
                       const StreamType stream)
 {
     // See the beginning of the file for an explanation of the index mapping
@@ -557,13 +598,13 @@ acLoadWithOffsetAsync(const AcMesh& host_mesh, const int3& src, const int num_ve
 }
 
 AcResult
-acLoadWithOffset(const AcMesh& host_mesh, const int3& src, const int num_vertices)
+acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_vertices)
 {
     return acLoadWithOffsetAsync(host_mesh, src, num_vertices, STREAM_DEFAULT);
 }
 
 AcResult
-acLoad(const AcMesh& host_mesh)
+acLoad(const AcMesh host_mesh)
 {
     acLoadWithOffset(host_mesh, (int3){0, 0, 0}, acVertexBufferSize(host_mesh.info));
     acSynchronizeStream(STREAM_ALL);
@@ -571,7 +612,7 @@ acLoad(const AcMesh& host_mesh)
 }
 
 AcResult
-acStoreWithOffsetAsync(const int3& src, const int num_vertices, AcMesh* host_mesh,
+acStoreWithOffsetAsync(const int3 src, const int num_vertices, AcMesh* host_mesh,
                        const StreamType stream)
 {
     // See the beginning of the file for an explanation of the index mapping
@@ -596,7 +637,7 @@ acStoreWithOffsetAsync(const int3& src, const int num_vertices, AcMesh* host_mes
 }
 
 AcResult
-acStoreWithOffset(const int3& src, const int num_vertices, AcMesh* host_mesh)
+acStoreWithOffset(const int3 src, const int num_vertices, AcMesh* host_mesh)
 {
     return acStoreWithOffsetAsync(src, num_vertices, host_mesh, STREAM_DEFAULT);
 }
@@ -624,3 +665,9 @@ acLoadDeviceConstant(const AcRealParam param, const AcReal value)
 {
     return acLoadDeviceConstantAsync(param, value, STREAM_DEFAULT);
 }
+
+/*
+ * =============================================================================
+ * Revised interface
+ * =============================================================================
+ */

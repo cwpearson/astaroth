@@ -26,7 +26,7 @@
  */
 #include "host_forcing.h"
 
-#include "core/math_utils.h"
+#include "src/core/math_utils.h"
 
 // The is a wrapper for genering random numbers with a chosen system.
 AcReal
