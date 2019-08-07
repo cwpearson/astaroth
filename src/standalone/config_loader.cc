@@ -31,8 +31,8 @@
 #include <stdio.h>  // print
 #include <string.h> // memset
 
-#include "core/errchk.h"
-#include "core/math_utils.h"
+#include "src/core/errchk.h"
+#include "src/core/math_utils.h"
 
 static inline void
 print(const AcMeshInfo& config)

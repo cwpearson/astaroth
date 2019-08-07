@@ -99,3 +99,9 @@ AcResult autoOptimize(const Device device);
 #if PACKED_DATA_TRANSFERS
 // Declarations used for packed data transfers
 #endif
+
+/*
+ * =============================================================================
+ * Revised interface
+ * =============================================================================
+ */

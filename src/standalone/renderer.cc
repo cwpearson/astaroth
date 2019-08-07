@@ -32,8 +32,8 @@
 #include <string.h> // memcpy
 
 #include "config_loader.h"
-#include "core/errchk.h"
-#include "core/math_utils.h"
+#include "src/core/errchk.h"
+#include "src/core/math_utils.h"
 #include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
@@ -430,7 +430,7 @@ run_renderer(void)
     return 0;
 }
 #else // BUILD_RT_VISUALIZATION == 0
-#include "core/errchk.h"
+#include "src/core/errchk.h"
 int
 run_renderer(void)
 {

@@ -22,9 +22,27 @@
 extern "C" {
 #endif
 
-#include <float.h>        // FLT_EPSILON, etc
-#include <stdlib.h>       // size_t
-#include <vector_types.h> // CUDA vector types (float4, etc)
+#include <float.h>  // FLT_EPSILON, etc
+#include <stdlib.h> // size_t
+//#include <vector_types.h> // CUDA vector types (float4, etc)
+
+#ifndef __CUDACC__
+typedef struct {
+    int x, y, z;
+} int3;
+
+typedef struct {
+    float x, y;
+} float2;
+
+typedef struct {
+    float x, y, z;
+} float3;
+
+typedef struct {
+    double x, y, z;
+} double3;
+#endif // __CUDACC__
 
 #include "stencil_defines.h"
 
@@ -147,31 +165,31 @@ typedef struct {
  * =============================================================================
  */
 static inline size_t
-acVertexBufferSize(const AcMeshInfo& info)
+acVertexBufferSize(const AcMeshInfo info)
 {
     return info.int_params[AC_mx] * info.int_params[AC_my] * info.int_params[AC_mz];
 }
 
 static inline size_t
-acVertexBufferSizeBytes(const AcMeshInfo& info)
+acVertexBufferSizeBytes(const AcMeshInfo info)
 {
     return sizeof(AcReal) * acVertexBufferSize(info);
 }
 
 static inline size_t
-acVertexBufferCompdomainSize(const AcMeshInfo& info)
+acVertexBufferCompdomainSize(const AcMeshInfo info)
 {
     return info.int_params[AC_nx] * info.int_params[AC_ny] * info.int_params[AC_nz];
 }
 
 static inline size_t
-acVertexBufferCompdomainSizeBytes(const AcMeshInfo& info)
+acVertexBufferCompdomainSizeBytes(const AcMeshInfo info)
 {
     return sizeof(AcReal) * acVertexBufferCompdomainSize(info);
 }
 
 static inline size_t
-acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo& info)
+acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo info)
 {
     return i +                          //
            j * info.int_params[AC_mx] + //
@@ -180,25 +198,25 @@ acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo& info)
 
 /*
 static inline int
-acGetParam(const AcMeshInfo& info, const AcIntParam param)
+acGetParam(const AcMeshInfo info, const AcIntParam param)
 {
     return info.int_params[param];
 }
 
 static inline int3
-acGetParam(const AcMeshInfo& info, const AcInt3Param param)
+acGetParam(const AcMeshInfo info, const AcInt3Param param)
 {
     return info.int3_params[param];
 }
 
 static inline AcReal
-acGetParam(const AcMeshInfo& info, const AcRealParam param)
+acGetParam(const AcMeshInfo info, const AcRealParam param)
 {
     return info.real_params[param];
 }
 
 static inline AcReal3
-acGetParam(const AcMeshInfo& info, const AcReal3Param param)
+acGetParam(const AcMeshInfo info, const AcReal3Param param)
 {
     return info.real3_params[param];
 }
