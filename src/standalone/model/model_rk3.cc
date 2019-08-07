@@ -560,11 +560,9 @@ momentum(const ModelVectorData& uu, const ModelScalarData& lnrho
 #else
     // !!!!!!!!!!!!!!!!%JP: NOTE TODO IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!
     // NOT CHECKED FOR CORRECTNESS: USE AT YOUR OWN RISK
-    const ModelMatrix S   = stress_tensor(uu);
-    const ModelScalar cs2 = get(AC_cs2_sound) *
-                            expl((get(AC_gamma) - 1) * (value(lnrho) - get(AC_lnrho0)));
+    const ModelMatrix S = stress_tensor(uu);
 
-    const ModelVector mom = -mul(gradients(uu), value(uu)) - cs2 * gradient(lnrho) +
+    const ModelVector mom = -mul(gradients(uu), value(uu)) - get(AC_cs2_sound) * gradient(lnrho) +
                             get(AC_nu_visc) * (laplace_vec(uu) +
                                                ModelScalar(1. / 3.) * gradient_of_divergence(uu) +
                                                ModelScalar(2.) * mul(S, gradient(lnrho))) +
@@ -662,15 +660,13 @@ is_valid(const ModelVector& a)
 }
 
 #if LFORCING
-// FORCING NOT SUPPORTED FOR AUTOTEST
-
-static inline ModelVector
+ModelVector
 simple_vortex_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
 {
     return magnitude * cross(normalized(b - a), (ModelVector){0, 0, 1}); // Vortex
 }
 
-static inline ModelVector
+ModelVector
 simple_outward_flow_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
 {
     return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
@@ -678,22 +674,24 @@ simple_outward_flow_forcing(ModelVector a, ModelVector b, ModelScalar magnitude)
 
 // The Pencil Code forcing_hel_noshear(), manual Eq. 222, inspired forcing function with adjustable
 // helicity
-static inline ModelVector
-helical_forcing(ModelScalar /* magnitude */, ModelVector k_force, ModelVector xx, ModelVector ff_re,
+ModelVector
+helical_forcing(ModelScalar magnitude, ModelVector k_force, ModelVector xx, ModelVector ff_re,
                 ModelVector ff_im, ModelScalar phi)
 {
+    (void)magnitude; // WARNING: unused
+    xx.x = xx.x * (2.0l * M_PI / (get(AC_dsx) * (get(AC_ny_max) - get(AC_ny_min))));
+    xx.y = xx.y * (2.0l * M_PI / (get(AC_dsy) * (get(AC_ny_max) - get(AC_ny_min))));
+    xx.z = xx.z * (2.0l * M_PI / (get(AC_dsz) * (get(AC_ny_max) - get(AC_ny_min))));
 
-    xx.x = xx.x * (2.0 * M_PI / (get(AC_dsx) * (get(AC_ny_max) - get(AC_ny_min))));
-    xx.y = xx.y * (2.0 * M_PI / (get(AC_dsy) * (get(AC_ny_max) - get(AC_ny_min))));
-    xx.z = xx.z * (2.0 * M_PI / (get(AC_dsz) * (get(AC_ny_max) - get(AC_ny_min))));
-
-    ModelScalar cos_phi     = cosl(phi);
-    ModelScalar sin_phi     = sinl(phi);
-    ModelScalar cos_k_dox_x = cosl(dot(k_force, xx));
-    ModelScalar sin_k_dox_x = sinl(dot(k_force, xx));
+    ModelScalar cosl_phi     = cosl(phi);
+    ModelScalar sinl_phi     = sinl(phi);
+    ModelScalar cosl_k_dox_x = cosl(dot(k_force, xx));
+    ModelScalar sinl_k_dox_x = sinl(dot(k_force, xx));
     // Phase affect only the x-component
-    ModelScalar real_comp_phase = cos_k_dox_x * cos_phi - sin_k_dox_x * sin_phi;
-    ModelScalar imag_comp_phase = cos_k_dox_x * sin_phi + sin_k_dox_x * cos_phi;
+    // ModelScalar real_comp       = cosl_k_dox_x;
+    // ModelScalar imag_comp       = sinl_k_dox_x;
+    ModelScalar real_comp_phase = cosl_k_dox_x * cosl_phi - sinl_k_dox_x * sinl_phi;
+    ModelScalar imag_comp_phase = cosl_k_dox_x * sinl_phi + sinl_k_dox_x * cosl_phi;
 
     ModelVector force = (ModelVector){ff_re.x * real_comp_phase - ff_im.x * imag_comp_phase,
                                       ff_re.y * real_comp_phase - ff_im.y * imag_comp_phase,
@@ -702,18 +700,17 @@ helical_forcing(ModelScalar /* magnitude */, ModelVector k_force, ModelVector xx
     return force;
 }
 
-static inline ModelVector
+ModelVector
 forcing(int3 globalVertexIdx, ModelScalar dt)
 {
-    /*
-    ModelVector a  = ModelScalar(.5) * (ModelVector){get(AC_nx) * get(AC_dsx),
+    ModelVector a = ModelScalar(.5) * (ModelVector){get(AC_nx) * get(AC_dsx),
                                                     get(AC_ny) * get(AC_dsy),
                                                     get(AC_nz) * get(AC_dsz)}; // source (origin)
-                                                    */
-    ModelVector xx = (ModelVector){
-        (globalVertexIdx.x - get(AC_nx_min)) * get(AC_dsx),
-        (globalVertexIdx.y - get(AC_ny_min) * get(AC_dsy)),
-        (globalVertexIdx.z - get(AC_nz_min) * get(AC_dsz))}; // sink (current index)
+    (void)a;                                                                   // WARNING: not used
+    ModelVector xx        = (ModelVector){(globalVertexIdx.x - get(AC_nx_min)) * get(AC_dsx),
+                                   (globalVertexIdx.y - get(AC_ny_min)) * get(AC_dsy),
+                                   (globalVertexIdx.z - get(AC_nz_min)) *
+                                       get(AC_dsz)}; // sink (current index)
     const ModelScalar cs2 = get(AC_cs2_sound);
     const ModelScalar cs  = sqrtl(cs2);
 
@@ -723,6 +720,11 @@ forcing(int3 globalVertexIdx, ModelScalar dt)
     ModelVector k_force   = (ModelVector){get(AC_k_forcex), get(AC_k_forcey), get(AC_k_forcez)};
     ModelVector ff_re = (ModelVector){get(AC_ff_hel_rex), get(AC_ff_hel_rey), get(AC_ff_hel_rez)};
     ModelVector ff_im = (ModelVector){get(AC_ff_hel_imx), get(AC_ff_hel_imy), get(AC_ff_hel_imz)};
+
+    (void)phase;   // WARNING: unused with simple forcing. Should be defined in helical_forcing
+    (void)k_force; // WARNING: unused with simple forcing. Should be defined in helical_forcing
+    (void)ff_re;   // WARNING: unused with simple forcing. Should be defined in helical_forcing
+    (void)ff_im;   // WARNING: unused with simple forcing. Should be defined in helical_forcing
 
     // Determine that forcing funtion type at this point.
     // ModelVector force = simple_vortex_forcing(a, xx, magnitude);

@@ -28,11 +28,10 @@
 #define LDENSITY (1)
 #define LHYDRO (1)
 #define LMAGNETIC (1)
-#define LENTROPY (1)
+#define LENTROPY (0)
 #define LTEMPERATURE (0)
-#define LFORCING (1)
+#define LFORCING (0)
 #define LUPWD (0)
-#define LSINK (1)
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
 
@@ -73,13 +72,6 @@
         FUNC(AC_star_pos_y),\
         FUNC(AC_star_pos_z),\
         FUNC(AC_M_star),\
-        /* properties of sink particle*/\
-	FUNC(AC_sink_pos_x),\
-	FUNC(AC_sink_pos_y),\
-	FUNC(AC_sink_pos_z),\
-	FUNC(AC_M_sink),\
-	FUNC(AC_M_sink_Msun),\
-        FUNC(AC_soft),\
         /* Run params */\
         FUNC(AC_cdt), \
         FUNC(AC_cdtv), \
@@ -122,8 +114,7 @@
         FUNC(AC_ff_hel_imz),\
         /* Additional helper params */\
         /* (deduced from other params do not set these directly!) */\
-        FUNC(AC_G_const),\
-        FUNC(AC_unit_mass),\
+        FUNC(AC_G_CONST),\
         FUNC(AC_GM_star),\
         FUNC(AC_sq2GM_star),\
         FUNC(AC_cs2_sound), \
@@ -143,8 +134,6 @@
 #if LENTROPY
 #define AC_FOR_VTXBUF_HANDLES(FUNC) \
     FUNC(VTXBUF_LNRHO), \
-    /*Added vertex buffer for sink. TODO: Invoke smarter.*/\
-    FUNC(VTXBUF_ACCRETION), \
     FUNC(VTXBUF_UUX), \
     FUNC(VTXBUF_UUY), \
     FUNC(VTXBUF_UUZ), \
@@ -155,8 +144,6 @@
 #elif LMAGNETIC
 #define AC_FOR_VTXBUF_HANDLES(FUNC) \
     FUNC(VTXBUF_LNRHO), \
-    /*Added vertex buffer for sink. TODO: Invoke smarter.*/\
-    FUNC(VTXBUF_ACCRETION), \
     FUNC(VTXBUF_UUX), \
     FUNC(VTXBUF_UUY), \
     FUNC(VTXBUF_UUZ), \
@@ -166,8 +153,6 @@
 #elif LHYDRO
 #define AC_FOR_VTXBUF_HANDLES(FUNC) \
     FUNC(VTXBUF_LNRHO), \
-    /*Added vertex buffer for sink. TODO: Invoke smarter.*/\
-    FUNC(VTXBUF_ACCRETION), \
     FUNC(VTXBUF_UUX), \
     FUNC(VTXBUF_UUY), \
     FUNC(VTXBUF_UUZ),
