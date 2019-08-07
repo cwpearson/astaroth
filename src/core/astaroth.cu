@@ -73,8 +73,11 @@ acStore(AcMesh* host_mesh)
 AcResult
 acIntegrate(const AcReal dt)
 {
+    /*
     acNodeIntegrate(nodes[0], dt);
     return acBoundcondStep();
+    */
+    return acNodeIntegrate(nodes[0], dt);
 }
 
 AcResult

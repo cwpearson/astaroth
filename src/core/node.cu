@@ -162,6 +162,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
 #endif
 
     // Initialize the devices
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         const int3 multinode_offset                    = (int3){0, 0, 0}; // Placeholder
         const int3 multigpu_offset                     = (int3){0, 0, i * node->subgrid.n.z};
@@ -173,6 +174,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
     }
 
     // Enable peer access
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         const int front = (i + 1) % node->num_devices;
         const int back  = (i - 1 + node->num_devices) % node->num_devices;
@@ -205,6 +207,7 @@ acNodeDestroy(Node node)
 {
     acNodeSynchronizeStream(node, STREAM_ALL);
 
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         acDeviceDestroy(node->devices[i]);
     }
@@ -241,6 +244,7 @@ acNodeAutoOptimize(const Node node)
 AcResult
 acNodeSynchronizeStream(const Node node, const Stream stream)
 {
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         acDeviceSynchronizeStream(node->devices[i], stream);
     }
@@ -267,6 +271,7 @@ acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
 
     const size_t num_vertices = node->subgrid.m.x * node->subgrid.m.y * NGHOST;
 
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices - 1; ++i) {
         // ...|ooooxxx|... -> xxx|ooooooo|...
         const int3 src = (int3){0, 0, node->subgrid.n.z};
@@ -278,6 +283,7 @@ acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
         acDeviceTransferVertexBufferWithOffset(src_device, stream, vtxbuf_handle, src, dst,
                                                num_vertices, dst_device);
     }
+    // #pragma omp parallel for
     for (int i = 1; i < node->num_devices; ++i) {
         // ...|ooooooo|xxx <- ...|xxxoooo|...
         const int3 src = (int3){0, 0, NGHOST};
@@ -305,6 +311,7 @@ acNodeSynchronizeMesh(const Node node, const Stream stream)
 AcResult
 acNodeSwapBuffers(const Node node)
 {
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         acDeviceSwapBuffers(node->devices[i]);
     }
@@ -316,6 +323,7 @@ acNodeLoadConstant(const Node node, const Stream stream, const AcRealParam param
                    const AcReal value)
 {
     acNodeSynchronizeStream(node, stream);
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         acDeviceLoadConstant(node->devices[i], stream, param, value);
     }
@@ -329,6 +337,7 @@ acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream, const AcM
 {
     acNodeSynchronizeStream(node, stream);
     // See the beginning of the file for an explanation of the index mapping
+    // // #pragma omp parallel for
     // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
@@ -404,6 +413,7 @@ acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
                                   const int3 dst, const int num_vertices, AcMesh* host_mesh)
 {
     acNodeSynchronizeStream(node, stream);
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
         const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
@@ -466,6 +476,7 @@ acNodeIntegrateSubstep(const Node node, const Stream stream, const int isubstep,
 {
     acNodeSynchronizeStream(node, stream);
 
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         // DECOMPOSITION OFFSET HERE
         const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * node->subgrid.n.z};
@@ -490,6 +501,7 @@ local_boundcondstep(const Node node, const Stream stream, const VertexBufferHand
 
     if (node->num_devices > 1) {
         // Local boundary conditions
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) {
             const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.n.z};
@@ -543,8 +555,8 @@ acNodeIntegrate(const Node node, const AcReal dt)
     // xxx|OOO OOOOOOOOO OOO|xxx
     //    ^    ^         ^  ^
     //   n0   n1        n2  n3
-    const int3 n0 = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 n1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+    // const int3 n0 = (int3){NGHOST, NGHOST, NGHOST};
+    // const int3 n1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
     // const int3 n2 = node->grid.n;
     // const int3 n3 = n0 + node->grid.n;
 
@@ -554,12 +566,15 @@ acNodeIntegrate(const Node node, const AcReal dt)
             local_boundcondstep(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
         }
         acNodeSynchronizeStream(node, STREAM_ALL);
+
         // Inner inner
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) {
-            const int3 m1 = n1;
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = node->subgrid.n;
             acDeviceIntegrateSubstep(node->devices[i], STREAM_16, isubstep, m1, m2, dt);
         }
+
         for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
             acNodeSynchronizeVertexBuffer(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
             global_boundcondstep(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
@@ -568,32 +583,38 @@ acNodeIntegrate(const Node node, const AcReal dt)
             acNodeSynchronizeStream(node, (Stream)vtxbuf);
         }
 
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) { // Front
             const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
             const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
             acDeviceIntegrateSubstep(node->devices[i], STREAM_0, isubstep, m1, m2, dt);
         }
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) { // Back
             const int3 m1 = (int3){NGHOST, NGHOST, node->subgrid.n.z};
             const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
             acDeviceIntegrateSubstep(node->devices[i], STREAM_1, isubstep, m1, m2, dt);
         }
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) { // Bottom
             const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
             acDeviceIntegrateSubstep(node->devices[i], STREAM_2, isubstep, m1, m2, dt);
         }
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) { // Top
             const int3 m1 = (int3){NGHOST, node->subgrid.n.y, 2 * NGHOST};
             const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
             acDeviceIntegrateSubstep(node->devices[i], STREAM_3, isubstep, m1, m2, dt);
         }
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) { // Left
             const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
                                         node->subgrid.n.z - 2 * NGHOST};
             acDeviceIntegrateSubstep(node->devices[i], STREAM_4, isubstep, m1, m2, dt);
         }
+        // #pragma omp parallel for
         for (int i = 0; i < node->num_devices; ++i) { // Right
             const int3 m1 = (int3){node->subgrid.n.x, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
@@ -663,6 +684,7 @@ acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype
     acNodeSynchronizeStream(node, STREAM_ALL);
 
     AcReal results[node->num_devices];
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         acDeviceReduceScal(node->devices[i], stream, rtype, vtxbuf_handle, &results[i]);
     }
@@ -679,6 +701,7 @@ acNodeReduceVec(const Node node, const Stream stream, const ReductionType rtype,
     acNodeSynchronizeStream(node, STREAM_ALL);
 
     AcReal results[node->num_devices];
+    // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         acDeviceReduceVec(node->devices[i], stream, rtype, a, b, c, &results[i]);
     }
