@@ -197,7 +197,6 @@ run_benchmark(void)
                double(results[int(NTH_PERCENTILE * NUM_ITERS)]), int(NTH_PERCENTILE * 100),
                mesh_info.int_params[AC_nx]);
 
-        acStore(mesh);
         acQuit();
         acmesh_destroy(mesh);
     }
@@ -269,7 +268,6 @@ run_benchmark(void)
     write_result_to_file(wallclock * 1e3f / steps);
     #endif
 
-    acStore(mesh);
     acQuit();
     acmesh_destroy(mesh);
 
