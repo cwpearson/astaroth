@@ -354,6 +354,56 @@ gradients(const ModelVectorData& data)
     return (ModelMatrix){gradient(data.x), gradient(data.y), gradient(data.z)};
 }
 
+#if LUPWD
+
+Preprocessed Scalar
+der6x_upwd(in Scalar vertex)
+{
+    Scalar inv_ds = DCONST_REAL(AC_inv_dsx);
+
+    return (Scalar){  Scalar(1.0/60.0)*inv_ds* (
+                    - Scalar(20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
+                    + Scalar(15.0)*(vertex[vertexIdx.x+1, vertexIdx.y, vertexIdx.z] 
+                    +               vertex[vertexIdx.x-1, vertexIdx.y, vertexIdx.z])
+                    - Scalar( 6.0)*(vertex[vertexIdx.x+2, vertexIdx.y, vertexIdx.z] 
+                    +               vertex[vertexIdx.x-2, vertexIdx.y, vertexIdx.z])
+                    +               vertex[vertexIdx.x+3, vertexIdx.y, vertexIdx.z] 
+                    +               vertex[vertexIdx.x-3, vertexIdx.y, vertexIdx.z])};
+}
+
+Preprocessed Scalar
+der6y_upwd(in Scalar vertex)
+{
+    Scalar inv_ds = DCONST_REAL(AC_inv_dsy);
+
+    return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
+                    -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
+                    +Scalar( 15.0)*(vertex[vertexIdx.x, vertexIdx.y+1, vertexIdx.z] 
+                    +               vertex[vertexIdx.x, vertexIdx.y-1, vertexIdx.z])
+                    -Scalar(  6.0)*(vertex[vertexIdx.x, vertexIdx.y+2, vertexIdx.z] 
+                    +               vertex[vertexIdx.x, vertexIdx.y-2, vertexIdx.z])
+                    +               vertex[vertexIdx.x, vertexIdx.y+3, vertexIdx.z] 
+                    +               vertex[vertexIdx.x, vertexIdx.y-3, vertexIdx.z])};
+}
+
+Preprocessed Scalar
+der6z_upwd(in Scalar vertex)
+{
+    Scalar inv_ds = DCONST_REAL(AC_inv_dsz);
+
+    return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
+                    -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
+                    +Scalar( 15.0)*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+1] 
+                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-1])
+                    -Scalar(  6.0)*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+2] 
+                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-2])
+                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+3] 
+                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-3])};
+}
+
+#endif
+
+
 /*
  * =============================================================================
  * Level 0.3 (Built-in functions available during the Stencil Processing Stage)
@@ -450,6 +500,17 @@ curl(const ModelVectorData& vec)
                          gradient(vec.y).x - gradient(vec.x).y};
 }
 
+#if LUPWD
+Scalar
+upwd_der6(in Vector uu, in Scalar lnrho)
+{
+    Scalar uux = fabs(value(uu).x);
+    Scalar uuy = fabs(value(uu).y);
+    Scalar uuz = fabs(value(uu).z);
+    return (Scalar){uux*der6x_upwd(lnrho) + uuy*der6y_upwd(lnrho) + uuz*der6z_upwd(lnrho)};
+}
+#endif
+
 static inline ModelVector
 gradient_of_divergence(const ModelVectorData& vec)
 {
@@ -505,7 +566,12 @@ contract(const ModelMatrix& mat)
 static inline ModelScalar
 continuity(const ModelVectorData& uu, const ModelScalarData& lnrho)
 {
-    return -dot(value(uu), gradient(lnrho)) - divergence(uu);
+    return -dot(value(uu), gradient(lnrho)) 
+#if LUPWD
+           //This is a corrective hyperdiffusion term for upwinding.
+           + upwd_der6(uu, lnrho)
+#endif
+           - divergence(uu);
 }
 
 static inline ModelScalar
