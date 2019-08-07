@@ -335,11 +335,13 @@ compute_gradient(const int i, const int j, const int k, const ModelScalar* arr)
     return (ModelVector){derx(i, j, k, arr), dery(i, j, k, arr), derz(i, j, k, arr)};
 }
 
+#if LUPWD
 static inline ModelVector
 compute_upwind(const int i, const int j, const int k, const ModelScalar* arr)
 {
     return (ModelVector){der6x_upwd(i, j, k, arr), der6y_upwd(i, j, k, arr), der6z_upwd(i, j, k, arr)};
 }
+#endif
 
 static inline ModelMatrix
 compute_hessian(const int i, const int j, const int k, const ModelScalar* arr)
