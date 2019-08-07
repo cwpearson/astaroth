@@ -44,7 +44,7 @@ typedef struct {
     ModelVector gradient;
     ModelMatrix hessian;
 #if LUPWD
-    ModelVector upwind;  
+    ModelVector upwind;
 #endif
 } ModelScalarData;
 
@@ -284,11 +284,11 @@ der6x_upwd(const int i, const int j, const int k, const ModelScalar* arr)
 
     return ModelScalar(1.0/60.0)*inv_ds* (
           -ModelScalar(    20.0)* arr[IDX(i,   j,   k)]
-          +ModelScalar(    15.0)*(arr[IDX(i+1, j,   k)] 
+          +ModelScalar(    15.0)*(arr[IDX(i+1, j,   k)]
           +                       arr[IDX(i-1, j,   k)])
-          -ModelScalar(     6.0)*(arr[IDX(i+2, j,   k)] 
+          -ModelScalar(     6.0)*(arr[IDX(i+2, j,   k)]
           +                       arr[IDX(i-2, j,   k)])
-          +                       arr[IDX(i+3, j,   k)] 
+          +                       arr[IDX(i+3, j,   k)]
           +                       arr[IDX(i-3, j,   k)]);
 }
 
@@ -299,11 +299,11 @@ der6y_upwd(const int i, const int j, const int k, const ModelScalar* arr)
 
     return ModelScalar(1.0/60.0)*inv_ds* (
           -ModelScalar(    20.0)* arr[IDX(i,   j,   k)]
-          +ModelScalar(    15.0)*(arr[IDX(i,   j+1, k)] 
+          +ModelScalar(    15.0)*(arr[IDX(i,   j+1, k)]
           +                       arr[IDX(i,   j-1, k)])
-          -ModelScalar(     6.0)*(arr[IDX(i,   j+2, k)] 
+          -ModelScalar(     6.0)*(arr[IDX(i,   j+2, k)]
           +                       arr[IDX(i,   j-2, k)])
-          +                       arr[IDX(i,   j+3, k)] 
+          +                       arr[IDX(i,   j+3, k)]
           +                       arr[IDX(i,   j-3, k)]);
 }
 
@@ -314,11 +314,11 @@ der6z_upwd(const int i, const int j, const int k, const ModelScalar* arr)
 
     return ModelScalar(1.0/60.0)*inv_ds* (
           -ModelScalar(    20.0)* arr[IDX(i,   j,   k  )]
-          +ModelScalar(    15.0)*(arr[IDX(i,   j,   k+1)] 
+          +ModelScalar(    15.0)*(arr[IDX(i,   j,   k+1)]
           +                       arr[IDX(i,   j,   k-1)])
-          -ModelScalar(     6.0)*(arr[IDX(i,   j,   k+2)] 
+          -ModelScalar(     6.0)*(arr[IDX(i,   j,   k+2)]
           +                       arr[IDX(i,   j,   k-2)])
-          +                       arr[IDX(i,   j,   k+3)] 
+          +                       arr[IDX(i,   j,   k+3)]
           +                       arr[IDX(i,   j,   k-3)]);
 }
 #endif
@@ -581,7 +581,7 @@ upwd_der6(const ModelVectorData& uu, const ModelScalarData& lnrho)
 static inline ModelScalar
 continuity(const ModelVectorData& uu, const ModelScalarData& lnrho)
 {
-    return -dot(value(uu), gradient(lnrho)) 
+    return -dot(value(uu), gradient(lnrho))
 #if LUPWD
            //This is a corrective hyperdiffusion term for upwinding.
            + upwd_der6(uu, lnrho)
@@ -760,23 +760,24 @@ helical_forcing(ModelScalar magnitude, ModelVector k_force, ModelVector xx, Mode
                 ModelVector ff_im, ModelScalar phi)
 {
     (void)magnitude; // WARNING: unused
-    xx.x = xx.x * (2.0l * M_PI / (get(AC_dsx) * (get(AC_ny_max) - get(AC_ny_min))));
-    xx.y = xx.y * (2.0l * M_PI / (get(AC_dsy) * (get(AC_ny_max) - get(AC_ny_min))));
-    xx.z = xx.z * (2.0l * M_PI / (get(AC_dsz) * (get(AC_ny_max) - get(AC_ny_min))));
+    xx.x = xx.x*(2.0*M_PI/(get(AC_dsx)*get(AC_nx)));
+    xx.y = xx.y*(2.0*M_PI/(get(AC_dsy)*get(AC_ny)));
+    xx.z = xx.z*(2.0*M_PI/(get(AC_dsz)*get(AC_nz)));
 
-    ModelScalar cosl_phi     = cosl(phi);
-    ModelScalar sinl_phi     = sinl(phi);
-    ModelScalar cosl_k_dox_x = cosl(dot(k_force, xx));
-    ModelScalar sinl_k_dox_x = sinl(dot(k_force, xx));
+    ModelScalar cos_phi = cosl(phi);
+    ModelScalar sin_phi = sinl(phi);
+    ModelScalar cos_k_dox_x     = cosl(dot(k_force, xx));
+    ModelScalar sin_k_dox_x     = sinl(dot(k_force, xx));
     // Phase affect only the x-component
-    // ModelScalar real_comp       = cosl_k_dox_x;
-    // ModelScalar imag_comp       = sinl_k_dox_x;
-    ModelScalar real_comp_phase = cosl_k_dox_x * cosl_phi - sinl_k_dox_x * sinl_phi;
-    ModelScalar imag_comp_phase = cosl_k_dox_x * sinl_phi + sinl_k_dox_x * cosl_phi;
+    //Scalar real_comp       = cos_k_dox_x;
+    //Scalar imag_comp       = sin_k_dox_x;
+    ModelScalar real_comp_phase = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
+    ModelScalar imag_comp_phase = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
 
-    ModelVector force = (ModelVector){ff_re.x * real_comp_phase - ff_im.x * imag_comp_phase,
-                                      ff_re.y * real_comp_phase - ff_im.y * imag_comp_phase,
-                                      ff_re.z * real_comp_phase - ff_im.z * imag_comp_phase};
+
+    ModelVector force = (ModelVector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
+                             ff_re.y*real_comp_phase - ff_im.y*imag_comp_phase,
+                             ff_re.z*real_comp_phase - ff_im.z*imag_comp_phase};
 
     return force;
 }
