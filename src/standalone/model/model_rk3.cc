@@ -273,6 +273,53 @@ derzz(const int i, const int j, const int k, const ModelScalar* arr)
     return second_derivative(pencil, get(AC_inv_dsz));
 }
 
+#if LUPWD
+static inline ModelScalar
+der6x_upwd(const int i, const int j, const int k, const ModelScalar* arr)
+{
+    ModelScalar inv_ds = get(AC_inv_dsx);
+
+    return ModelScalar(1.0/60.0)*inv_ds* (
+          -ModelScalar(    20.0)* arr[IDX(i,   j,   k)]
+          +ModelScalar(    15.0)*(arr[IDX(i+1, j,   k)] 
+          +                       arr[IDX(i-1, j,   k)])
+          -ModelScalar(     6.0)*(arr[IDX(i+2, j,   k)] 
+          +                       arr[IDX(i-2, j,   k)])
+          +                       arr[IDX(i+3, j,   k)] 
+          +                       arr[IDX(i-3, j,   k)]);
+}
+
+static inline ModelScalar
+der6y_upwd(const int i, const int j, const int k, const ModelScalar* arr)
+{
+    ModelScalar inv_ds = get(AC_inv_dsy);
+
+    return ModelScalar(1.0/60.0)*inv_ds* (
+          -ModelScalar(    20.0)* arr[IDX(i,   j,   k)]
+          +ModelScalar(    15.0)*(arr[IDX(i,   j+1, k)] 
+          +                       arr[IDX(i,   j-1, k)])
+          -ModelScalar(     6.0)*(arr[IDX(i,   j+2, k)] 
+          +                       arr[IDX(i,   j-2, k)])
+          +                       arr[IDX(i,   j+3, k)] 
+          +                       arr[IDX(i,   j-3, k)]);
+}
+
+static inline ModelScalar
+der6z_upwd(const int i, const int j, const int k, const ModelScalar* arr)
+{
+    ModelScalar inv_ds = get(AC_inv_dsz);
+
+    return ModelScalar(1.0/60.0)*inv_ds* (
+          -ModelScalar(    20.0)* arr[IDX(i,   j,   k  )]
+          +ModelScalar(    15.0)*(arr[IDX(i,   j,   k+1)] 
+          +                       arr[IDX(i,   j,   k-1)])
+          -ModelScalar(     6.0)*(arr[IDX(i,   j,   k+2)] 
+          +                       arr[IDX(i,   j,   k-2)])
+          +                       arr[IDX(i,   j,   k+3)] 
+          +                       arr[IDX(i,   j,   k-3)]);
+}
+#endif
+
 static inline ModelScalar
 compute_value(const int i, const int j, const int k, const ModelScalar* arr)
 {
@@ -354,54 +401,6 @@ gradients(const ModelVectorData& data)
     return (ModelMatrix){gradient(data.x), gradient(data.y), gradient(data.z)};
 }
 
-#if LUPWD
-
-Preprocessed Scalar
-der6x_upwd(in Scalar vertex)
-{
-    Scalar inv_ds = DCONST_REAL(AC_inv_dsx);
-
-    return (Scalar){  Scalar(1.0/60.0)*inv_ds* (
-                    - Scalar(20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
-                    + Scalar(15.0)*(vertex[vertexIdx.x+1, vertexIdx.y, vertexIdx.z] 
-                    +               vertex[vertexIdx.x-1, vertexIdx.y, vertexIdx.z])
-                    - Scalar( 6.0)*(vertex[vertexIdx.x+2, vertexIdx.y, vertexIdx.z] 
-                    +               vertex[vertexIdx.x-2, vertexIdx.y, vertexIdx.z])
-                    +               vertex[vertexIdx.x+3, vertexIdx.y, vertexIdx.z] 
-                    +               vertex[vertexIdx.x-3, vertexIdx.y, vertexIdx.z])};
-}
-
-Preprocessed Scalar
-der6y_upwd(in Scalar vertex)
-{
-    Scalar inv_ds = DCONST_REAL(AC_inv_dsy);
-
-    return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
-                    -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
-                    +Scalar( 15.0)*(vertex[vertexIdx.x, vertexIdx.y+1, vertexIdx.z] 
-                    +               vertex[vertexIdx.x, vertexIdx.y-1, vertexIdx.z])
-                    -Scalar(  6.0)*(vertex[vertexIdx.x, vertexIdx.y+2, vertexIdx.z] 
-                    +               vertex[vertexIdx.x, vertexIdx.y-2, vertexIdx.z])
-                    +               vertex[vertexIdx.x, vertexIdx.y+3, vertexIdx.z] 
-                    +               vertex[vertexIdx.x, vertexIdx.y-3, vertexIdx.z])};
-}
-
-Preprocessed Scalar
-der6z_upwd(in Scalar vertex)
-{
-    Scalar inv_ds = DCONST_REAL(AC_inv_dsz);
-
-    return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
-                    -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
-                    +Scalar( 15.0)*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+1] 
-                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-1])
-                    -Scalar(  6.0)*(vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+2] 
-                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-2])
-                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z+3] 
-                    +               vertex[vertexIdx.x, vertexIdx.y, vertexIdx.z-3])};
-}
-
-#endif
 
 
 /*
@@ -500,17 +499,6 @@ curl(const ModelVectorData& vec)
                          gradient(vec.y).x - gradient(vec.x).y};
 }
 
-#if LUPWD
-Scalar
-upwd_der6(in Vector uu, in Scalar lnrho)
-{
-    Scalar uux = fabs(value(uu).x);
-    Scalar uuy = fabs(value(uu).y);
-    Scalar uuz = fabs(value(uu).z);
-    return (Scalar){uux*der6x_upwd(lnrho) + uuy*der6y_upwd(lnrho) + uuz*der6z_upwd(lnrho)};
-}
-#endif
-
 static inline ModelVector
 gradient_of_divergence(const ModelVectorData& vec)
 {
@@ -563,6 +551,18 @@ contract(const ModelMatrix& mat)
  * Stencil Processing Stage (equations)
  * =============================================================================
  */
+
+#if LUPWD
+ModelScalar
+upwd_der6(const ModelVectorData& uu, const ModelScalarData& lnrho)
+{
+    ModelScalar uux = fabs(value(uu).x);
+    ModelScalar uuy = fabs(value(uu).y);
+    ModelScalar uuz = fabs(value(uu).z);
+    return uux*der6x_upwd(lnrho) + uuy*der6y_upwd(lnrho) + uuz*der6z_upwd(lnrho);
+}
+#endif
+
 static inline ModelScalar
 continuity(const ModelVectorData& uu, const ModelScalarData& lnrho)
 {
