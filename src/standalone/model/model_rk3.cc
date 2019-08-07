@@ -43,6 +43,9 @@ typedef struct {
     ModelScalar value;
     ModelVector gradient;
     ModelMatrix hessian;
+#if LUPWD
+    ModelVector upwind;  
+#endif
 } ModelScalarData;
 
 typedef struct {
@@ -332,6 +335,12 @@ compute_gradient(const int i, const int j, const int k, const ModelScalar* arr)
     return (ModelVector){derx(i, j, k, arr), dery(i, j, k, arr), derz(i, j, k, arr)};
 }
 
+static inline ModelVector
+compute_upwind(const int i, const int j, const int k, const ModelScalar* arr)
+{
+    return (ModelVector){der6x_upwd(i, j, k, arr), der6y_upwd(i, j, k, arr), der6z_upwd(i, j, k, arr)};
+}
+
 static inline ModelMatrix
 compute_hessian(const int i, const int j, const int k, const ModelScalar* arr)
 {
@@ -355,6 +364,10 @@ read_data(const int i, const int j, const int k, ModelScalar* buf[], const int h
     // No significant effect on performance even though we do not need the
     // diagonals with all arrays
     data.hessian = compute_hessian(i, j, k, buf[handle]);
+
+#if LUPWD
+    data.upwind   = compute_upwind(i, j, k, buf[handle]);
+#endif
 
     return data;
 }
@@ -559,7 +572,7 @@ upwd_der6(const ModelVectorData& uu, const ModelScalarData& lnrho)
     ModelScalar uux = fabs(value(uu).x);
     ModelScalar uuy = fabs(value(uu).y);
     ModelScalar uuz = fabs(value(uu).z);
-    return uux*der6x_upwd(lnrho) + uuy*der6y_upwd(lnrho) + uuz*der6z_upwd(lnrho);
+    return uux*lnrho.upwind.x + uuy*lnrho.upwind.y + uuz*lnrho.upwind.z;
 }
 #endif
 
