@@ -766,13 +766,13 @@ helical_forcing(ModelScalar magnitude, ModelVector k_force, ModelVector xx, Mode
 
     ModelScalar cos_phi = cosl(phi);
     ModelScalar sin_phi = sinl(phi);
-    ModelScalar cos_k_dox_x     = cosl(dot(k_force, xx));
-    ModelScalar sin_k_dox_x     = sinl(dot(k_force, xx));
+    ModelScalar cos_k_dot_x     = cosl(dot(k_force, xx));
+    ModelScalar sin_k_dot_x     = sinl(dot(k_force, xx));
     // Phase affect only the x-component
-    //Scalar real_comp       = cos_k_dox_x;
-    //Scalar imag_comp       = sin_k_dox_x;
-    ModelScalar real_comp_phase = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
-    ModelScalar imag_comp_phase = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
+    //Scalar real_comp       = cos_k_dot_x;
+    //Scalar imag_comp       = sin_k_dot_x;
+    ModelScalar real_comp_phase = cos_k_dot_x*cos_phi - sin_k_dot_x*sin_phi;
+    ModelScalar imag_comp_phase = cos_k_dot_x*sin_phi + sin_k_dot_x*cos_phi;
 
 
     ModelVector force = (ModelVector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,

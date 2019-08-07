@@ -222,11 +222,11 @@ helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vecto
     // JP: This looks wrong:
     //    1) Should it be dsx * nx instead of dsx * ny?
     //    2) Should you also use globalGrid.n instead of the local n?
-    //    MV: You are rigth. Made a quickfix. I did not see the error  because multigpu is split 
-    //        in z direction not y direction. 
+    //    MV: You are rigth. Made a quickfix. I did not see the error  because multigpu is split
+    //        in z direction not y direction.
     //    3) Also final point: can we do this with vectors/quaternions instead?
     //       Tringonometric functions are much more expensive and inaccurate/
-    //    MV: Good idea. No an immediate priority.  
+    //    MV: Good idea. No an immediate priority.
     // Fun related article:
     // https://randomascii.wordpress.com/2014/10/09/intel-underestimates-error-bounds-by-1-3-quintillion/
     xx.x = xx.x*(2.0*M_PI/(dsx*globalGrid.n.x));
@@ -235,13 +235,13 @@ helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vecto
 
     Scalar cos_phi = cos(phi);
     Scalar sin_phi = sin(phi);
-    Scalar cos_k_dox_x     = cos(dot(k_force, xx));
-    Scalar sin_k_dox_x     = sin(dot(k_force, xx));
+    Scalar cos_k_dot_x     = cos(dot(k_force, xx));
+    Scalar sin_k_dot_x     = sin(dot(k_force, xx));
     // Phase affect only the x-component
-    //Scalar real_comp       = cos_k_dox_x;
-    //Scalar imag_comp       = sin_k_dox_x;
-    Scalar real_comp_phase = cos_k_dox_x*cos_phi - sin_k_dox_x*sin_phi;
-    Scalar imag_comp_phase = cos_k_dox_x*sin_phi + sin_k_dox_x*cos_phi;
+    //Scalar real_comp       = cos_k_dot_x;
+    //Scalar imag_comp       = sin_k_dot_x;
+    Scalar real_comp_phase = cos_k_dot_x*cos_phi - sin_k_dot_x*sin_phi;
+    Scalar imag_comp_phase = cos_k_dot_x*sin_phi + sin_k_dot_x*cos_phi;
 
 
     Vector force = (Vector){ ff_re.x*real_comp_phase - ff_im.x*imag_comp_phase,
