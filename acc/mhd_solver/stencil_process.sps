@@ -79,7 +79,6 @@ sink_gravity(int3 globalVertexIdx){
 
 
 
-// Now this is more of a suedo-code, just write out some intuitions. 
 #if LSINK
 Scalar
 truelove_density(in Scalar lnrho){
@@ -90,7 +89,7 @@ truelove_density(in Scalar lnrho){
  
     Scalar accrection_rho = rho - TJ_rho;
     if (accrection_rho < 0){
-    accrection_rho = Scalar(0);
+        accrection_rho = Scalar(0);
     } 
        
     return accretion_rho;
@@ -98,21 +97,21 @@ truelove_density(in Scalar lnrho){
 
 
 accretion_profile(int3 globalVertexIdx){
+     // ONE QUESTION: do I need to define grid_pos, sink_pos and distance again
+     // if the sink_gravity kernel will also be called once LSINK swtich is on? Seems redundant.
      const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                                       (globalVertexIdx.y - ny_min) * dsy,
                                       (globalVertexIdx.z - nz_min) * dsz};
      const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
                                       DCONST_REAL(AC_sink_pos_y),
                                       DCONST_REAL(AC_sink_pos_z)};
-     // Here I'm trying to make the accretion profile adjustable within astaroth.conf, i.e., making it possible to
-     // choose how many "cells" around the sink particle we want to accrete mass from.
-     const Scalar profile = DCONST_REAL(AC_accretion_range) * dsx;
-     if ((grid_pos - sink_pos) <= profile){
-        
+     const Scalar profile_range = DCONST_REAL(AC_accretion_range) * dsx;
+     const Scalar accretion_distance = length(grid_pos - sink_pos);   
+     if ((accretion_distance) <= profile_range){
+        // calculate accretion according to chosen criterion for the grid cell.
+         accretion = accretion_rho * dsx * dsy * dsz;
      }
-// I'm still trying to figure out what to put in if statement when the cell is within the range we set
-// and what should this kernel return.
-     return
+     return accretion;// the returned value is effectively mass, doesn't seem right since MIIKKA said mass will be summed up in vertex buffer. But I'll keep it as it untill we discuss this.
 }
 
 
