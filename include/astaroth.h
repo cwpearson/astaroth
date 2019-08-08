@@ -24,95 +24,62 @@ extern "C" {
 
 #include "astaroth_defines.h"
 
-/** Checks whether there are any CUDA devices available. Returns AC_SUCCESS if there is 1 or more,
- * AC_FAILURE otherwise. */
-AcResult acCheckDeviceAvailability(void);
+#include "astaroth_device.h"
+#include "astaroth_node.h"
 
-/** Synchronizes the stream shared by all GPUs in the node. Synchronizes all streams if STREAM_ALL
- * passed as a parameter */
-AcResult acSynchronizeStream(const StreamType stream);
+/*
+#include "astaroth_grid.h"
+#define acInit(x) acGridInit(x)
+#define acQuit() acGridQuit()
+#define acLoad(x) acGridLoadMesh(STREAM_DEFAULT, x)
+#define acReduceScal(x, y) acGridReduceScal(STREAM_DEFAULT, x, y)
+#define acReduceVec(x, y, z, w) acGridReduceVec(STREAM_DEFAULT, x, y, z, w)
+#define acBoundcondStep() acGridPeriodicBoundcondStep(STREAM_DEFAULT)
+#define acIntegrate(x) acGridIntegrateStep(STREAM_DEFAULT, x)
+#define acStore(x) acGridStoreMesh(STREAM_DEFAULT, x)
+#define acSynchronizeStream(x) acGridSynchronizeStream(x)
+#define acLoadDeviceConstant(x, y) acGridLoadConstant(STREAM_DEFAULT, x, y)
+*/
 
-/** Synchronizes the mesh distributed across multiple GPUs. Must be called if the data in the halos
- * of neighboring GPUs has been modified by an asynchronous function, f.ex. acBoundcondStep() */
-AcResult acSynchronizeMesh(void);
-
-/** Starting point of all GPU computation. Handles the allocation and
-initialization of *all memory needed on all GPUs in the node*. In other words,
-setups everything GPU-side so that calling any other GPU interface function
-afterwards does not result in illegal memory accesses. */
+/** Allocates all memory and initializes the devices visible to the caller. Should be
+ * called before any other function in this interface. */
 AcResult acInit(const AcMeshInfo mesh_info);
 
 /** Frees all GPU allocations and resets all devices in the node. Should be
  * called at exit. */
 AcResult acQuit(void);
 
-/** Does all three substeps of the RK3 integration and computes the boundary
-conditions when necessary. The result is synchronized and the boundary conditions are applied
-after the final substep, after which the result can be fetched to CPU memory with acStore. */
+/** Synchronizes a specific stream. All streams are synchronized if STREAM_ALL is passed as a
+ * parameter*/
+AcResult acSynchronizeStream(const Stream stream);
+
+/** Loads a constant to the memories of the devices visible to the caller */
+AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
+
+/** Loads an AcMesh to the devices visible to the caller */
+AcResult acLoad(const AcMesh host_mesh);
+
+/** Stores the AcMesh distributed among the devices visible to the caller back to the host*/
+AcResult acStore(AcMesh* host_mesh);
+
+/** Performs Runge-Kutta 3 integration. Note: Boundary conditions are not applied after the final
+ * substep and the user is responsible for calling acBoundcondStep before reading the data. */
 AcResult acIntegrate(const AcReal dt);
 
-/** Performs a scalar reduction on all GPUs in the node and returns the result. Operates on the
- * whole computational domain, which must be up to date and synchronized before calling
- * acReduceScal.
- */
-AcReal acReduceScal(const ReductionType rtype, const VertexBufferHandle a);
+/** Applies periodic boundary conditions for the Mesh distributed among the devices visible to the
+ * caller*/
+AcResult acBoundcondStep(void);
 
-/** Performs a vector reduction on all GPUs in the node and returns the result. Operates on the
- * whole computational domain, which must be up to date and synchronized before calling
- * acReduceVec.
- */
+/** Does a scalar reduction with the data stored in some vertex buffer */
+AcReal acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuf_handle);
+
+/** Does a vector reduction with vertex buffers where the vector components are (a, b, c) */
 AcReal acReduceVec(const ReductionType rtype, const VertexBufferHandle a,
                    const VertexBufferHandle b, const VertexBufferHandle c);
 
-/** Distributes the host mesh among the GPUs in the node. Synchronous. */
-AcResult acLoad(const AcMesh host_mesh);
-
-/** Gathers the mesh stored across GPUs in the node and stores it back to host memory. Synchronous.
+/** Stores a subset of the mesh stored across the devices visible to the caller back to host memory.
  */
-AcResult acStore(AcMesh* host_mesh);
-
-/*
- * =============================================================================
- * Astaroth interface: Advanced functions. Asynchronous.
- * =============================================================================
- */
-/** Loads a parameter to the constant memory of all GPUs in the node. Asynchronous. */
-AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
-AcResult acLoadDeviceConstantAsync(const AcRealParam param, const AcReal value,
-                                   const StreamType stream);
-
-/** Splits a subset of the host_mesh and distributes it among the GPUs in the node. Asynchronous. */
-AcResult acLoadWithOffset(const AcMesh host_mesh, const int3 start, const int num_vertices);
-AcResult acLoadWithOffsetAsync(const AcMesh host_mesh, const int3 start, const int num_vertices,
-                               const StreamType stream);
-
-/** Gathers a subset of the data distributed among the GPUs in the node and stores the mesh back to
- * CPU memory. Asynchronous.
- */
-AcResult acStoreWithOffset(const int3 start, const int num_vertices, AcMesh* host_mesh);
-AcResult acStoreWithOffsetAsync(const int3 start, const int num_vertices, AcMesh* host_mesh,
-                                const StreamType stream);
-
-/** Performs a single RK3 step without computing boundary conditions. Asynchronous.*/
-AcResult acIntegrateStep(const int isubstep, const AcReal dt);
-AcResult acIntegrateStepAsync(const int isubstep, const AcReal dt, const StreamType stream);
-
-/** Performs a single RK3 step on a subset of the mesh without computing the boundary conditions.
- * Asynchronous.*/
-AcResult acIntegrateStepWithOffset(const int isubstep, const AcReal dt, const int3 start,
-                                   const int3 end);
-AcResult acIntegrateStepWithOffsetAsync(const int isubstep, const AcReal dt, const int3 start,
-                                        const int3 end, const StreamType stream);
-
-/** Performs the boundary condition step on the GPUs in the node. Asynchronous. */
-AcResult acBoundcondStep(void);
-AcResult acBoundcondStepAsync(const StreamType stream);
-
-/*
- * =============================================================================
- * Revised interface
- * =============================================================================
- */
+AcResult acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh);
 
 #ifdef __cplusplus
 } // extern "C"
