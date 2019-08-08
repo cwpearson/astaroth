@@ -229,8 +229,11 @@ translate_latest_symbol(void)
     // IN / OUT
     else if (symbol->type != SYMBOLTYPE_FUNCTION_PARAMETER &&
              (symbol->type_qualifier == IN || symbol->type_qualifier == OUT)) {
-        const char* inout_type_qualifier = "static __device__ const auto";
-        printf("%s %s%s", inout_type_qualifier, inout_name_prefix, symbol_table[handle].identifier);
+
+        printf("static __device__ const %s %s%s", symbol->type_specifier == SCALAR ? "int" : "int3",
+               inout_name_prefix, symbol_table[handle].identifier);
+        if (symbol->type_specifier == VECTOR)
+            printf(" = make_int3");
     }
     // OTHER
     else {
