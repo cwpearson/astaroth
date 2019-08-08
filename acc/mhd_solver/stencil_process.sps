@@ -95,7 +95,7 @@ truelove_density(in Scalar lnrho){
     return accretion_rho;
 }
 
-
+Scalar
 accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
      // QUESTION: do I need to define grid_pos, sink_pos and distance again
      // if the sink_gravity kernel will also be called once LSINK swtich is on? Seems redundant.
@@ -109,25 +109,24 @@ accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
      const Scalar accretion_distance = length(grid_pos - sink_pos);   
      if ((accretion_distance) <= profile_range){
         // calculate accretion according to chosen criterion for the grid cell.
-         accretion = truelove_density(lnrho);
+         accretion_density = truelove_density(lnrho);
      } else {
-         accretion = Scalar(0.0); 
+         accretion_density = Scalar(0.0); 
      }
-     return accretion;// the returned value is effectively mass, doesn't seem right since MIIKKA said mass will be summed up in vertex buffer. But I'll keep it as it untill we discuss this.
+     return accretion_density;
 }
-
-
-update_accretion_buffer(){
-// 1. reduce accretion density from the density field.
+// Note for update_accretion_buffer:  1. reduce accretion density from the density field.
 // 2. Add the accretion mass, which is calculated from accretion density times volume of each cell and sum them into accretion buffer.
+Scalar
+update_accretion_buffer(in Scalar lnrho, out Scalar out_accretion){
+     lnrho = log(exp(lnrho) - accretion_profile(lnrho));    
+     // This subtracts the accretion_density from the density field.
+     out_accretion = Scalar (0.0); //Initilize the buffer?
+     out_accretion = out_accretion + (accretion_profile(lnrho) * dsx * dsy * dsz);
+     // Not sure if this is correct, but it's suppose to add the accretion "mass" into vertex buffer and sum them all up.
+    
 
-
-
-
-
-
-
-
+     return 
 }
 #endif
 //TODO: basic structure of this part is as follows 
