@@ -19,6 +19,7 @@
 // #include "astaroth_defines.h"
 #include "astaroth.h"
 
+#include "errchk.h"
 #include "math_utils.h" // int3 + int3
 
 #define AC_GEN_STR(X) #X
@@ -49,6 +50,17 @@ AcResult
 acQuit(void)
 {
     return acNodeDestroy(nodes[0]);
+}
+
+AcResult
+acCheckDeviceAvailability(void)
+{
+    int device_count; // Separate from num_devices to avoid side effects
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&device_count));
+    if (device_count > 0)
+        return AC_SUCCESS;
+    else
+        return AC_FAILURE;
 }
 
 AcResult
