@@ -104,7 +104,7 @@ acIntegrate(const AcReal dt)
 }
 
 AcResult
-acIntegrateStep(const int& isubstep, const AcReal dt)
+acIntegrateStep(const int isubstep, const AcReal dt)
 {
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
     const int3 end   = start + grid_n;
@@ -144,4 +144,10 @@ AcResult
 acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh)
 {
     return acNodeStoreMeshWithOffset(nodes[0], STREAM_DEFAULT, dst, dst, num_vertices, host_mesh);
+}
+
+AcResult
+acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_vertices)
+{
+    return acNodeLoadMeshWithOffset(nodes[0], STREAM_DEFAULT, host_mesh, src, src, num_vertices);
 }

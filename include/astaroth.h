@@ -87,10 +87,11 @@ AcResult acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* ho
 
 /** Will potentially be deprecated in later versions. Added only to fix backwards compatibility with
  * PC for now.*/
-AcResult acIntegrateStep(const int isubstep, const AcReal& dt);
+AcResult acIntegrateStep(const int isubstep, const AcReal dt);
 AcResult acIntegrateStepWithOffset(const int isubstep, const AcReal dt, const int3 start,
                                    const int3 end);
 AcResult acSynchronize(void);
+AcResult acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_vertices);
 
 #ifdef __cplusplus
 } // extern "C"
