@@ -115,19 +115,7 @@ accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
      }
      return accretion_density;
 }
-// Note for update_accretion_buffer:  1. reduce accretion density from the density field.
-// 2. Add the accretion mass, which is calculated from accretion density times volume of each cell and sum them into accretion buffer.
-Scalar
-update_accretion_buffer(in Scalar lnrho, out Scalar out_accretion){
-     lnrho = log(exp(lnrho) - accretion_profile(lnrho));    
-     // This subtracts the accretion_density from the density field.
-     out_accretion = Scalar (0.0); //Initilize the buffer?
-     out_accretion = out_accretion + (accretion_profile(lnrho) * dsx * dsy * dsz);
-     // Not sure if this is correct, but it's suppose to add the accretion "mass" into vertex buffer and sum them all up.
-    
 
-     return 
-}
 #endif
 //TODO: basic structure of this part is as follows 
 // update_accretion_buffer() <--> accretion_profile() <--> truelove_density()
@@ -426,4 +414,10 @@ solve(Scalar dt) {
         out_uu = out_uu + forcing(globalVertexIdx, dt);
     }
     #endif
+    
+    #if LSINK
+    out_lnrho = log(exp(out_lnrho) - accretion_profile(globalVertexIdx, lnrho));    
+    out_accretion = accretion + (accretion_profile(globalVertexIdx,lnrho) * dsx * dsy * dsz);
+    #endif
 }
+
