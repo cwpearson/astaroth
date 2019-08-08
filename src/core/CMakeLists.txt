@@ -3,7 +3,8 @@
 ########################################
 
 ## Find packages
-find_package(CUDA 9 REQUIRED)
+find_package(CUDA REQUIRED)
+# find_package(OpenMP REQUIRED)
 
 ## Architecture and optimization flags
 set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
@@ -12,7 +13,8 @@ set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
                     -gencode arch=compute_61,code=sm_61
                     -lineinfo
                     -ftz=true # Flush denormalized floats to zero
-                    -std=c++11)
+                    -std=c++11
+                    )# --compiler-options ${OpenMP_CXX_FLAGS})
                     #--maxrregcount=255
                     # -Xptxas -dlcm=ca opt-in to cache all global loads to L1/texture cache
                     # =cg to opt out
@@ -32,6 +34,6 @@ else ()
 endif ()
 
 ## Create and link the library
-include_directories(.)
-cuda_add_library(astaroth_core STATIC astaroth.cu device.cu)
+cuda_add_library(astaroth_core STATIC astaroth.cu device.cu node.cu)
+target_include_directories(astaroth_core PRIVATE .)
 target_link_libraries(astaroth_core m)

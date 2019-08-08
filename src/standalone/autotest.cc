@@ -29,13 +29,13 @@
 #include <stdio.h>
 
 #include "config_loader.h"
-#include "src/core/math_utils.h"
 #include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
 #include "model/model_boundconds.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
+#include "src/core/math_utils.h"
 
 #include "src/core/errchk.h"
 
@@ -431,8 +431,9 @@ check_rk3(const AcMeshInfo& mesh_info)
             acIntegrate(dt);
 
             model_rk3(dt, model_mesh);
-            boundconds(model_mesh->info, model_mesh);
         }
+        boundconds(model_mesh->info, model_mesh);
+        acBoundcondStep();
         acStore(gpu_mesh);
 
         bool is_acceptable = verify_meshes(*model_mesh, *gpu_mesh);
@@ -726,6 +727,7 @@ run_autotest(void)
 
                 // Device integration step
                 acIntegrate(dt);
+                acBoundcondStep();
                 acStore(candidate_mesh);
 
                 // Check fields

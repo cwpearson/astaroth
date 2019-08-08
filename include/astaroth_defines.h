@@ -86,7 +86,9 @@ typedef struct {
         FUNC(AC_nxy),\
         FUNC(AC_nxyz),\
 
-#define AC_FOR_BUILTIN_INT3_PARAM_TYPES(FUNC)
+#define AC_FOR_BUILTIN_INT3_PARAM_TYPES(FUNC)\
+        FUNC(AC_global_grid_n),\
+        FUNC(AC_multigpu_offset),
 
 #define AC_FOR_BUILTIN_REAL_PARAM_TYPES(FUNC)
 
@@ -106,9 +108,26 @@ typedef enum {
 
 typedef enum {
     STREAM_DEFAULT,
-    NUM_STREAM_TYPES, //
-    STREAM_ALL
-} StreamType;
+    STREAM_0,
+    STREAM_1,
+    STREAM_2,
+    STREAM_3,
+    STREAM_4,
+    STREAM_5,
+    STREAM_6,
+    STREAM_7,
+    STREAM_8,
+    STREAM_9,
+    STREAM_10,
+    STREAM_11,
+    STREAM_12,
+    STREAM_13,
+    STREAM_14,
+    STREAM_15,
+    STREAM_16,
+    NUM_STREAM_TYPES
+} Stream;
+#define STREAM_ALL (NUM_STREAM_TYPES)
 
 #define AC_GEN_ID(X) X
 typedef enum {

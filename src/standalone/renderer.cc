@@ -32,13 +32,13 @@
 #include <string.h> // memcpy
 
 #include "config_loader.h"
-#include "src/core/errchk.h"
-#include "src/core/math_utils.h"
 #include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
+#include "src/core/errchk.h"
+#include "src/core/math_utils.h"
 #include "timer_hires.h"
 
 // Window
@@ -106,6 +106,7 @@ renderer_init(const int& mx, const int& my)
     // Setup window
     window = SDL_CreateWindow("Astaroth", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               window_width, window_height, SDL_WINDOW_SHOWN);
+    ERRCHK_ALWAYS(window);
 
     // Setup SDL renderer
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
@@ -409,9 +410,10 @@ run_renderer(void)
         /* Render */
         const float timer_diff_sec = timer_diff_nsec(frame_timer) / 1e9f;
         if (timer_diff_sec >= desired_frame_time) {
-            // acStore(mesh);
             const int num_vertices = mesh->info.int_params[AC_mxy];
             const int3 dst         = (int3){0, 0, k_slice};
+            acBoundcondStep();
+            // acStore(mesh);
             acStoreWithOffset(dst, num_vertices, mesh);
             acSynchronizeStream(STREAM_ALL);
             renderer_draw(*mesh); // Bottleneck is here
@@ -421,7 +423,6 @@ run_renderer(void)
     }
     printf("Wallclock time %f s\n", double(timer_diff_nsec(wallclock) / 1e9f));
 
-    acStore(mesh);
     acQuit();
     acmesh_destroy(mesh);
 
