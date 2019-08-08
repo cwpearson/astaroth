@@ -66,8 +66,8 @@ AcResult acStore(AcMesh* host_mesh);
  * substep and the user is responsible for calling acBoundcondStep before reading the data. */
 AcResult acIntegrate(const AcReal dt);
 
-/** Applies periodic boundary conditions for the Mesh distributed among the devices visible to the
- * caller*/
+/** Applies periodic boundary conditions for the Mesh distributed among the devices visible to
+ * the caller*/
 AcResult acBoundcondStep(void);
 
 /** Does a scalar reduction with the data stored in some vertex buffer */
@@ -80,6 +80,13 @@ AcReal acReduceVec(const ReductionType rtype, const VertexBufferHandle a,
 /** Stores a subset of the mesh stored across the devices visible to the caller back to host memory.
  */
 AcResult acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh);
+
+/** Will potentially be deprecated in later versions. Added only to fix backwards compatibility with
+ * PC for now.*/
+AcResult acIntegrateStep(const int isubstep, const AcReal& dt);
+AcResult acIntegrateStepWithOffset(const int isubstep, const AcReal dt, const int3 start,
+                                   const int3 end);
+AcResult acSynchronize(void);
 
 #ifdef __cplusplus
 } // extern "C"
