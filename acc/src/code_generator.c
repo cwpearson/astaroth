@@ -338,8 +338,8 @@ traverse(const ASTNode* node)
     // Preprocessed parameter boilerplate
     if (node->type == NODE_TYPE_QUALIFIER && node->token == PREPROCESSED)
         inside_preprocessed = true;
-    static const char
-        preprocessed_parameter_boilerplate[] = "const int3 vertexIdx, const int3 globalVertexIdx, ";
+    static const char preprocessed_parameter_boilerplate
+        [] = "const int3& vertexIdx, const int3& globalVertexIdx, ";
     if (inside_preprocessed && node->type == NODE_FUNCTION_PARAMETER_DECLARATION)
         printf("%s ", preprocessed_parameter_boilerplate);
     // BOILERPLATE END////////////////////////////////////////////////////////
@@ -494,8 +494,8 @@ generate_preprocessed_structures(void)
 
     // FILLING THE DATA STRUCT
     printf("static __device__ __forceinline__ AcRealData\
-            read_data(const int3 vertexIdx,\
-                const int3 globalVertexIdx,\
+            read_data(const int3& vertexIdx,\
+                const int3& globalVertexIdx,\
             AcReal* __restrict__ buf[], const int handle)\
             {\n\
                 %sData data;\n",
@@ -530,8 +530,8 @@ generate_preprocessed_structures(void)
         } AcReal3Data;\
         \
         static __device__ __forceinline__ AcReal3Data\
-        read_data(const int3 vertexIdx,\
-                  const int3 globalVertexIdx,\
+        read_data(const int3& vertexIdx,\
+                  const int3& globalVertexIdx,\
                   AcReal* __restrict__ buf[], const int3& handle)\
         {\
             AcReal3Data data;\
