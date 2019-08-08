@@ -36,31 +36,31 @@ uniform Scalar inv_dsx;
 uniform Scalar inv_dsy;
 uniform Scalar inv_dsz;
 
-Scalar 
-distance_x(Vector a, Vector b) 
-{ 
-    return sqrt(dot(a-b, a-b)); 
+Scalar
+distance_x(Vector a, Vector b)
+{
+    return sqrt(dot(a-b, a-b));
 }
 
 Vector
-value(in Vector uu)
+value(in VectorField uu)
 {
     return (Vector){value(uu.x), value(uu.y), value(uu.z)};
 }
 
 Matrix
-gradients(in Vector uu)
+gradients(in VectorField uu)
 {
     return (Matrix){gradient(uu.x), gradient(uu.y), gradient(uu.z)};
 }
 
 Scalar
-continuity(in Vector uu, in Scalar lnrho) {
+continuity(in VectorField uu, in ScalarField lnrho) {
     return -dot(value(uu), gradient(lnrho)) - divergence(uu);
 }
 
 // "Line-like" gravity with no y-component
-Vector 
+Vector
 grav_force_line(const int3 vertexIdx)
 {
     Vector vertex_pos = (Vector){dsx * vertexIdx.x - xorig, dsy * vertexIdx.y - yorig, dsz * vertexIdx.z - zorig};
@@ -84,7 +84,7 @@ grav_force_line(const int3 vertexIdx)
 
 #if LENTROPY
 Vector
-momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa, const int3 vertexIdx) {
+momentum(in VectorField uu, in ScalarField lnrho, in ScalarField ss, in VectorField aa, const int3 vertexIdx) {
   Vector mom;
 
   const Matrix S = stress_tensor(uu);
@@ -109,7 +109,7 @@ momentum(in Vector uu, in Scalar lnrho, in Scalar ss, in Vector aa, const int3 v
 }
 #else
 Vector
-momentum(in Vector uu, in Scalar lnrho, const int3 vertexIdx) {
+momentum(in VectorField uu, in ScalarField lnrho, const int3 vertexIdx) {
   Vector mom;
 
   const Matrix S = stress_tensor(uu);
@@ -128,7 +128,7 @@ momentum(in Vector uu, in Scalar lnrho, const int3 vertexIdx) {
 
 
 Vector
-induction(in Vector uu, in Vector aa) {
+induction(in VectorField uu, in VectorField aa) {
   // Note: We do (-nabla^2 A + nabla(nabla dot A)) instead of (nabla x (nabla
   // x A)) in order to avoid taking the first derivative twice (did the math,
   // yes this actually works. See pg.28 in arXiv:astro-ph/0109497)
@@ -146,7 +146,7 @@ induction(in Vector uu, in Vector aa) {
 
 #if LENTROPY
 Scalar
-lnT( in Scalar ss, in Scalar lnrho) {
+lnT( in ScalarField ss, in ScalarField lnrho) {
   const Scalar lnT = LNT0 + value(ss) / cp_sound +
     (gamma - AcReal(1.)) * (value(lnrho) - LNRHO0);
   return lnT;
@@ -154,7 +154,7 @@ lnT( in Scalar ss, in Scalar lnrho) {
 
 // Nabla dot (K nabla T) / (rho T)
 Scalar
-heat_conduction( in Scalar ss, in Scalar lnrho) {
+heat_conduction( in ScalarField ss, in ScalarField lnrho) {
   const Scalar inv_cp_sound = AcReal(1.) / cp_sound;
 
   const Vector grad_ln_chi = (Vector) {
@@ -179,7 +179,7 @@ heating(const int i, const int j, const int k) {
 }
 
 Scalar
-entropy(in Scalar ss, in Vector uu, in Scalar lnrho, in Vector aa) {
+entropy(in ScalarField ss, in VectorField uu, in ScalarField lnrho, in VectorField aa) {
     const Matrix S = stress_tensor(uu);
 
     // nabla x nabla x A / mu0 = nabla(nabla dot A) - nabla^2(A)
@@ -198,21 +198,20 @@ entropy(in Scalar ss, in Vector uu, in Scalar lnrho, in Vector aa) {
 
 // Declare input and output arrays using locations specified in the
 // array enum in astaroth.h
-in Scalar lnrho = VTXBUF_LNRHO;
-out Scalar out_lnrho = VTXBUF_LNRHO;
+in ScalarField lnrho(VTXBUF_LNRHO);
+out ScalarField out_lnrho(VTXBUF_LNRHO);
 
-in Vector uu = (int3) {VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ};
-out Vector out_uu = (int3) {VTXBUF_UUX,VTXBUF_UUY,VTXBUF_UUZ};
-
+in VectorField uu(VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+out VectorField out_uu(VTXBUF_UUX,VTXBUF_UUY,VTXBUF_UUZ);
 
 #if LMAGNETIC
-in Vector aa = (int3) {VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ};
-out Vector out_aa = (int3) {VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ};
+in VectorField aa(VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ);
+out VectorField out_aa(VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ);
 #endif
 
 #if LENTROPY
-in Scalar ss = VTXBUF_ENTROPY;
-out Scalar out_ss = VTXBUF_ENTROPY;
+in ScalarField ss(VTXBUF_ENTROPY);
+out ScalarField out_ss(VTXBUF_ENTROPY);
 #endif
 
 Kernel void

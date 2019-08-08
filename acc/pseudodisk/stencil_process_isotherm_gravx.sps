@@ -33,32 +33,32 @@ uniform Scalar inv_dsx;
 uniform Scalar inv_dsy;
 uniform Scalar inv_dsz;
 
-Scalar 
-distance_x(Vector a, Vector b) 
-{ 
-    return sqrt(dot(a-b, a-b)); 
+Scalar
+distance_x(Vector a, Vector b)
+{
+    return sqrt(dot(a-b, a-b));
 }
 
 Vector
-value(in Vector uu)
+value(in VectorField uu)
 {
     return (Vector){value(uu.x), value(uu.y), value(uu.z)};
 }
 
 Matrix
-gradients(in Vector uu)
+gradients(in VectorField uu)
 {
     return (Matrix){gradient(uu.x), gradient(uu.y), gradient(uu.z)};
 }
 
 Scalar
-continuity(in Vector uu, in Scalar lnrho) {
+continuity(in VectorField uu, in ScalarField lnrho) {
     return -dot(value(uu), gradient(lnrho)) - divergence(uu);
 }
 
 
 // "Line-like" gravity with no y-component
-Vector 
+Vector
 grav_force_line(const int3 vertexIdx)
 {
     Vector vertex_pos = (Vector){dsx * vertexIdx.x - xorig, dsy * vertexIdx.y - yorig, dsz * vertexIdx.z - zorig};
@@ -77,7 +77,7 @@ grav_force_line(const int3 vertexIdx)
 
 
 Vector
-momentum(in Vector uu, in Scalar lnrho, const int3 vertexIdx) {
+momentum(in VectorField uu, in ScalarField lnrho, const int3 vertexIdx) {
   Vector mom;
 
   const Matrix S = stress_tensor(uu);
@@ -86,15 +86,15 @@ momentum(in Vector uu, in Scalar lnrho, const int3 vertexIdx) {
     cs2_sound * gradient(lnrho) +
     nu_visc *
     (laplace_vec(uu) + Scalar(1. / 3.) * gradient_of_divergence(uu) +
-      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu) 
+      Scalar(2.) * mul(S, gradient(lnrho))) + zeta * gradient_of_divergence(uu)
       + grav_force_line(vertexIdx);
-  
+
 
   return mom;
 }
 
 Vector
-induction(in Vector uu, in Vector aa) {
+induction(in VectorField uu, in VectorField aa) {
   // Note: We do (-nabla^2 A + nabla(nabla dot A)) instead of (nabla x (nabla
   // x A)) in order to avoid taking the first derivative twice (did the math,
   // yes this actually works. See pg.28 in arXiv:astro-ph/0109497)
@@ -111,15 +111,16 @@ induction(in Vector uu, in Vector aa) {
 
 // Declare input and output arrays using locations specified in the
 // array enum in astaroth.h
-in Scalar lnrho = VTXBUF_LNRHO;
-out Scalar out_lnrho = VTXBUF_LNRHO;
+in ScalarField lnrho(VTXBUF_LNRHO);
+out ScalarField out_lnrho(VTXBUF_LNRHO);
 
-in Vector uu = (int3) {VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ};
-out Vector out_uu = (int3) {VTXBUF_UUX,VTXBUF_UUY,VTXBUF_UUZ};
+in VectorField uu(VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+out VectorField out_uu(VTXBUF_UUX,VTXBUF_UUY,VTXBUF_UUZ);
+
 
 #if LMAGNETIC
-in Vector aa = (int3) {VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ};
-out Vector out_aa = (int3) {VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ};
+in VectorField aa(VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ);
+out VectorField out_aa(VTXBUF_AX,VTXBUF_AY,VTXBUF_AZ);
 #endif
 
 Kernel void
@@ -132,38 +133,3 @@ solve(Scalar dt) {
 
   WRITE(out_uu, RK3(out_uu, uu, momentum(uu, lnrho, vertexIdx), dt));
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
