@@ -82,14 +82,14 @@ sink_gravity(int3 globalVertexIdx){
 #if LSINK
 Scalar
 truelove_density(in Scalar lnrho){
-    const Scalar rho = exp(lnrho);
+    const Scalar rho = exp(value(lnrho));
     const Scalar Jeans_length_squared = (M_PI * cs2_sound) / (AC_G_const * rho);
     const Scalar TJ_rho = ((M_PI) * ((dsx * dsx) / Jeans_length_squared) * cs2_sound) / (AC_G_const * dsx * dsx);
     //TODO: dsx will cancel out, deal with it later for optimization.      
  
-    Scalar accrection_rho = rho - TJ_rho;
-    if (accrection_rho < 0){
-        accrection_rho = Scalar(0);
+    Scalar accretion_rho = rho - TJ_rho;
+    if (accretion_rho < 0){
+        accretion_rho = Scalar(0);
     } 
        
     return accretion_rho;
@@ -97,23 +97,24 @@ truelove_density(in Scalar lnrho){
 
 Scalar
 accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
-     // QUESTION: do I need to define grid_pos, sink_pos and distance again
-     // if the sink_gravity kernel will also be called once LSINK swtich is on? Seems redundant.
-     const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                                      (globalVertexIdx.y - ny_min) * dsy,
-                                      (globalVertexIdx.z - nz_min) * dsz};
-     const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
-                                      DCONST_REAL(AC_sink_pos_y),
-                                      DCONST_REAL(AC_sink_pos_z)};
-     const Scalar profile_range = DCONST_REAL(AC_accretion_range);
-     const Scalar accretion_distance = length(grid_pos - sink_pos);   
-     if ((accretion_distance) <= profile_range){
+    // QUESTION: do I need to define grid_pos, sink_pos and distance again
+    // if the sink_gravity kernel will also be called once LSINK swtich is on? Seems redundant.
+    const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                                     (globalVertexIdx.y - ny_min) * dsy,
+                                     (globalVertexIdx.z - nz_min) * dsz};
+    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
+                                     DCONST_REAL(AC_sink_pos_y),
+                                     DCONST_REAL(AC_sink_pos_z)};
+    const Scalar profile_range = DCONST_REAL(AC_accretion_range);
+    const Scalar accretion_distance = length(grid_pos - sink_pos);   
+    Scalar accretion_density; 
+    if ((accretion_distance) <= profile_range){
         // calculate accretion according to chosen criterion for the grid cell.
-         accretion_density = truelove_density(lnrho);
-     } else {
-         accretion_density = Scalar(0.0); 
-     }
-     return accretion_density;
+        accretion_density = truelove_density(lnrho);
+    } else {
+        accretion_density = Scalar(0.0); 
+    }
+    return accretion_density;
 }
 
 #endif
@@ -417,7 +418,7 @@ solve(Scalar dt) {
     
     #if LSINK
     out_lnrho = log(exp(out_lnrho) - accretion_profile(globalVertexIdx, lnrho));    
-    out_accretion = accretion + (accretion_profile(globalVertexIdx,lnrho) * dsx * dsy * dsz);
+    out_accretion = value(accretion) + (accretion_profile(globalVertexIdx,lnrho) * dsx * dsy * dsz);
     #endif
 }
 

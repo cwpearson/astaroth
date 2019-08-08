@@ -80,6 +80,7 @@
 	FUNC(AC_M_sink),\
 	FUNC(AC_M_sink_Msun),\
         FUNC(AC_soft),\
+        FUNC(AC_accretion_range),\
         /* Run params */\
         FUNC(AC_cdt), \
         FUNC(AC_cdtv), \
