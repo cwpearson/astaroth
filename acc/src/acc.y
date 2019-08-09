@@ -20,7 +20,7 @@ int yyget_lineno();
 %token VOID INT INT3
 %token IF ELSE FOR WHILE ELIF
 %token LEQU LAND LOR LLEQU
-%token KERNEL PREPROCESSED 
+%token KERNEL PREPROCESSED
 %token INPLACE_INC INPLACE_DEC
 
 %%
@@ -72,11 +72,11 @@ selection_statement: IF expression else_selection_statement                     
                    ;
 
 else_selection_statement: compound_statement                                            { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
-                        | compound_statement elif_selection_statement                   { $$ = astnode_create(NODE_UNKNOWN, $1, $2); }                        
+                        | compound_statement elif_selection_statement                   { $$ = astnode_create(NODE_UNKNOWN, $1, $2); }
                         | compound_statement ELSE compound_statement                    { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = ELSE; }
                         ;
 
-elif_selection_statement: ELIF expression else_selection_statement                      { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = ELIF; }   
+elif_selection_statement: ELIF expression else_selection_statement                      { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = ELIF; }
                         ;
 
 iteration_statement: WHILE expression compound_statement                                { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = WHILE; }
@@ -101,8 +101,9 @@ exec_statement: declaration                                                     
               ;
 
 assignment: declaration '=' expression                                                  { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = '='; }
+          | declaration '(' expression_list ')'                                         { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = '('; $$->postfix = ')'; } // C++ style initializer
           | expression '=' expression                                                   { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = '='; }
-          ; 
+          ;
 
 return_statement: /* Empty */                                                           { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); }
                 | expression                                                            { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
@@ -126,7 +127,7 @@ array_declaration: identifier '[' ']'                                           
                  | identifier '[' expression ']'                                        { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = '['; $$->postfix = ']'; }
                  ;
 
-type_declaration: type_specifier                                                        { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }                 
+type_declaration: type_specifier                                                        { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
                 | type_qualifier type_specifier                                         { $$ = astnode_create(NODE_UNKNOWN, $1, $2); }
                 ;
 
@@ -181,7 +182,7 @@ binary_operator: '+'                                                            
                | '/'                                                                    { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); $$->infix = yytext[0]; }
                | '*'                                                                    { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); $$->infix = yytext[0]; }
                | '<'                                                                    { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); $$->infix = yytext[0]; }
-               | '>'                                                                    { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); $$->infix = yytext[0]; }           
+               | '>'                                                                    { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); $$->infix = yytext[0]; }
                | LEQU                                                                   { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                | LAND                                                                   { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                | LOR                                                                    { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }

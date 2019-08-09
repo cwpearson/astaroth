@@ -229,8 +229,11 @@ translate_latest_symbol(void)
     // IN / OUT
     else if (symbol->type != SYMBOLTYPE_FUNCTION_PARAMETER &&
              (symbol->type_qualifier == IN || symbol->type_qualifier == OUT)) {
-        const char* inout_type_qualifier = "static __device__ const auto";
-        printf("%s %s%s", inout_type_qualifier, inout_name_prefix, symbol_table[handle].identifier);
+
+        printf("static __device__ const %s %s%s", symbol->type_specifier == SCALAR ? "int" : "int3",
+               inout_name_prefix, symbol_table[handle].identifier);
+        if (symbol->type_specifier == VECTOR)
+            printf(" = make_int3");
     }
     // OTHER
     else {
@@ -335,8 +338,8 @@ traverse(const ASTNode* node)
     // Preprocessed parameter boilerplate
     if (node->type == NODE_TYPE_QUALIFIER && node->token == PREPROCESSED)
         inside_preprocessed = true;
-    static const char
-        preprocessed_parameter_boilerplate[] = "const int3 vertexIdx, const int3 globalVertexIdx, ";
+    static const char preprocessed_parameter_boilerplate
+        [] = "const int3& vertexIdx, const int3& globalVertexIdx, ";
     if (inside_preprocessed && node->type == NODE_FUNCTION_PARAMETER_DECLARATION)
         printf("%s ", preprocessed_parameter_boilerplate);
     // BOILERPLATE END////////////////////////////////////////////////////////
@@ -491,8 +494,8 @@ generate_preprocessed_structures(void)
 
     // FILLING THE DATA STRUCT
     printf("static __device__ __forceinline__ AcRealData\
-            read_data(const int3 vertexIdx,\
-                const int3 globalVertexIdx,\
+            read_data(const int3& vertexIdx,\
+                const int3& globalVertexIdx,\
             AcReal* __restrict__ buf[], const int handle)\
             {\n\
                 %sData data;\n",
@@ -527,8 +530,8 @@ generate_preprocessed_structures(void)
         } AcReal3Data;\
         \
         static __device__ __forceinline__ AcReal3Data\
-        read_data(const int3 vertexIdx,\
-                  const int3 globalVertexIdx,\
+        read_data(const int3& vertexIdx,\
+                  const int3& globalVertexIdx,\
                   AcReal* __restrict__ buf[], const int3& handle)\
         {\
             AcReal3Data data;\
