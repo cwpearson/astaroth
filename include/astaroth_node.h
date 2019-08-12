@@ -24,6 +24,8 @@ extern "C" {
 
 #include "astaroth_defines.h"
 
+#include "astaroth_device.h" // TODO: Should this really be here?
+
 typedef struct node_s* Node; // Opaque pointer to node_s.
 
 typedef struct {
