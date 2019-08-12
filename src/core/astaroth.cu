@@ -16,7 +16,6 @@
     You should have received a copy of the GNU General Public License
     along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
 */
-// #include "astaroth_defines.h"
 #include "astaroth.h"
 
 #include "errchk.h"
@@ -93,10 +92,6 @@ acStore(AcMesh* host_mesh)
 AcResult
 acIntegrate(const AcReal dt)
 {
-    /*
-    acNodeIntegrate(nodes[0], dt);
-    return acBoundcondStep();
-    */
     return acNodeIntegrate(nodes[0], dt);
 }
 
