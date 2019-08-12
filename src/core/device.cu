@@ -92,6 +92,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
 
     device->id           = id;
     device->local_config = device_config;
+    acDevicePrintInfo(device);
 
     // Check that the code was compiled for the proper GPU architecture
     printf("Trying to run a dummy kernel. If this fails, make sure that your\n"
