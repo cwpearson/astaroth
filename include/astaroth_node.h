@@ -27,7 +27,16 @@ extern "C" {
 typedef struct node_s* Node; // Opaque pointer to node_s.
 
 typedef struct {
+    int3 m;
+    int3 n;
+} Grid;
 
+typedef struct {
+    int num_devices;
+    Device* devices;
+
+    Grid grid;
+    Grid subgrid;
 } DeviceConfiguration;
 
 /** */
