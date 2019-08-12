@@ -19,6 +19,9 @@
 // #include "astaroth_defines.h"
 #include "astaroth.h"
 
+#include "errchk.h"
+#include "math_utils.h" // int3 + int3
+
 #define AC_GEN_STR(X) #X
 const char* intparam_names[]   = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
                                 AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
@@ -33,10 +36,13 @@ const char* vtxbuf_names[]     = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 
 static const int num_nodes = 1;
 static Node nodes[num_nodes];
+static int3 grid_n;
 
 AcResult
 acInit(const AcMeshInfo mesh_info)
 {
+    grid_n = (int3){mesh_info.int_params[AC_nx], mesh_info.int_params[AC_ny],
+                    mesh_info.int_params[AC_nz]};
     return acNodeCreate(0, mesh_info, &nodes[0]);
 }
 
@@ -44,6 +50,23 @@ AcResult
 acQuit(void)
 {
     return acNodeDestroy(nodes[0]);
+}
+
+AcResult
+acCheckDeviceAvailability(void)
+{
+    int device_count; // Separate from num_devices to avoid side effects
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&device_count));
+    if (device_count > 0)
+        return AC_SUCCESS;
+    else
+        return AC_FAILURE;
+}
+
+AcResult
+acSynchronize(void)
+{
+    return acNodeSynchronizeStream(nodes[0], STREAM_ALL);
 }
 
 AcResult
@@ -81,6 +104,20 @@ acIntegrate(const AcReal dt)
 }
 
 AcResult
+acIntegrateStep(const int isubstep, const AcReal dt)
+{
+    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 end   = start + grid_n;
+    return acNodeIntegrateSubstep(nodes[0], STREAM_DEFAULT, isubstep, start, end, dt);
+}
+
+AcResult
+acIntegrateStepWithOffset(const int isubstep, const AcReal dt, const int3 start, const int3 end)
+{
+    return acNodeIntegrateSubstep(nodes[0], STREAM_DEFAULT, isubstep, start, end, dt);
+}
+
+AcResult
 acBoundcondStep(void)
 {
     return acNodePeriodicBoundconds(nodes[0], STREAM_DEFAULT);
@@ -107,4 +144,10 @@ AcResult
 acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh)
 {
     return acNodeStoreMeshWithOffset(nodes[0], STREAM_DEFAULT, dst, dst, num_vertices, host_mesh);
+}
+
+AcResult
+acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_vertices)
+{
+    return acNodeLoadMeshWithOffset(nodes[0], STREAM_DEFAULT, host_mesh, src, src, num_vertices);
 }

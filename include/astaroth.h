@@ -49,6 +49,10 @@ AcResult acInit(const AcMeshInfo mesh_info);
  * called at exit. */
 AcResult acQuit(void);
 
+/** Checks whether there are any CUDA devices available. Returns AC_SUCCESS if there is 1 or more,
+ * AC_FAILURE otherwise. */
+AcResult acCheckDeviceAvailability(void);
+
 /** Synchronizes a specific stream. All streams are synchronized if STREAM_ALL is passed as a
  * parameter*/
 AcResult acSynchronizeStream(const Stream stream);
@@ -66,8 +70,8 @@ AcResult acStore(AcMesh* host_mesh);
  * substep and the user is responsible for calling acBoundcondStep before reading the data. */
 AcResult acIntegrate(const AcReal dt);
 
-/** Applies periodic boundary conditions for the Mesh distributed among the devices visible to the
- * caller*/
+/** Applies periodic boundary conditions for the Mesh distributed among the devices visible to
+ * the caller*/
 AcResult acBoundcondStep(void);
 
 /** Does a scalar reduction with the data stored in some vertex buffer */
@@ -80,6 +84,14 @@ AcReal acReduceVec(const ReductionType rtype, const VertexBufferHandle a,
 /** Stores a subset of the mesh stored across the devices visible to the caller back to host memory.
  */
 AcResult acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh);
+
+/** Will potentially be deprecated in later versions. Added only to fix backwards compatibility with
+ * PC for now.*/
+AcResult acIntegrateStep(const int isubstep, const AcReal dt);
+AcResult acIntegrateStepWithOffset(const int isubstep, const AcReal dt, const int3 start,
+                                   const int3 end);
+AcResult acSynchronize(void);
+AcResult acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_vertices);
 
 #ifdef __cplusplus
 } // extern "C"

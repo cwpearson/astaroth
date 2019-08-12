@@ -46,6 +46,9 @@ IDX(const int3 idx)
     return DEVICE_VTXBUF_IDX(idx.x, idx.y, idx.z);
 }
 
+#define make_int3(a, b, c)                                                                         \
+    (int3) { (int)a, (int)b, (int)c }
+
 static __forceinline__ AcMatrix
 create_rotz(const AcReal radians)
 {
