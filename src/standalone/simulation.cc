@@ -96,7 +96,6 @@ write_mesh_info(const AcMeshInfo* config)
     fprintf(infotxt, "real AC_sink_pos_z %e \n", (double)config->real_params[AC_sink_pos_z]);
     fprintf(infotxt, "real AC_M_sink     %e \n", (double)config->real_params[AC_M_sink]);
     fprintf(infotxt, "real AC_soft     %e \n", (double)config->real_params[AC_soft]);
- 
     fprintf(infotxt, "real AC_G_const     %e \n", (double)config->real_params[AC_G_const]);
     
     fclose(infotxt);
@@ -195,6 +194,8 @@ run_simulation(void)
     AcMesh* mesh = acmesh_create(mesh_info);
     // TODO: This need to be possible to define in astaroth.conf
     acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
+
+    vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
 
     acInit(mesh_info);
     acLoad(*mesh);

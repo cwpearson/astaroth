@@ -71,7 +71,7 @@ acmesh_create(const AcMeshInfo& mesh_info)
     return mesh;
 }
 
-static void
+void
 vertex_buffer_set(const VertexBufferHandle& key, const AcReal& val, AcMesh* mesh)
 {
     const int n = acVertexBufferSize(mesh->info);

@@ -48,6 +48,8 @@ extern const char* init_type_names[]; // Defined in host_memory.cc
 
 AcMesh* acmesh_create(const AcMeshInfo& mesh_info);
 
+void vertex_buffer_set(const VertexBufferHandle& key, const AcReal& val, AcMesh* mesh);
+
 void acmesh_clear(AcMesh* mesh);
 
 void acmesh_init_to(const InitType& type, AcMesh* mesh);
