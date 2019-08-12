@@ -240,9 +240,16 @@ run_simulation(void)
     //  acUpdate_sink_particle() will do the similar trick to the device.
 
     /* Step the simulation */
+    AcReal accreted_mass = 0.0;
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
+        const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
+        accreted_mass = accreted_mass + sum_mass;
+        AcReal sink_mass = AC_M_sink_init + accreted_mass;
+        printf("sink mass is: %e\n", sink_mass); 
+        printf("accreted mass is: %e\n", accreted_mass); 
+        acLoadDeviceConstant(AC_M_sink, sink_mass);
 
 #if LFORCING
         const ForcingParams forcing_params = generateForcingParams(mesh_info);

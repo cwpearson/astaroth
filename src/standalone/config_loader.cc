@@ -150,6 +150,8 @@ update_config(AcMeshInfo* config)
 
     config->real_params[AC_M_sink] = config->real_params[AC_M_sink_Msun] * M_sun / 
 	                             config->real_params[AC_unit_mass];
+    config->real_params[AC_M_sink_init] = config->real_params[AC_M_sink_Msun] * M_sun / 
+	                                  config->real_params[AC_unit_mass];
 
     config->real_params[AC_G_const] = G_CONST_CGS / ((config->real_params[AC_unit_velocity] *
                                                       config->real_params[AC_unit_velocity]) /
