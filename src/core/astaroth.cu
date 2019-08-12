@@ -151,3 +151,9 @@ acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_vertices)
 {
     return acNodeLoadMeshWithOffset(nodes[0], STREAM_DEFAULT, host_mesh, src, src, num_vertices);
 }
+
+AcResult
+acSynchronizeMesh(void)
+{
+    return acNodeSynchronizeMesh(nodes[0], STREAM_DEFAULT);
+}
