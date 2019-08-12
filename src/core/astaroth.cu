@@ -36,13 +36,10 @@ const char* vtxbuf_names[]     = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 
 static const int num_nodes = 1;
 static Node nodes[num_nodes];
-static int3 grid_n;
 
 AcResult
 acInit(const AcMeshInfo mesh_info)
 {
-    grid_n = (int3){mesh_info.int_params[AC_nx], mesh_info.int_params[AC_ny],
-                    mesh_info.int_params[AC_nz]};
     return acNodeCreate(0, mesh_info, &nodes[0]);
 }
 
@@ -106,8 +103,11 @@ acIntegrate(const AcReal dt)
 AcResult
 acIntegrateStep(const int isubstep, const AcReal dt)
 {
+    DeviceConfiguration config;
+    acNodeQueryDeviceConfiguration(nodes[0], &config);
+
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = start + grid_n;
+    const int3 end   = start + config.grid.n;
     return acNodeIntegrateSubstep(nodes[0], STREAM_DEFAULT, isubstep, start, end, dt);
 }
 
