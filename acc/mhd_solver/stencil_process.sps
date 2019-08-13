@@ -423,8 +423,11 @@ solve(Scalar dt) {
     #endif
     
     #if LSINK
-    out_lnrho = log(exp(out_lnrho) - accretion_profile(globalVertexIdx, lnrho));    
-    out_accretion = value(accretion) + (accretion_profile(globalVertexIdx,lnrho) * dsx * dsy * dsz);
+//    out_lnrho = log(exp(out_lnrho) - accretion_profile(globalVertexIdx, lnrho));    
+//    out_accretion = value(accretion) + (accretion_profile(globalVertexIdx,lnrho) * dsx * dsy * dsz);
+      out_accretion = rk3(out_accretion, accretion, accretion_profile(globalVertexIdx, lnrho), dt);// unit now is rho!
+      out_lnrho = log(exp(out_lnrho) - out_accretion);    
+      out_accretion = out_accretion * dsx * dsy * dsz;// unit is now mass!
     #endif
 }
 
