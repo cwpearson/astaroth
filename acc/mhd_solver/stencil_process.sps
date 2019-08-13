@@ -118,6 +118,7 @@ accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
      
     // multiplying the truelove density by a wave function to avoid step-function like accretion profile.   
     const Scalar weight = exp(-(accretion_distance/profile_range));    
+    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
 //    const Scalar rate = truelove_density(lnrho);
     const Scalar B = Scalar(3.0);
     const Scalar k = Scalar(2.0);
