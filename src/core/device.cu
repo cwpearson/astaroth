@@ -40,14 +40,44 @@ typedef struct {
 } VertexBufferArray;
 
 __constant__ AcMeshInfo d_mesh_info;
-#define DCONST_INT(X) (d_mesh_info.int_params[X])
-#define DCONST_INT3(X) (d_mesh_info.int3_params[X])
-#define DCONST_REAL(X) (d_mesh_info.real_params[X])
-#define DCONST_REAL3(X) (d_mesh_info.real3_params[X])
+static inline int __device__
+DCONST(const AcIntParam param)
+{
+    return d_mesh_info.int_params[param];
+}
+static inline int3 __device__
+DCONST(const AcInt3Param param)
+{
+    return d_mesh_info.int3_params[param];
+}
+static inline AcReal __device__
+DCONST(const AcRealParam param)
+{
+    return d_mesh_info.real_params[param];
+}
+static inline AcReal3 __device__
+DCONST(const AcReal3Param param)
+{
+    return d_mesh_info.real3_params[param];
+}
+#define DCONST_INT(x) DCONST(x)
+#define DCONST_INT3(x) DCONST(x)
+#define DCONST_REAL(x) DCONST(x)
+#define DCONST_REAL3(x) DCONST(x)
+//#define DCONST_INT(X) (d_mesh_info.int_params[X])
+//#define DCONST_INT3(X) (d_mesh_info.int3_params[X])
+//#define DCONST_REAL(X) (d_mesh_info.real_params[X])
+//#define DCONST_REAL3(X) (d_mesh_info.real3_params[X])
 #define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
 #define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
 #define globalGridN (d_mesh_info.int3_params[AC_global_grid_n])
+//#define globalMeshM // Placeholder
+//#define localMeshN // Placeholder
+//#define localMeshM // Placeholder
+//#define localMeshN_min // Placeholder
+//#define globalMeshN_min // Placeholder
 #define d_multigpu_offset (d_mesh_info.int3_params[AC_multigpu_offset])
+//#define d_multinode_offset (d_mesh_info.int3_params[AC_multinode_offset]) // Placeholder
 #include "kernels/boundconds.cuh"
 #include "kernels/integration.cuh"
 #include "kernels/reductions.cuh"
@@ -92,6 +122,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
 
     device->id           = id;
     device->local_config = device_config;
+    acDevicePrintInfo(device);
 
     // Check that the code was compiled for the proper GPU architecture
     printf("Trying to run a dummy kernel. If this fails, make sure that your\n"

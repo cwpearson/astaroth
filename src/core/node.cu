@@ -131,11 +131,6 @@
 
 static const int MAX_NUM_DEVICES = 32;
 
-typedef struct {
-    int3 m;
-    int3 n;
-} Grid;
-
 struct node_s {
     int id;
 
@@ -334,10 +329,12 @@ acNodePrintInfo(const Node node)
 AcResult
 acNodeQueryDeviceConfiguration(const Node node, DeviceConfiguration* config)
 {
-    (void)node;
-    (void)config;
-    WARNING("Not implemented");
-    return AC_FAILURE;
+    config->num_devices = node->num_devices;
+    config->devices     = node->devices;
+    config->grid        = node->grid;
+    config->subgrid     = node->subgrid;
+
+    return AC_SUCCESS;
 }
 
 AcResult

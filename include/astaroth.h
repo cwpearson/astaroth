@@ -57,6 +57,9 @@ AcResult acCheckDeviceAvailability(void);
  * parameter*/
 AcResult acSynchronizeStream(const Stream stream);
 
+/** */
+AcResult acSynchronizeMesh(void);
+
 /** Loads a constant to the memories of the devices visible to the caller */
 AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
 
