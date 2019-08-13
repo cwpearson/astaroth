@@ -108,14 +108,24 @@ accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
     const Scalar profile_range = DCONST_REAL(AC_accretion_range);
     const Scalar accretion_distance = length(grid_pos - sink_pos);   
     Scalar accretion_density; 
-    if ((accretion_distance) <= profile_range){
-        // calculate accretion according to chosen criterion for the grid cell.
-        accretion_density = truelove_density(lnrho);
-    } else {
-        accretion_density = Scalar(0.0); 
-    }
+//    if ((accretion_distance) <= profile_range){
+//        // calculate accretion according to chosen criterion for the grid cell.
+//        accretion_density = truelove_density(lnrho);
+//    } else {
+//        accretion_density = Scalar(0.0); 
+//    }
+//    return accretion_density;
+     
+    // multiplying the truelove density by a wave function to avoid step-function like accretion profile.   
+    const Scalar weight = exp(-(accretion_distance/profile_range));    
+    const Scalar rate = truelove_density(lnrho);
+    accretion_density = weight * rate;
+    
     return accretion_density;
+
+
 }
+
 
 #endif
 //TODO: basic structure of this part is as follows 
