@@ -81,7 +81,7 @@ sink_gravity(int3 globalVertexIdx){
 
 #if LSINK
 Scalar
-truelove_density(in Scalar lnrho){
+truelove_density(in ScalarField lnrho){
     const Scalar rho = exp(value(lnrho));
     const Scalar Jeans_length_squared = (M_PI * cs2_sound) / (AC_G_const * rho);
     const Scalar TJ_rho = ((M_PI) * ((dsx * dsx) / Jeans_length_squared) * cs2_sound) / (AC_G_const * dsx * dsx);
@@ -96,7 +96,7 @@ truelove_density(in Scalar lnrho){
 }
 
 Scalar
-accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
+accretion_profile(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     // QUESTION: do I need to define grid_pos, sink_pos and distance again
     // if the sink_gravity kernel will also be called once LSINK swtich is on? Seems redundant.
     const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
@@ -119,18 +119,20 @@ accretion_profile(int3 globalVertexIdx, in Scalar lnrho){
     // multiplying the truelove density by a wave function to avoid step-function like accretion profile.   
     const Scalar weight = exp(-(accretion_distance/profile_range));    
     const Scalar sink_mass = DCONST_REAL(AC_M_sink);
+    const Scalar lnrho_min = Scalar(-10.0);
 //    const Scalar rate = truelove_density(lnrho);
-    const Scalar B = Scalar(3.0);
-    const Scalar k = Scalar(2.0);
-    const Scalar rate = B * (pow(sink_mass, k) / (dsx * dsy * dsz));
-    accretion_density = weight * rate;
-    
+//    const Scalar B = Scalar(0.5);
+//    const Scalar k = Scalar(1.5);
+//    const Scalar rate = B * (pow(sink_mass, k) / (dsx * dsy * dsz));
+    Scalar rate;     
+    if (value(lnrho) > lnrho_min) {
+        rate = exp(value(lnrho)) / dt;
+    } else { 
+        rate = exp(lnrho_min) / dt;
+    }
+    accretion_density = weight * rate ;
     return accretion_density;
-
-
 }
-
-
 #endif
 //TODO: basic structure of this part is as follows 
 // update_accretion_buffer() <--> accretion_profile() <--> truelove_density()
@@ -429,9 +431,11 @@ solve(Scalar dt) {
     #if LSINK
 //    out_lnrho = log(exp(out_lnrho) - accretion_profile(globalVertexIdx, lnrho));    
 //    out_accretion = value(accretion) + (accretion_profile(globalVertexIdx,lnrho) * dsx * dsy * dsz);
-      out_accretion = rk3(out_accretion, accretion, accretion_profile(globalVertexIdx, lnrho), dt);// unit now is rho!
+      out_accretion = rk3(out_accretion, accretion, accretion_profile(globalVertexIdx, lnrho, dt), dt);// unit now is rho!
       out_lnrho = log(exp(out_lnrho) - out_accretion);    
       out_accretion = out_accretion * dsx * dsy * dsz;// unit is now mass!
+    //TODO: reset accretion buffer in the beginning.
+    //TODO: implement accretion correction to contiunity equation and momentum equation.
     #endif
 }
 
