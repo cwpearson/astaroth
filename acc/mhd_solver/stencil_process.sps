@@ -45,16 +45,6 @@ gradients(in VectorField uu)
     return (Matrix){gradient(uu.x), gradient(uu.y), gradient(uu.z)};
 }
 
-Scalar
-continuity(in VectorField uu, in ScalarField lnrho) {
-    return -dot(value(uu), gradient(lnrho))
-#if LUPWD
-           //This is a corrective hyperdiffusion term for upwinding.
-           + upwd_der6(uu, lnrho)
-#endif
-           - divergence(uu);
-}
-
 #if LSINK 
 Vector
 sink_gravity(int3 globalVertexIdx){
@@ -134,13 +124,27 @@ accretion_profile(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     return accretion_density;
 }
 #endif
-//TODO: basic structure of this part is as follows 
-// update_accretion_buffer() <--> accretion_profile() <--> truelove_density()
+
+
+
+Scalar
+continuity(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar dt) {
+    return -dot(value(uu), gradient(lnrho))
+#if LUPWD
+           //This is a corrective hyperdiffusion term for upwinding.
+           + upwd_der6(uu, lnrho)
+#endif
+#if LSINK
+	   - accretion_profile(globalVertexIdx, lnrho, dt) / exp(value(lnrho)) 
+#endif
+           - divergence(uu);
+}
+
 
 
 #if LENTROPY
 Vector
-momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in ScalarField ss, in VectorField aa) {
+momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in ScalarField ss, in VectorField aa, Scalar dt) {
     const Matrix S = stress_tensor(uu);
     const Scalar cs2 = cs2_sound * exp(gamma * value(ss) / cp_sound + (gamma - 1) * (value(lnrho) - lnrho0));
     const Vector  j = (Scalar(1.) / mu0) * (gradient_of_divergence(aa) - laplace_vec(aa)); // Current density
@@ -160,7 +164,9 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
                                                         )
                                                         + zeta * gradient_of_divergence(uu)
     #if LSINK
-                                                        + sink_gravity(globalVertexIdx);
+                                                        + sink_gravity(globalVertexIdx)
+    	                                                - accretion_profile(globalVertexIdx, lnrho, dt) / exp(value(lnrho)) 
+                                                          * value(uu); //TODO: Confirm
     #else
                                                         ;
     #endif
@@ -406,14 +412,14 @@ out Scalar out_accretion = VTXBUF_ACCRETION;
 
 Kernel void
 solve(Scalar dt) {
-    out_lnrho = rk3(out_lnrho, lnrho, continuity(uu, lnrho), dt);
+    out_lnrho = rk3(out_lnrho, lnrho, continuity(globalVertexIdx, uu, lnrho, dt), dt);
 
     #if LMAGNETIC
     out_aa = rk3(out_aa, aa, induction(uu, aa), dt);
     #endif
 
     #if LENTROPY
-        out_uu  = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, ss, aa), dt);
+        out_uu  = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, ss, aa, dt), dt);
         out_ss  = rk3(out_ss, ss, entropy(ss, uu, lnrho, aa), dt);
     #elif LTEMPERATURE
         out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, tt), dt);
@@ -437,4 +443,3 @@ solve(Scalar dt) {
     //TODO: implement accretion correction to contiunity equation and momentum equation.
     #endif
 }
-
