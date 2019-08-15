@@ -256,9 +256,10 @@ run_simulation(void)
         printf("sink mass is: %e \n", sink_mass); 
         printf("accreted mass is: %e \n", accreted_mass); 
         acLoadDeviceConstant(AC_M_sink, sink_mass);
+        vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
 #endif
 
-#if LSINK
+#if LFORCING
         const ForcingParams forcing_params = generateForcingParams(mesh_info);
         loadForcingParamsToDevice(forcing_params);
 #endif
