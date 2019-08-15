@@ -26,6 +26,8 @@
  */
 #pragma once
 
+#include "math_utils.h"
+
 #include <assert.h>
 
 static __device__ __forceinline__ int
@@ -320,65 +322,6 @@ read_data(const int i, const int j, const int k,
  * Level 0.3 (Built-in functions available during the Stencil Processing Stage)
  * =============================================================================
  */
-
-static __host__ __device__ __forceinline__ AcReal3
-operator-(const AcReal3& a, const AcReal3& b)
-{
-    return (AcReal3){a.x - b.x, a.y - b.y, a.z - b.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-operator+(const AcReal3& a, const AcReal3& b)
-{
-    return (AcReal3){a.x + b.x, a.y + b.y, a.z + b.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-operator-(const AcReal3& a)
-{
-    return (AcReal3){-a.x, -a.y, -a.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal3 operator*(const AcReal a, const AcReal3& b)
-{
-    return (AcReal3){a * b.x, a * b.y, a * b.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal
-dot(const AcReal3& a, const AcReal3& b)
-{
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-mul(const AcMatrix& aa, const AcReal3& x)
-{
-    return (AcReal3){dot(aa.row[0], x), dot(aa.row[1], x), dot(aa.row[2], x)};
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-cross(const AcReal3& a, const AcReal3& b)
-{
-    AcReal3 c;
-
-    c.x = a.y * b.z - a.z * b.y;
-    c.y = a.z * b.x - a.x * b.z;
-    c.z = a.x * b.y - a.y * b.x;
-
-    return c;
-}
-
-static __host__ __device__ __forceinline__ bool
-is_valid(const AcReal& a)
-{
-    return !isnan(a) && !isinf(a);
-}
-
-static __host__ __device__ __forceinline__ bool
-is_valid(const AcReal3& a)
-{
-    return is_valid(a.x) && is_valid(a.y) && is_valid(a.z);
-}
 
 /*
  * =============================================================================

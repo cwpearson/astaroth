@@ -27,6 +27,7 @@
 #pragma once
 #include "astaroth.h"
 
+#include "math.h"
 
 typedef long double ModelScalar;
 
