@@ -105,9 +105,18 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
 //    return accretion_density;
      
     // multiplying the truelove density by a wave function to avoid step-function like accretion profile.   
-    const Scalar weight = exp(-(accretion_distance/profile_range));    
+
+    Scalar weight;
+//    const Scalar weight = exp(-(accretion_distance/profile_range));   
+    // Step function weighting 
+    if ((accretion_distance) <= profile_range){
+        weight = Scalar(1.0);
+    } else {
+        weight = Scalar(0.0);
+    }
+
     const Scalar sink_mass = DCONST_REAL(AC_M_sink);
-    const Scalar lnrho_min = Scalar(-10.0);
+    const Scalar lnrho_min = Scalar(-10.0);  //TODO Define from astaroth.conf
 //    const Scalar rate = truelove_density(lnrho);
 //    const Scalar B = Scalar(0.5);
 //    const Scalar k = Scalar(1.5);
