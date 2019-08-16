@@ -162,9 +162,12 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
                                                         )
                                                         + zeta * gradient_of_divergence(uu)
     #if LSINK
-                                                        + sink_gravity(globalVertexIdx)
-    	                                                - sink_accretion(globalVertexIdx, lnrho, dt) / exp(value(lnrho)) 
-                                                          * value(uu); //TODO: Confirm
+                                                        //Gravity term
+                                                        + sink_gravity(globalVertexIdx) 
+                                                        //Corresponding loss of momentum
+                                                        - (Scalar(1.0) / Scalar( (dsx*dsy*dsz) * exp(value(lnrho))))   // Correction factor by unit mass
+    	                                                  * (sink_accretion(globalVertexIdx, lnrho, dt) * value(uu)) // As in Lee et al.(2014)
+                                                          ; 
     #else
                                                         ;
     #endif
