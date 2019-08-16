@@ -86,9 +86,7 @@ truelove_density(in ScalarField lnrho){
 }
 
 Scalar
-accretion_profile(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
-    // QUESTION: do I need to define grid_pos, sink_pos and distance again
-    // if the sink_gravity kernel will also be called once LSINK swtich is on? Seems redundant.
+sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
                                      (globalVertexIdx.y - ny_min) * dsy,
                                      (globalVertexIdx.z - nz_min) * dsz};
@@ -135,7 +133,7 @@ continuity(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar
            + upwd_der6(uu, lnrho)
 #endif
 #if LSINK
-	   - accretion_profile(globalVertexIdx, lnrho, dt) / exp(value(lnrho)) 
+	   - sink_accretion(globalVertexIdx, lnrho, dt) / exp(value(lnrho)) 
 #endif
            - divergence(uu);
 }
@@ -165,7 +163,7 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
                                                         + zeta * gradient_of_divergence(uu)
     #if LSINK
                                                         + sink_gravity(globalVertexIdx)
-    	                                                - accretion_profile(globalVertexIdx, lnrho, dt) / exp(value(lnrho)) 
+    	                                                - sink_accretion(globalVertexIdx, lnrho, dt) / exp(value(lnrho)) 
                                                           * value(uu); //TODO: Confirm
     #else
                                                         ;
@@ -435,9 +433,9 @@ solve(Scalar dt) {
     #endif
     
     #if LSINK
-//    out_lnrho = log(exp(out_lnrho) - accretion_profile(globalVertexIdx, lnrho));    
-//    out_accretion = value(accretion) + (accretion_profile(globalVertexIdx,lnrho) * dsx * dsy * dsz);
-      out_accretion = rk3(out_accretion, accretion, accretion_profile(globalVertexIdx, lnrho, dt), dt);// unit now is rho!
+//    out_lnrho = log(exp(out_lnrho) - sink_accretion(globalVertexIdx, lnrho));    
+//    out_accretion = value(accretion) + (sink_accretion(globalVertexIdx,lnrho) * dsx * dsy * dsz);
+      out_accretion = rk3(out_accretion, accretion, sink_accretion(globalVertexIdx, lnrho, dt), dt);// unit now is rho!
       out_lnrho = log(exp(out_lnrho) - out_accretion);    
       out_accretion = out_accretion * dsx * dsy * dsz;// unit is now mass!
     //TODO: implement accretion correction to contiunity equation and momentum equation.
