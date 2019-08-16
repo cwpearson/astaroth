@@ -438,9 +438,12 @@ solve(Scalar dt) {
     #if LSINK
 //    out_lnrho = log(exp(out_lnrho) - sink_accretion(globalVertexIdx, lnrho));    
 //    out_accretion = value(accretion) + (sink_accretion(globalVertexIdx,lnrho) * dsx * dsy * dsz);
-      out_accretion = rk3(out_accretion, accretion, sink_accretion(globalVertexIdx, lnrho, dt), dt);// unit now is rho!
-      out_lnrho = log(exp(out_lnrho) - out_accretion);    
-      out_accretion = out_accretion * dsx * dsy * dsz;// unit is now mass!
+    out_accretion = rk3(out_accretion, accretion, sink_accretion(globalVertexIdx, lnrho, dt), dt);// unit now is rho!
+//    out_lnrho = log(exp(out_lnrho) - out_accretion);
+          
+    if (step_number == 2) {
+        out_accretion = out_accretion * dsx * dsy * dsz;// unit is now mass!
+    }
     //TODO: implement accretion correction to contiunity equation and momentum equation.
     #endif
 }
