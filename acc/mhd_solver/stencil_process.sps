@@ -115,8 +115,8 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
         weight = Scalar(0.0);
     }
 
-    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
     const Scalar lnrho_min = Scalar(-10.0);  //TODO Define from astaroth.conf
+//    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
 //    const Scalar rate = truelove_density(lnrho);
 //    const Scalar B = Scalar(0.5);
 //    const Scalar k = Scalar(1.5);
@@ -125,10 +125,42 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     if (value(lnrho) > lnrho_min) {
         rate = exp(value(lnrho)) / dt;
     } else { 
-        rate = exp(lnrho_min) / dt;
+//        rate = exp(lnrho_min) / dt;
+        rate = Scalar(0.0);
     }
     accretion_density = weight * rate ;
     return accretion_density;
+}
+
+Vector
+sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
+    const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                                     (globalVertexIdx.y - ny_min) * dsy,
+                                     (globalVertexIdx.z - nz_min) * dsz};
+    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
+                                     DCONST_REAL(AC_sink_pos_y),
+                                     DCONST_REAL(AC_sink_pos_z)};
+    const Scalar profile_range = DCONST_REAL(AC_accretion_range);
+    const Scalar accretion_distance = length(grid_pos - sink_pos);   
+
+    Vector accretion_velocity; 
+
+    Scalar weight;
+    // Step function weighting 
+    if ((accretion_distance) <= profile_range){
+        weight = Scalar(1.0);
+    } else {
+        weight = Scalar(0.0);
+    }
+
+    Vector rate;     
+    if (length(value(uu)) > Scalar(0.0)) {
+        rate = (Scalar(1.0)/dt) * value(uu);
+    } else { 
+        rate = (Vector){0.0, 0.0, 0.0};
+    }
+    accretion_velocity = weight * rate ;
+    return accretion_velocity;
 }
 #endif
 
@@ -174,8 +206,8 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
                                                         //Gravity term
                                                         + sink_gravity(globalVertexIdx) 
                                                         //Corresponding loss of momentum
-                                                        - (Scalar(1.0) / Scalar( (dsx*dsy*dsz) * exp(value(lnrho))))   // Correction factor by unit mass
-    	                                                  * (sink_accretion(globalVertexIdx, lnrho, dt) * value(uu)) // As in Lee et al.(2014)
+                                                        -     //(Scalar(1.0) / Scalar( (dsx*dsy*dsz) * exp(value(lnrho)))) *  // Correction factor by unit mass
+    	                                                  sink_accretion_velocity(globalVertexIdx, uu, dt) // As in Lee et al.(2014)
                                                           ; 
     #else
                                                         ;
