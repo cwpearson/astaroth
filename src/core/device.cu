@@ -370,6 +370,13 @@ AcResult
 acDeviceLoadMeshInfo(const Device device, const Stream stream, const AcMeshInfo device_config)
 {
     cudaSetDevice(device->id);
+
+    ERRCHK_ALWAYS(device_config.int_params[AC_nx] == device->local_config.int_params[AC_nx]);
+    ERRCHK_ALWAYS(device_config.int_params[AC_ny] == device->local_config.int_params[AC_ny]);
+    ERRCHK_ALWAYS(device_config.int_params[AC_nz] == device->local_config.int_params[AC_nz]);
+    ERRCHK_ALWAYS(device_config.int_params[AC_multigpu_offset] ==
+                  device->local_config.int_params[AC_multigpu_offset]);
+
     ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &device_config, sizeof(device_config),
                                                0, cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
