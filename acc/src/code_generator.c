@@ -228,6 +228,9 @@ translate_latest_symbol(void)
     }
     // UNIFORM
     else if (symbol->type_qualifier == UNIFORM) {
+        // if (compilation_type != STENCIL_HEADER) {
+        //    printf("ERROR: %s can only be used in stencil headers\n", translation_table[UNIFORM]);
+        //}
         /* Do nothing */
     }
     // IN / OUT
@@ -373,6 +376,8 @@ traverse(const ASTNode* node)
             //    printf("%s%s", inout_name_prefix, symbol->identifier);
             //}
             if (symbol->type_qualifier == UNIFORM) {
+                printf("DCONST(%s) ", symbol->identifier);
+                /*
                 if (symbol->type_specifier == SCALAR)
                     printf("DCONST_REAL(AC_%s) ", symbol->identifier);
                 else if (symbol->type_specifier == INT)
@@ -380,6 +385,7 @@ traverse(const ASTNode* node)
                 else
                     printf("INVALID UNIFORM type specifier %s with %s\n",
                            translate(symbol->type_specifier), symbol->identifier);
+                           */
             }
             else {
                 // Do a regular translation
