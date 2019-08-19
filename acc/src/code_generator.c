@@ -566,8 +566,8 @@ main(int argc, char** argv)
         printf("Usage: ./acc [flags]\n"
                "Flags:\n"
                "\t-sas - Generates code for the stencil assembly stage\n"
-               "\t-sps - Generates code for the stencil processing "
-               "stage\n");
+               "\t-sps - Generates code for the stencil processing stage\n"
+               "\t-hh  - Generates stencil definitions from a header file\n");
         printf("\n");
         return EXIT_FAILURE;
     }
