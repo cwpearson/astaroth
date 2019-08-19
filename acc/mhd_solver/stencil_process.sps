@@ -1,4 +1,4 @@
-#include "stencil_header.hh"
+#include "stencil_definition.sdh"
 
 
 Vector

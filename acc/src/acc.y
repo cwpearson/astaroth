@@ -16,7 +16,7 @@ int yyget_lineno();
 %token CONSTANT IN OUT UNIFORM
 %token IDENTIFIER NUMBER
 %token RETURN
-%token SCALAR VECTOR MATRIX
+%token SCALAR VECTOR MATRIX SCALARFIELD
 %token VOID INT INT3
 %token IF ELSE FOR WHILE ELIF
 %token LEQU LAND LOR LLEQU
@@ -209,6 +209,7 @@ type_specifier: VOID                                                            
               | SCALAR                                                                  { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = SCALAR;  }
               | VECTOR                                                                  { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = VECTOR;  }
               | MATRIX                                                                  { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = MATRIX;  }
+              | SCALARFIELD                                                             { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = SCALARFIELD;  }
               ;
 
 identifier: IDENTIFIER                                                                  { $$ = astnode_create(NODE_IDENTIFIER, NULL, NULL); astnode_set_buffer(yytext, $$); }

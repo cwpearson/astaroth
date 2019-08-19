@@ -54,12 +54,13 @@ static const char* translation_table[TRANSLATION_TABLE_SIZE] = {
     [WHILE] = "while",
     [FOR]   = "for",
     // Type specifiers
-    [VOID]   = "void",
-    [INT]    = "int",
-    [INT3]   = "int3",
-    [SCALAR] = "AcReal",
-    [VECTOR] = "AcReal3",
-    [MATRIX] = "AcMatrix",
+    [VOID]        = "void",
+    [INT]         = "int",
+    [INT3]        = "int3",
+    [SCALAR]      = "AcReal",
+    [VECTOR]      = "AcReal3",
+    [MATRIX]      = "AcMatrix",
+    [SCALARFIELD] = "AcReal",
     // Type qualifiers
     [KERNEL] = "template <int step_number>  static "
                "__global__", //__launch_bounds__(RK_THREADBLOCK_SIZE,
@@ -555,6 +556,68 @@ generate_preprocessed_structures(void)
     ");
 }
 
+static void
+generate_header(void)
+{
+    printf("\n#pragma once\n");
+
+    // Int params
+    printf("#define AC_FOR_USER_INT_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == INT) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Int3 params
+    printf("#define AC_FOR_USER_INT3_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == INT3) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Scalar params
+    printf("#define AC_FOR_USER_REAL_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == SCALAR) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Vector params
+    printf("#define AC_FOR_USER_REAL3_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == VECTOR) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Scalar fields
+    printf("#define AC_FOR_VTXBUF_HANDLES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == SCALARFIELD) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    /*
+    printf("\n");
+    printf("typedef struct {\n");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_qualifier == PREPROCESSED)
+            printf("%s %s;\n", translate(symbol_table[i].type_specifier),
+                   symbol_table[i].identifier);
+    }
+    printf("} %sData;\n", translate(SCALAR));
+    */
+}
+
 int
 main(int argc, char** argv)
 {
@@ -563,7 +626,7 @@ main(int argc, char** argv)
             compilation_type = STENCIL_ASSEMBLY;
         else if (!strcmp(argv[1], "-sps"))
             compilation_type = STENCIL_PROCESS;
-        else if (!strcmp(argv[1], "-hh"))
+        else if (!strcmp(argv[1], "-sdh"))
             compilation_type = STENCIL_HEADER;
         else
             printf("Unknown flag %s. Generating stencil assembly.\n", argv[1]);
@@ -590,6 +653,8 @@ main(int argc, char** argv)
     traverse(root);
     if (compilation_type == STENCIL_ASSEMBLY)
         generate_preprocessed_structures();
+    else if (compilation_type == STENCIL_HEADER)
+        generate_header();
 
     // print_symbol_table();
 
