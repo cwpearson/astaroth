@@ -60,6 +60,11 @@ DCONST(const AcReal3Param param)
 {
     return d_mesh_info.real3_params[param];
 }
+constexpr VertexBufferHandle
+DCONST(const VertexBufferHandle handle)
+{
+    return handle;
+}
 #define DCONST_INT(x) DCONST(x)
 #define DCONST_INT3(x) DCONST(x)
 #define DCONST_REAL(x) DCONST(x)

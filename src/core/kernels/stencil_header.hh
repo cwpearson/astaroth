@@ -90,34 +90,28 @@ uniform Scalar AC_inv_dsz;
  * User-defined vertex buffers
  * =============================================================================
  */
-// clang-format off
 #if LENTROPY
-#define AC_FOR_VTXBUF_HANDLES(FUNC) \
-    FUNC(VTXBUF_LNRHO), \
-    FUNC(VTXBUF_UUX), \
-    FUNC(VTXBUF_UUY), \
-    FUNC(VTXBUF_UUZ), \
-    FUNC(VTXBUF_AX), \
-    FUNC(VTXBUF_AY), \
-    FUNC(VTXBUF_AZ), \
-    FUNC(VTXBUF_ENTROPY),
+uniform ScalarField VTXBUF_LNRHO;
+uniform ScalarField VTXBUF_UUX;
+uniform ScalarField VTXBUF_UUY;
+uniform ScalarField VTXBUF_UUZ;
+uniform ScalarField VTXBUF_AX;
+uniform ScalarField VTXBUF_AY;
+uniform ScalarField VTXBUF_AZ;
+uniform ScalarField VTXBUF_ENTROPY;
 #elif LMAGNETIC
-#define AC_FOR_VTXBUF_HANDLES(FUNC) \
-    FUNC(VTXBUF_LNRHO), \
-    FUNC(VTXBUF_UUX), \
-    FUNC(VTXBUF_UUY), \
-    FUNC(VTXBUF_UUZ), \
-    FUNC(VTXBUF_AX), \
-    FUNC(VTXBUF_AY), \
-    FUNC(VTXBUF_AZ),
+uniform ScalarField VTXBUF_LNRHO;
+uniform ScalarField VTXBUF_UUX;
+uniform ScalarField VTXBUF_UUY;
+uniform ScalarField VTXBUF_UUZ;
+uniform ScalarField VTXBUF_AX;
+uniform ScalarField VTXBUF_AY;
+uniform ScalarField VTXBUF_AZ;
 #elif LHYDRO
-#define AC_FOR_VTXBUF_HANDLES(FUNC) \
-    FUNC(VTXBUF_LNRHO), \
-    FUNC(VTXBUF_UUX), \
-    FUNC(VTXBUF_UUY), \
-    FUNC(VTXBUF_UUZ),
+uniform ScalarField VTXBUF_LNRHO;
+uniform ScalarField VTXBUF_UUX;
+uniform ScalarField VTXBUF_UUY;
+uniform ScalarField VTXBUF_UUZ;
 #else
-#define AC_FOR_VTXBUF_HANDLES(FUNC) \
-    FUNC(VTXBUF_LNRHO),
+uniform ScalarField VTXBUF_LNRHO;
 #endif
-// clang-format on
