@@ -8,26 +8,116 @@
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
 
-// Declare uniforms (i.e. device constants)
-uniform Scalar AC_cs2_sound;
-uniform Scalar AC_nu_visc;
-uniform Scalar AC_cp_sound;
-uniform Scalar AC_cv_sound;
-uniform Scalar AC_mu0;
-uniform Scalar AC_eta;
-uniform Scalar AC_gamma;
-uniform Scalar AC_zeta;
+// Int params
+uniform int AC_max_steps;
+uniform int AC_save_steps;
+uniform int AC_bin_steps;
+uniform int AC_bc_type;
 
+// Real params
+// Spacing
 uniform Scalar AC_dsx;
 uniform Scalar AC_dsy;
 uniform Scalar AC_dsz;
-
+uniform Scalar AC_dsmin;
+// physical grid
+uniform Scalar AC_xlen;
+uniform Scalar AC_ylen;
+uniform Scalar AC_zlen;
+uniform Scalar AC_xorig;
+uniform Scalar AC_yorig;
+uniform Scalar AC_zorig;
+// Physical units
+uniform Scalar AC_unit_density;
+uniform Scalar AC_unit_velocity;
+uniform Scalar AC_unit_length;
+// properties of gravitating star
+uniform Scalar AC_star_pos_x;
+uniform Scalar AC_star_pos_y;
+uniform Scalar AC_star_pos_z;
+uniform Scalar AC_M_star;
+//  Run params
+uniform Scalar AC_cdt;
+uniform Scalar AC_cdtv;
+uniform Scalar AC_cdts;
+uniform Scalar AC_nu_visc;
+uniform Scalar AC_cs_sound;
+uniform Scalar AC_eta;
+uniform Scalar AC_mu0;
+uniform Scalar AC_cp_sound;
+uniform Scalar AC_gamma;
+uniform Scalar AC_cv_sound;
 uniform Scalar AC_lnT0;
 uniform Scalar AC_lnrho0;
+uniform Scalar AC_zeta;
+uniform Scalar AC_trans;
+//  Other
+uniform Scalar AC_bin_save_t;
+//  Initial condition params
+uniform Scalar AC_ampl_lnrho;
+uniform Scalar AC_ampl_uu;
+uniform Scalar AC_angl_uu;
+uniform Scalar AC_lnrho_edge;
+uniform Scalar AC_lnrho_out;
+//  Forcing parameters. User configured.
+uniform Scalar AC_forcing_magnitude;
+uniform Scalar AC_relhel;
+uniform Scalar AC_kmin;
+uniform Scalar AC_kmax;
+//  Forcing parameters. Set by the generator.
+uniform Scalar AC_forcing_phase;
+uniform Scalar AC_k_forcex;
+uniform Scalar AC_k_forcey;
+uniform Scalar AC_k_forcez;
+uniform Scalar AC_kaver;
+uniform Scalar AC_ff_hel_rex;
+uniform Scalar AC_ff_hel_rey;
+uniform Scalar AC_ff_hel_rez;
+uniform Scalar AC_ff_hel_imx;
+uniform Scalar AC_ff_hel_imy;
+uniform Scalar AC_ff_hel_imz;
+//  Additional helper params  //  (deduced from other params do not set these directly!)
+uniform Scalar AC_G_CONST;
+uniform Scalar AC_GM_star;
+uniform Scalar AC_sq2GM_star;
+uniform Scalar AC_cs2_sound;
+uniform Scalar AC_inv_dsx;
+uniform Scalar AC_inv_dsy;
+uniform Scalar AC_inv_dsz;
 
-uniform int AC_nx_min;
-uniform int AC_ny_min;
-uniform int AC_nz_min;
-uniform int AC_nx;
-uniform int AC_ny;
-uniform int AC_nz;
+/*
+ * =============================================================================
+ * User-defined vertex buffers
+ * =============================================================================
+ */
+// clang-format off
+#if LENTROPY
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO), \
+    FUNC(VTXBUF_UUX), \
+    FUNC(VTXBUF_UUY), \
+    FUNC(VTXBUF_UUZ), \
+    FUNC(VTXBUF_AX), \
+    FUNC(VTXBUF_AY), \
+    FUNC(VTXBUF_AZ), \
+    FUNC(VTXBUF_ENTROPY),
+#elif LMAGNETIC
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO), \
+    FUNC(VTXBUF_UUX), \
+    FUNC(VTXBUF_UUY), \
+    FUNC(VTXBUF_UUZ), \
+    FUNC(VTXBUF_AX), \
+    FUNC(VTXBUF_AY), \
+    FUNC(VTXBUF_AZ),
+#elif LHYDRO
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO), \
+    FUNC(VTXBUF_UUX), \
+    FUNC(VTXBUF_UUY), \
+    FUNC(VTXBUF_UUZ),
+#else
+#define AC_FOR_VTXBUF_HANDLES(FUNC) \
+    FUNC(VTXBUF_LNRHO),
+#endif
+// clang-format on

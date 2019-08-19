@@ -234,18 +234,18 @@ forcing(int3 globalVertexIdx, Scalar dt)
     Vector a = Scalar(.5) * (Vector){globalGridN.x * AC_dsx,
                                      globalGridN.y * AC_dsy,
                                      globalGridN.z * AC_dsz}; // source (origin)
-    Vector xx = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
-                        (globalVertexIdx.y - AC_ny_min) * AC_dsy,
-                        (globalVertexIdx.z - AC_nz_min) * AC_dsz}; // sink (current index)
+    Vector xx = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
+                        (globalVertexIdx.y - DCONST(AC_ny_min)) * AC_dsy,
+                        (globalVertexIdx.z - DCONST(AC_nz_min)) * AC_dsz}; // sink (current index)
     const Scalar cs2 = AC_cs2_sound;
     const Scalar cs = sqrt(cs2);
 
     //Placeholders until determined properly
-    Scalar magnitude = DCONST_REAL(AC_forcing_magnitude);
-    Scalar phase     = DCONST_REAL(AC_forcing_phase);
-    Vector k_force   = (Vector){  DCONST_REAL(AC_k_forcex),   DCONST_REAL(AC_k_forcey),   DCONST_REAL(AC_k_forcez)};
-    Vector ff_re     = (Vector){DCONST_REAL(AC_ff_hel_rex), DCONST_REAL(AC_ff_hel_rey), DCONST_REAL(AC_ff_hel_rez)};
-    Vector ff_im     = (Vector){DCONST_REAL(AC_ff_hel_imx), DCONST_REAL(AC_ff_hel_imy), DCONST_REAL(AC_ff_hel_imz)};
+    Scalar magnitude = AC_forcing_magnitude;
+    Scalar phase     = AC_forcing_phase;
+    Vector k_force   = (Vector){  AC_k_forcex,   AC_k_forcey,   AC_k_forcez};
+    Vector ff_re     = (Vector){AC_ff_hel_rex, AC_ff_hel_rey, AC_ff_hel_rez};
+    Vector ff_im     = (Vector){AC_ff_hel_imx, AC_ff_hel_imy, AC_ff_hel_imz};
 
 
     //Determine that forcing funtion type at this point.
@@ -254,7 +254,7 @@ forcing(int3 globalVertexIdx, Scalar dt)
     Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
 
     //Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
-    const Scalar NN = cs*sqrt(DCONST_REAL(AC_kaver)*cs);
+    const Scalar NN = cs*sqrt(AC_kaver*cs);
     //MV: Like in the Pencil Code. I don't understandf the logic here.
     force.x = sqrt(dt)*NN*force.x;
     force.y = sqrt(dt)*NN*force.y;
