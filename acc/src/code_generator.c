@@ -36,7 +36,8 @@
 ASTNode* root = NULL;
 
 static const char inout_name_prefix[] = "handle_";
-static bool doing_stencil_assembly    = true;
+typedef enum { STENCIL_ASSEMBLY, STENCIL_PROCESS, STENCIL_HEADER } CompilationType;
+static CompilationType compilation_type;
 
 /*
  * =============================================================================
@@ -212,11 +213,14 @@ translate_latest_symbol(void)
     // FUNCTION PARAMETER
     else if (symbol->type == SYMBOLTYPE_FUNCTION_PARAMETER) {
         if (symbol->type_qualifier == IN || symbol->type_qualifier == OUT) {
-            if (doing_stencil_assembly)
+            if (compilation_type == STENCIL_ASSEMBLY)
                 printf("const __restrict__ %s* %s", translate(symbol->type_specifier),
                        symbol->identifier);
-            else
+            else if (compilation_type == STENCIL_PROCESS)
                 printf("const %sData& %s", translate(symbol->type_specifier), symbol->identifier);
+            else
+                printf("Invalid compilation type %d, IN and OUT qualifiers not supported\n",
+                       compilation_type);
         }
         else {
             print_symbol(handle);
@@ -550,9 +554,11 @@ main(int argc, char** argv)
 {
     if (argc == 2) {
         if (!strcmp(argv[1], "-sas"))
-            doing_stencil_assembly = true;
+            compilation_type = STENCIL_ASSEMBLY;
         else if (!strcmp(argv[1], "-sps"))
-            doing_stencil_assembly = false;
+            compilation_type = STENCIL_PROCESS;
+        else if (!strcmp(argv[1], "-hh"))
+            compilation_type = STENCIL_HEADER;
         else
             printf("Unknown flag %s. Generating stencil assembly.\n", argv[1]);
     }
@@ -576,7 +582,7 @@ main(int argc, char** argv)
 
     // Traverse
     traverse(root);
-    if (doing_stencil_assembly)
+    if (compilation_type == STENCIL_ASSEMBLY)
         generate_preprocessed_structures();
 
     // print_symbol_table();
