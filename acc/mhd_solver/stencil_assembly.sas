@@ -1,3 +1,5 @@
+#include "stencil_definition.sdh"
+
 Preprocessed Scalar
 value(in ScalarField vertex)
 {
@@ -17,7 +19,7 @@ gradient(in ScalarField vertex)
 Preprocessed Scalar
 der6x_upwd(in ScalarField vertex)
 {
-    Scalar inv_ds = DCONST_REAL(AC_inv_dsx);
+    Scalar inv_ds = AC_inv_dsx;
 
     return (Scalar){  Scalar(1.0/60.0)*inv_ds* (
                     - Scalar(20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
@@ -32,7 +34,7 @@ der6x_upwd(in ScalarField vertex)
 Preprocessed Scalar
 der6y_upwd(in ScalarField vertex)
 {
-    Scalar inv_ds = DCONST_REAL(AC_inv_dsy);
+    Scalar inv_ds = AC_inv_dsy;
 
     return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
                     -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
@@ -47,7 +49,7 @@ der6y_upwd(in ScalarField vertex)
 Preprocessed Scalar
 der6z_upwd(in ScalarField vertex)
 {
-    Scalar inv_ds = DCONST_REAL(AC_inv_dsz);
+    Scalar inv_ds = AC_inv_dsz;
 
     return (Scalar){ Scalar(1.0/60.0)*inv_ds* (
                     -Scalar( 20.0)* vertex[vertexIdx.x,   vertexIdx.y, vertexIdx.z]
