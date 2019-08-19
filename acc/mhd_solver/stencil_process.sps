@@ -70,6 +70,7 @@ sink_gravity(int3 globalVertexIdx){
 
 
 #if LSINK
+// Give Truelove density
 Scalar
 truelove_density(in ScalarField lnrho){
     const Scalar rho = exp(value(lnrho));
@@ -77,10 +78,7 @@ truelove_density(in ScalarField lnrho){
     const Scalar TJ_rho = ((M_PI) * ((dsx * dsx) / Jeans_length_squared) * cs2_sound) / (AC_G_const * dsx * dsx);
     //TODO: dsx will cancel out, deal with it later for optimization.      
  
-    Scalar accretion_rho = rho - TJ_rho;
-    if (accretion_rho < 0){
-        accretion_rho = Scalar(0);
-    } 
+    Scalar accretion_rho = TJ_rho;
        
     return accretion_rho;
 }
@@ -96,16 +94,7 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     const Scalar profile_range = DCONST_REAL(AC_accretion_range);
     const Scalar accretion_distance = length(grid_pos - sink_pos);   
     Scalar accretion_density; 
-//    if ((accretion_distance) <= profile_range){
-//        // calculate accretion according to chosen criterion for the grid cell.
-//        accretion_density = truelove_density(lnrho);
-//    } else {
-//        accretion_density = Scalar(0.0); 
-//    }
-//    return accretion_density;
      
-    // multiplying the truelove density by a wave function to avoid step-function like accretion profile.   
-
     Scalar weight;
 //    const Scalar weight = exp(-(accretion_distance/profile_range));   
     // Step function weighting 
@@ -115,17 +104,16 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
         weight = Scalar(0.0);
     }
 
-    const Scalar lnrho_min = Scalar(-10.0);  //TODO Define from astaroth.conf
+//    const Scalar lnrho_min = Scalar(-10.0);  //TODO Define from astaroth.conf
+    const Scalar lnrho_min = log(truelove_density(lnrho));
 //    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
-//    const Scalar rate = truelove_density(lnrho);
 //    const Scalar B = Scalar(0.5);
 //    const Scalar k = Scalar(1.5);
 //    const Scalar rate = B * (pow(sink_mass, k) / (dsx * dsy * dsz));
     Scalar rate;     
     if (value(lnrho) > lnrho_min) {
-        rate = exp(value(lnrho)) / dt;
+        rate = (exp(value(lnrho)) - exp(lnrho_min)) / dt;
     } else { 
-//        rate = exp(lnrho_min) / dt;
         rate = Scalar(0.0);
     }
     accretion_density = weight * rate ;

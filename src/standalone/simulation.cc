@@ -250,9 +250,13 @@ run_simulation(void)
         const AcReal dt   = host_timestep(umax, mesh_info);
 
 #if LSINK
+
         const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
 	accreted_mass = accreted_mass + sum_mass;
-        AcReal sink_mass = AC_M_sink_init + accreted_mass;
+        AcReal sink_mass = 0.0;
+        //if (i > 1000 ) {
+	    sink_mass = AC_M_sink_init + accreted_mass;
+	//} 
         printf("sink mass is: %e \n", sink_mass); 
         printf("accreted mass is: %e \n", accreted_mass); 
         acLoadDeviceConstant(AC_M_sink, sink_mass);
