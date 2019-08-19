@@ -356,11 +356,44 @@ acDeviceSwapBuffers(const Device device)
 }
 
 AcResult
-acDeviceLoadConstant(const Device device, const Stream stream, const AcRealParam param,
-                     const AcReal value)
+acDeviceLoadScalarConstant(const Device device, const Stream stream, const AcRealParam param,
+                           const AcReal value)
 {
     cudaSetDevice(device->id);
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
+    ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+                                        cudaMemcpyHostToDevice, device->streams[stream]));
+    return AC_SUCCESS;
+}
+
+AcResult
+acDeviceLoadVectorConstant(const Device device, const Stream stream, const AcReal3Param param,
+                           const AcReal3 value)
+{
+    cudaSetDevice(device->id);
+    const size_t offset = (size_t)&d_mesh_info.real3_params[param] - (size_t)&d_mesh_info;
+    ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+                                        cudaMemcpyHostToDevice, device->streams[stream]));
+    return AC_SUCCESS;
+}
+
+AcResult
+acDeviceLoadIntConstant(const Device device, const Stream stream, const AcIntParam param,
+                        const int value)
+{
+    cudaSetDevice(device->id);
+    const size_t offset = (size_t)&d_mesh_info.int_params[param] - (size_t)&d_mesh_info;
+    ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+                                        cudaMemcpyHostToDevice, device->streams[stream]));
+    return AC_SUCCESS;
+}
+
+AcResult
+acDeviceLoadInt3Constant(const Device device, const Stream stream, const AcInt3Param param,
+                         const int3 value)
+{
+    cudaSetDevice(device->id);
+    const size_t offset = (size_t)&d_mesh_info.int3_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
                                         cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
