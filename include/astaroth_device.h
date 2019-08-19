@@ -50,6 +50,10 @@ AcResult acDeviceLoadConstant(const Device device, const Stream stream, const Ac
                               const AcReal value);
 
 /** */
+AcResult acDeviceLoadMeshInfo(const Device device, const Stream stream,
+                              const AcMeshInfo device_config);
+
+/** */
 AcResult acDeviceLoadVertexBufferWithOffset(const Device device, const Stream stream,
                                             const AcMesh host_mesh,
                                             const VertexBufferHandle vtxbuf_handle, const int3 src,

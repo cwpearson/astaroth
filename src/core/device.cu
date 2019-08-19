@@ -149,8 +149,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
 #endif
 
     // Device constants
-    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbol(d_mesh_info, &device_config, sizeof(device_config), 0,
-                                          cudaMemcpyHostToDevice));
+    acDeviceLoadMeshInfo(device, STREAM_DEFAULT, device_config);
 
     printf("Created device %d (%p)\n", device->id, device);
     *device_handle = device;
@@ -364,6 +363,15 @@ acDeviceLoadConstant(const Device device, const Stream stream, const AcRealParam
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
                                         cudaMemcpyHostToDevice, device->streams[stream]));
+    return AC_SUCCESS;
+}
+
+AcResult
+acDeviceLoadMeshInfo(const Device device, const Stream stream, const AcMeshInfo device_config)
+{
+    cudaSetDevice(device->id);
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &device_config, sizeof(device_config),
+                                               0, cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
 }
 
