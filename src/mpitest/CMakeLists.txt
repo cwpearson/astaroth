@@ -9,4 +9,4 @@ find_package(MPI REQUIRED)
 
 add_executable(mpitest main.c)
 target_include_directories(mpitest PRIVATE ${MPI_C_INCLUDE_PATH})
-target_link_libraries(mpitest PRIVATE ${MPI_C_LIBRARIES} astaroth_core)
+target_link_libraries(mpitest PRIVATE astaroth_core ${MPI_C_LIBRARIES})
