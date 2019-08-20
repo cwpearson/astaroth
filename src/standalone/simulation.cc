@@ -252,11 +252,11 @@ run_simulation(void)
 #if LSINK
 
         const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
-	if (i > 1000) {
+//	if (i > 1000) {
             accreted_mass = accreted_mass + sum_mass;
-        } else {
-            accreted_mass = 0.0;
-        }
+//        } else {
+//            accreted_mass = 0.0;
+//        }
         AcReal sink_mass = 0.0;
         //if (i > 1000 ) {
 	    sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
@@ -265,14 +265,19 @@ run_simulation(void)
         printf("accreted mass is: %e \n", accreted_mass); 
         acLoadDeviceConstant(AC_M_sink, sink_mass);
         vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
+        
+        int on_off_switch;
+        if (i < 1000) {
+            on_off_switch = 0; //accretion is off till 1000 steps.
+        } else {
+            on_off_switch = 1;
+        }
+        acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
 #endif
 
 #if LFORCING
         const ForcingParams forcing_params = generateForcingParams(mesh_info);
-        if (i > 1000) {
-            loadForcingParamsToDevice(forcing_params);
-        } 
-            
+        loadForcingParamsToDevice(forcing_params);
 #endif
 
 
