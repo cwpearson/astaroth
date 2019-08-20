@@ -252,11 +252,15 @@ run_simulation(void)
 #if LSINK
 
         const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
-	accreted_mass = accreted_mass + sum_mass;
+	if (i > 1000) {
+            accreted_mass = accreted_mass + sum_mass;
+        } else {
+            accreted_mass = 0.0;
+        }
         AcReal sink_mass = 0.0;
         //if (i > 1000 ) {
 	    sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
-	//} 
+	//}
         printf("sink mass is: %e \n", sink_mass); 
         printf("accreted mass is: %e \n", accreted_mass); 
         acLoadDeviceConstant(AC_M_sink, sink_mass);
@@ -265,7 +269,10 @@ run_simulation(void)
 
 #if LFORCING
         const ForcingParams forcing_params = generateForcingParams(mesh_info);
-        loadForcingParamsToDevice(forcing_params);
+        if (i > 1000) {
+            loadForcingParamsToDevice(forcing_params);
+        } 
+            
 #endif
 
 
