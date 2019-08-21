@@ -116,6 +116,7 @@ def parse_ts(fdir, fname):
         line[i] = line[i].replace('VTXBUF_', "")
         line[i] = line[i].replace('UU', "uu")
         line[i] = line[i].replace('_total', "tot")
+        line[i] = line[i].replace('ACCRETION', "acc")
         line[i] = line[i].replace('A', "aa")
         line[i] = line[i].replace('LNRHO', "lnrho")
         line[i] = line[i].replace('ENTROPY', "ss")

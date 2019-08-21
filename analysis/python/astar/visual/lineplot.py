@@ -32,7 +32,7 @@ def plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3):
     plt.xlabel(xaxis)
     plt.legend()
 
-def plot_ts(ts, show_all=False, lnrho=False, uutot=False, uux=False, uuy=False, uuz=False, ss=False):
+def plot_ts(ts, show_all=False, lnrho=False, uutot=False, uux=False, uuy=False, uuz=False, ss=False, acc=False):
 
     if show_all:
         lnrho=True
@@ -41,6 +41,7 @@ def plot_ts(ts, show_all=False, lnrho=False, uutot=False, uux=False, uuy=False, 
         uuy=True
         uuz=True
         ss=True
+        acc=True
 
     if lnrho:
         plt.figure()
@@ -88,6 +89,14 @@ def plot_ts(ts, show_all=False, lnrho=False, uutot=False, uux=False, uuy=False, 
         yaxis1 = 'ss_rms'
         yaxis2 = 'ss_min'
         yaxis3 = 'ss_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+    if acc:   
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'acc_rms'
+        yaxis2 = 'acc_min'
+        yaxis3 = 'acc_max'
         plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
   
     plt.show()

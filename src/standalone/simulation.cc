@@ -252,17 +252,9 @@ run_simulation(void)
 #if LSINK
 
         const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
-//	if (i > 1000) {
-            accreted_mass = accreted_mass + sum_mass;
-//        } else {
-//            accreted_mass = 0.0;
-//        }
+        accreted_mass = accreted_mass + sum_mass;
         AcReal sink_mass = 0.0;
-        //if (i > 1000 ) {
-	    sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
-	//}
-        printf("sink mass is: %e \n", sink_mass); 
-        printf("accreted mass is: %e \n", accreted_mass); 
+	sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
         acLoadDeviceConstant(AC_M_sink, sink_mass);
         vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
         
@@ -315,6 +307,8 @@ run_simulation(void)
             */
 
             print_diagnostics(i, dt, t_step, diag_file);
+            printf("sink mass is: %.15e \n", sink_mass); 
+            printf("accreted mass is: %.15e \n", accreted_mass); 
 
             /*
                 We would also might want an XY-average calculating funtion,
