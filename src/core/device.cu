@@ -40,22 +40,22 @@ typedef struct {
 } VertexBufferArray;
 
 __constant__ AcMeshInfo d_mesh_info;
-static inline int __device__
+static int __device__ __forceinline__
 DCONST(const AcIntParam param)
 {
     return d_mesh_info.int_params[param];
 }
-static inline int3 __device__
+static int3 __device__ __forceinline__
 DCONST(const AcInt3Param param)
 {
     return d_mesh_info.int3_params[param];
 }
-static inline AcReal __device__
+static AcReal __device__ __forceinline__
 DCONST(const AcRealParam param)
 {
     return d_mesh_info.real_params[param];
 }
-static inline AcReal3 __device__
+static AcReal3 __device__ __forceinline__
 DCONST(const AcReal3Param param)
 {
     return d_mesh_info.real3_params[param];
@@ -108,7 +108,7 @@ struct device_s {
 };
 
 // clang-format off
-static __global__ void dummy_kernel(void) {}
+static __global__ void dummy_kernel(void) { DCONST((AcIntParam)0); DCONST((AcInt3Param)0); DCONST((AcRealParam)0); DCONST((AcReal3Param)0); }
 // clang-format on
 
 AcResult
