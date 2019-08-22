@@ -198,7 +198,8 @@ run_simulation(void)
 
     AcMesh* mesh = acmesh_create(mesh_info);
     // TODO: This need to be possible to define in astaroth.conf
-    acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
+    //acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
+    acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh);
 
 #if LSINK
     vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
@@ -270,7 +271,7 @@ run_simulation(void)
         vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
         
         int on_off_switch;
-        if (i < 1000) {
+        if (i < 1) {
             on_off_switch = 0; //accretion is off till 1000 steps.
         } else {
             on_off_switch = 1;

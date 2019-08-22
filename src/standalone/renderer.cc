@@ -292,7 +292,8 @@ renderer_quit(void)
     return 0;
 }
 
-static int init_type = INIT_TYPE_GAUSSIAN_RADIAL_EXPL;
+//static int init_type = INIT_TYPE_GAUSSIAN_RADIAL_EXPL;
+static int init_type = INIT_TYPE_SIMPLE_CORE;
 
 static bool
 running(AcMesh* mesh)
@@ -396,7 +397,7 @@ run_renderer(void)
 #if LSINK
         const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
 	accreted_mass = accreted_mass + sum_mass;
-        AcReal sink_mass = AC_M_sink_init + accreted_mass;
+	AcReal sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
         printf("sink mass is: %e \n", sink_mass); 
         printf("accreted mass is: %e \n", accreted_mass); 
         acLoadDeviceConstant(AC_M_sink, sink_mass);

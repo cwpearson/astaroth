@@ -78,6 +78,8 @@ class Mesh:
         if self.ok:
 
             self.ss, timestamp, ok = read_bin('VTXBUF_ENTROPY', fdir, fnum, self.minfo)
+
+            self.accretion, timestamp, ok = read_bin('VTXBUF_ACCRETION', fdir, fnum, self.minfo)
  
             #TODO Generalize is a dict. Do not hardcode!  
             uux, timestamp, ok = read_bin('VTXBUF_UUX', fdir, fnum, self.minfo)

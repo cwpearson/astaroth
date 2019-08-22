@@ -238,7 +238,7 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
 }
 #else
 Vector
-momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho) {
+momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar dt) {
     Vector mom;
     const Matrix S = stress_tensor(uu);
 
@@ -252,6 +252,10 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho) {
     
     #if LSINK
                                                         + sink_gravity(globalVertexIdx);
+                                                        //Corresponding loss of momentum
+                                                        -     //(Scalar(1.0) / Scalar( (dsx*dsy*dsz) * exp(value(lnrho)))) *  // Correction factor by unit mass
+    	                                                  sink_accretion_velocity(globalVertexIdx, uu, dt) // As in Lee et al.(2014)
+                                                          ; 
     #else
                                                         ;
     #endif
@@ -492,7 +496,7 @@ solve(Scalar dt) {
         out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, tt), dt);
         out_tt = rk3(out_tt, tt, heat_transfer(uu, lnrho, tt), dt);
     #else
-        out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho), dt);
+        out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, dt), dt);
     #endif
 
     #if LFORCING
