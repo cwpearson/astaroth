@@ -270,7 +270,7 @@ run_simulation(void)
         vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
         
         int on_off_switch;
-        if (i < 1000) {
+        if (i < 50) {
             on_off_switch = 0; //accretion is off till 1000 steps.
         } else {
             on_off_switch = 1;
