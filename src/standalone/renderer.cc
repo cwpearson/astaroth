@@ -390,12 +390,8 @@ run_renderer(void)
         timer_reset(&io_timer);
 
 /* Step the simulation */
-#if 1
-        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
-        const AcReal dt   = host_timestep(umax, mesh_info);
-
 #if LSINK
-        const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
+        const AcReal sum_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
 	accreted_mass = accreted_mass + sum_mass;
 	AcReal sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
         printf("sink mass is: %e \n", sink_mass); 
@@ -408,6 +404,12 @@ run_renderer(void)
         const ForcingParams forcing_params = generateForcingParams(mesh->info);
         loadForcingParamsToDevice(forcing_params);
 #endif
+
+
+#if 1
+        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+        const AcReal dt   = host_timestep(umax, mesh_info);
+
 
         acIntegrate(dt);
 #else

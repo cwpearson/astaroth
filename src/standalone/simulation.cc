@@ -263,7 +263,7 @@ run_simulation(void)
 
 #if LSINK
 
-        const AcReal sum_mass = acReduceScal(RTYPE_MAX, VTXBUF_ACCRETION);
+        const AcReal sum_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
         accreted_mass = accreted_mass + sum_mass;
         AcReal sink_mass = 0.0;
 	sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
