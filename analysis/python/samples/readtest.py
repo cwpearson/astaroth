@@ -45,7 +45,7 @@ print("sys.argv", sys.argv)
 #meshdir = "/tiara/home/mvaisala/astaroth-code/astaroth_2.0/build/"
 #meshdir  = "/tiara/ara/data/mvaisala/tmp/astaroth-code/astaroth_2.0/build/"
 #meshdir = "/tiara/ara/data/mvaisala/asth_testbed_double/"
-meshdir  = "/scratch/data/mvaisala/forcingtest/"
+meshdir  = "/home/mvaisala/astaroth/build/"
 
 if "xtopbound" in sys.argv: 
     for i in range(0, 171):
@@ -199,6 +199,6 @@ if 'sl' in sys.argv:
 
 if 'ts' in sys.argv:
    ts = ad.read.TimeSeries(fdir=meshdir)
-   vis.lineplot.plot_ts(ts, lnrho=1, uutot=1, uux=1, ss=1)
+   vis.lineplot.plot_ts(ts, show_all=True)
 
 

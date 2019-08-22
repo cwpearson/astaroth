@@ -48,22 +48,27 @@ gradients(in VectorField uu)
 #if LSINK 
 Vector
 sink_gravity(int3 globalVertexIdx){
-    Vector force_gravity;
-    const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                                     (globalVertexIdx.y - ny_min) * dsy,
-                                     (globalVertexIdx.z - nz_min) * dsz};
-    const Scalar sink_mass = DCONST_REAL(AC_M_sink);
-    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
-                                     DCONST_REAL(AC_sink_pos_y),
-                                     DCONST_REAL(AC_sink_pos_z)}; 
-    const Scalar distance = length(grid_pos - sink_pos);
-    const Scalar soft = DCONST_REAL(AC_soft);
-    const Scalar gravity_magnitude = (AC_G_const * sink_mass) / pow(((distance * distance) +  soft*soft), 1.5);
-    const Vector direction = (Vector){(sink_pos.x - grid_pos.x) / distance,
-                                      (sink_pos.y - grid_pos.y) / distance,
-                                      (sink_pos.z - grid_pos.z) / distance};
-    force_gravity = gravity_magnitude * direction;
-    return force_gravity;
+    int accretion_switch = DCONST_INT(AC_switch_accretion);
+    if (accretion_switch == 1){
+        Vector force_gravity;
+        const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
+                                         (globalVertexIdx.y - ny_min) * dsy,
+                                         (globalVertexIdx.z - nz_min) * dsz};
+        const Scalar sink_mass = DCONST_REAL(AC_M_sink);
+        const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
+                                         DCONST_REAL(AC_sink_pos_y),
+                                         DCONST_REAL(AC_sink_pos_z)}; 
+        const Scalar distance = length(grid_pos - sink_pos);
+        const Scalar soft = DCONST_REAL(AC_soft);
+        const Scalar gravity_magnitude = (AC_G_const * sink_mass) / pow(((distance * distance) +  soft*soft), 1.5);
+        const Vector direction = (Vector){(sink_pos.x - grid_pos.x) / distance,
+                                          (sink_pos.y - grid_pos.y) / distance,
+                                          (sink_pos.z - grid_pos.z) / distance};
+        force_gravity = gravity_magnitude * direction;
+        return force_gravity;
+    } else {
+        return (Vector){0.0, 0.0, 0.0};
+    }
 }
 #endif
 

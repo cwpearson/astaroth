@@ -145,7 +145,8 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
 // This function prints out the diagnostic values to std.out and also saves and
 // appends an ascii file to contain all the result.
 static inline void
-print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file)
+print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file, 
+		  const AcReal sink_mass, const AcReal accreted_mass)
 {
 
     AcReal buf_rms, buf_max, buf_min;
@@ -173,6 +174,10 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* di
         printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, vtxbuf_names[i],
                double(buf_min), double(buf_rms), double(buf_max));
         fprintf(diag_file, "%e %e %e ", double(buf_min), double(buf_rms), double(buf_max));
+    }
+
+    if ((sink_mass >= 0.0) || (accreted_mass >= 0.0)) {
+        fprintf(diag_file, "%e %e ", sink_mass, accreted_mass);
     }
 
     fprintf(diag_file, "\n");
@@ -213,11 +218,17 @@ run_simulation(void)
         fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
                 vtxbuf_names[i]);
     }
-
+#if LSINK
+    fprintf(diag_file, "sink_mass  accreted_mass  ");
+#endif
     fprintf(diag_file, "\n");
 
     write_mesh_info(&mesh_info);
-    print_diagnostics(0, AcReal(.0), t_step, diag_file);
+#if LSINK
+    print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0);
+#else
+    print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0);
+#endif
 
     acBoundcondStep();
     acStore(mesh);
@@ -265,6 +276,8 @@ run_simulation(void)
             on_off_switch = 1;
         }
         acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
+#else
+	accreted_mass = -1.0; sink_mass = -1.0;
 #endif
 
 #if LFORCING
@@ -306,7 +319,7 @@ run_simulation(void)
                 timeseries.ts.
             */
 
-            print_diagnostics(i, dt, t_step, diag_file);
+            print_diagnostics(i, dt, t_step, diag_file, sink_mass, accreted_mass);
             printf("sink mass is: %.15e \n", sink_mass); 
             printf("accreted mass is: %.15e \n", accreted_mass); 
 
