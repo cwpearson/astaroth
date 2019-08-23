@@ -272,7 +272,7 @@ run_simulation(void)
         
         int on_off_switch;
         if (i < 1) {
-            on_off_switch = 0; //accretion is off till 1000 steps.
+            on_off_switch = 0; //accretion is off till certain amount of steps.
         } else {
             on_off_switch = 1;
         }
