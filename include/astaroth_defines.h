@@ -217,6 +217,9 @@ acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo info)
            k * info.int_params[AC_mx] * info.int_params[AC_my];
 }
 
+/** Prints all parameters inside AcMeshInfo */
+void acPrintMeshInfo(const AcMeshInfo config);
+
 /*
 static inline int
 acGetParam(const AcMeshInfo info, const AcIntParam param)
