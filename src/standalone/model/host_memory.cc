@@ -253,7 +253,10 @@ simple_uniform_core(AcMesh* mesh)
 
     //TEMPORARY TEST INPUT PARAMETERS
     const double core_radius = DX*32.0;
-    const double trans = DX*6.0;
+    const double trans = DX*12.0;
+
+    RR = 1.0;
+    printf("%e %e %e \n", RR, trans, core_radius);
 
     for (int k = 0; k < mz; k++) {
         for (int j = 0; j < my; j++) {
@@ -268,8 +271,11 @@ simple_uniform_core(AcMesh* mesh)
                 delz   = zz;
                 RR     = sqrt(delx*delx + dely*dely + delz*delz);
 
-                tanhRR = double(0.5)*tanh((core_radius-RR)/trans) + double(0.5)
-                         + double(0.1);
+                //tanhRR = double(-0.5)*tanh((core_radius-RR)/trans) + double(0.5)
+                //         + double(0.1);
+                tanhRR = double(1.0);
+               
+                abso_vel = c * sqrt(2.0 * mesh->info.real_params[AC_G_const] * mesh->info.real_params[AC_M_sink_init] / RR);
 
                 mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(exp(ampl_lnrho)*tanhRR);
                 mesh->vertex_buffer[VTXBUF_UUX][idx] = double(0.0);
