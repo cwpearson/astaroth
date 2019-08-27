@@ -39,6 +39,24 @@ typedef struct {
     AcReal* out[NUM_VTXBUF_HANDLES];
 } VertexBufferArray;
 
+struct device_s {
+    int id;
+    AcMeshInfo local_config;
+
+    // Concurrency
+    cudaStream_t streams[NUM_STREAM_TYPES];
+
+    // Memory
+    VertexBufferArray vba;
+    AcReal* reduce_scratchpad;
+    AcReal* reduce_result;
+
+#if PACKED_DATA_TRANSFERS
+// Declare memory for buffers needed for packed data transfers here
+// AcReal* data_packing_buffer;
+#endif
+};
+
 __constant__ AcMeshInfo d_mesh_info;
 static int __device__ __forceinline__
 DCONST(const AcIntParam param)
@@ -88,24 +106,6 @@ static dim3 rk3_tpb(32, 1, 4);
 #if PACKED_DATA_TRANSFERS // Defined in device.cuh
 // #include "kernels/pack_unpack.cuh"
 #endif
-
-struct device_s {
-    int id;
-    AcMeshInfo local_config;
-
-    // Concurrency
-    cudaStream_t streams[NUM_STREAM_TYPES];
-
-    // Memory
-    VertexBufferArray vba;
-    AcReal* reduce_scratchpad;
-    AcReal* reduce_result;
-
-#if PACKED_DATA_TRANSFERS
-// Declare memory for buffers needed for packed data transfers here
-// AcReal* data_packing_buffer;
-#endif
-};
 
 // clang-format off
 static __global__ void dummy_kernel(void) { DCONST((AcIntParam)0); DCONST((AcInt3Param)0); DCONST((AcRealParam)0); DCONST((AcReal3Param)0); }

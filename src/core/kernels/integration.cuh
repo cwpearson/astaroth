@@ -585,4 +585,54 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
                                                                                                    \
     const int idx = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
 
+// clang-format off
+#define GEN_DEVICE_FUNC_HOOK(identifier)                                                           \
+    template <int step_number>                                                                     \
+    AcResult acDeviceKernel_##identifier(const Device device, const Stream stream,                 \
+                                         const int3 start, const int3 end)                         \
+    {                                                                                              \
+        cudaSetDevice(device->id);                                                                 \
+                                                                                                   \
+        const dim3 tpb(32, 1, 4);                                                                  \
+                                                                                                   \
+        const int3 n = end - start;                                                                \
+        const dim3 bpg((unsigned int)ceil(n.x / AcReal(tpb.x)),                                    \
+                       (unsigned int)ceil(n.y / AcReal(tpb.y)),                                    \
+                       (unsigned int)ceil(n.z / AcReal(tpb.z)));                                   \
+                                                                                                   \
+        identifier<step_number>                                                                    \
+            <<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);                   \
+        ERRCHK_CUDA_KERNEL();                                                                      \
+                                                                                                   \
+        return AC_SUCCESS;                                                                         \
+    }
+
+/*
+#define GEN_NODE_FUNC_HOOK(identifier)                                                             \
+    template <int step_number>                                                                     \
+    AcResult acNodeKernel_##identifier(const Node node, const Stream stream, const int3 start,     \
+                                       const int3 end)                                             \
+    {                                                                                              \
+        acNodeSynchronizeStream(node, stream);                                                     \
+                                                                                                   \
+        for (int i = 0; i < node->num_devices; ++i) {                                              \
+                                                                                                   \
+            const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * node->subgrid.n.z};                \
+            const int3 d1 = d0 + (int3){node->subgrid.n.x, node->subgrid.n.y, node->subgrid.n.z};  \
+                                                                                                   \
+            const int3 da = max(start, d0);                                                        \
+            const int3 db = min(end, d1);                                                          \
+                                                                                                   \
+            if (db.z >= da.z) {                                                                    \
+                const int3 da_local = da - (int3){0, 0, i * node->subgrid.n.z};                    \
+                const int3 db_local = db - (int3){0, 0, i * node->subgrid.n.z};                    \
+                acDeviceKernel_ #identifier(node->devices[i], stream, isubstep, da_local,          \
+                                            db_local, dt);                                         \
+            }                                                                                      \
+        }                                                                                          \
+        return AC_SUCCESS;                                                                         \
+    }
+    */
+// clang-format on
+
 #include "stencil_process.cuh"

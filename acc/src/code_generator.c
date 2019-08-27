@@ -625,6 +625,17 @@ generate_header(void)
     */
 }
 
+static void
+generate_library_hooks(void)
+{
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_qualifier == KERNEL) {
+            printf("GEN_DEVICE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
+            // printf("GEN_NODE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
+        }
+    }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -662,6 +673,8 @@ main(int argc, char** argv)
         generate_preprocessed_structures();
     else if (compilation_type == STENCIL_HEADER)
         generate_header();
+    else if (compilation_type == STENCIL_PROCESS)
+        generate_library_hooks();
 
     // print_symbol_table();
 
