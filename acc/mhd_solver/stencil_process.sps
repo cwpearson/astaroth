@@ -294,8 +294,9 @@ out ScalarField out_tt(VTXBUF_TEMPERATURE);
 #endif
 
 Kernel void
-solve(Scalar dt)
+solve()
 {
+    Scalar dt = AC_dt;
     out_lnrho = rk3(out_lnrho, lnrho, continuity(uu, lnrho), dt);
 
 #if LMAGNETIC

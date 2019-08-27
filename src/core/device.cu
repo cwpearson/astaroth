@@ -303,8 +303,9 @@ acDeviceAutoOptimize(const Device device)
 
                 cudaEventRecord(tstart); // ---------------------------------------- Timing start
 
+                acDeviceLoadScalarConstant(device, STREAM_DEFAULT, AC_dt, FLT_EPSILON);
                 for (int i = 0; i < num_iterations; ++i)
-                    solve<2><<<bpg, tpb>>>(start, end, device->vba, FLT_EPSILON);
+                    solve<2><<<bpg, tpb>>>(start, end, device->vba);
 
                 cudaEventRecord(tstop); // ----------------------------------------- Timing end
                 cudaEventSynchronize(tstop);
@@ -600,12 +601,13 @@ acDeviceIntegrateSubstep(const Device device, const Stream stream, const int ste
                    (unsigned int)ceil(n.y / AcReal(tpb.y)), //
                    (unsigned int)ceil(n.z / AcReal(tpb.z)));
 
+    acDeviceLoadScalarConstant(device, stream, AC_dt, dt);
     if (step_number == 0)
-        solve<0><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
+        solve<0><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
     else if (step_number == 1)
-        solve<1><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
+        solve<1><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
     else
-        solve<2><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
+        solve<2><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
 
     ERRCHK_CUDA_KERNEL();
 

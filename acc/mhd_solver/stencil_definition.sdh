@@ -15,6 +15,7 @@ uniform int AC_bin_steps;
 uniform int AC_bc_type;
 
 // Real params
+uniform Scalar AC_dt;
 // Spacing
 uniform Scalar AC_dsx;
 uniform Scalar AC_dsy;
