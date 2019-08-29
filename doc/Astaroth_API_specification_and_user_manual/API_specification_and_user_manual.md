@@ -33,13 +33,14 @@ The kernels generated from the Astaroth DSL are embedded in the Astaroth Core li
 
 # Publications
 
-> J. Pekkilä, M. S. Väisälä, M. Käpylä, P. J. Käpylä, and O. Anjum, “Methods for compressible fluid simulation on GPUs using high-order finite differences, ”Computer Physics Communications, vol. 217, pp. 11–22, Aug. 2017.
-
-> M. S. Väisälä, Magnetic Phenomena of the Interstellar Medium in Theory and Observation. PhD thesis, University of Helsinki, Finland, 2017.
+The foundational work was done in (Väisälä, Pekkilä, 2017) and the library, API and DSL described in this document were introduced in (Pekkilä, 2019). We kindly wish the users of Astaroth to cite to these publications in their work.
 
 > J. Pekkilä, Astaroth: A Library for Stencil Computations on Graphics Processing Units. Master's thesis, Aalto University School of Science, Espoo, Finland, 2019.
 
-The library, API and DSL described in this document were introduced in (Pekkilä, 2019). Consider referring to it if you use the latest version of Astaroth in your work.
+> M. S. Väisälä, Magnetic Phenomena of the Interstellar Medium in Theory and Observation. PhD thesis, University of Helsinki, Finland, 2017.
+
+> J. Pekkilä, M. S. Väisälä, M. Käpylä, P. J. Käpylä, and O. Anjum, “Methods for compressible fluid simulation on GPUs using high-order finite differences, ”Computer Physics Communications, vol. 217, pp. 11–22, Aug. 2017.
+
 
 
 # Astaroth API
