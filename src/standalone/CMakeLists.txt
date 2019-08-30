@@ -25,10 +25,11 @@ add_compile_options(-pipe ${OpenMP_CXX_FLAGS})
 add_compile_options(-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion)# -Wshadow)
 
 ## Compile and link
-add_library(astaroth_standalone ${SOURCES})
+add_library(astaroth_standalone STATIC ${SOURCES})
+target_link_libraries(astaroth_standalone PRIVATE astaroth_core "${OpenMP_CXX_FLAGS}" ${SDL2_LIBRARY})
 
 add_executable(ac_run main.cc)
-target_link_libraries(ac_run PRIVATE astaroth_standalone astaroth_core "${OpenMP_CXX_FLAGS}" ${SDL2_LIBRARY})
+target_link_libraries(ac_run PRIVATE astaroth_standalone)
 
 # Define the config directory
 if (ALTER_CONF)

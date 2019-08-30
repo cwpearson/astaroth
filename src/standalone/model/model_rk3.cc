@@ -31,6 +31,16 @@
 #include "host_memory.h"
 #include "model_boundconds.h"
 
+// Standalone flags
+#define LDENSITY (1)
+#define LHYDRO (1)
+#define LMAGNETIC (1)
+#define LENTROPY (1)
+#define LTEMPERATURE (0)
+#define LFORCING (1)
+#define LUPWD (1)
+#define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
+
 typedef struct {
     ModelScalar x, y, z;
 } ModelVector;
