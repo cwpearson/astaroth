@@ -62,9 +62,9 @@ static const char* translation_table[TRANSLATION_TABLE_SIZE] = {
     [MATRIX]      = "AcMatrix",
     [SCALARFIELD] = "AcReal",
     // Type qualifiers
-    [KERNEL] = "template <int step_number>  static "
-               "__global__", //__launch_bounds__(RK_THREADBLOCK_SIZE,
-                             // RK_LAUNCH_BOUND_MIN_BLOCKS),
+    [KERNEL] = "template <int step_number>  static __global__",
+    //__launch_bounds__(RK_THREADBLOCK_SIZE,
+    // RK_LAUNCH_BOUND_MIN_BLOCKS),
     [PREPROCESSED] = "static __device__ "
                      "__forceinline__",
     [CONSTANT] = "const",
@@ -318,9 +318,15 @@ traverse(const ASTNode* node)
         inside_kernel = true;
 
     // Kernel parameter boilerplate
-    const char* kernel_parameter_boilerplate = "GEN_KERNEL_PARAM_BOILERPLATE, ";
-    if (inside_kernel && node->type == NODE_FUNCTION_PARAMETER_DECLARATION)
-        printf("%s ", kernel_parameter_boilerplate);
+    const char* kernel_parameter_boilerplate = "GEN_KERNEL_PARAM_BOILERPLATE";
+    if (inside_kernel && node->type == NODE_FUNCTION_PARAMETER_DECLARATION) {
+        printf("%s", kernel_parameter_boilerplate);
+
+        if (node->lhs != NULL) {
+            printf("Compilation error: function parameters for Kernel functions not allowed!\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     // Kernel builtin variables boilerplate (read input/output arrays and setup
     // indices)
@@ -619,6 +625,17 @@ generate_header(void)
     */
 }
 
+static void
+generate_library_hooks(void)
+{
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_qualifier == KERNEL) {
+            printf("GEN_DEVICE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
+            // printf("GEN_NODE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
+        }
+    }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -656,6 +673,8 @@ main(int argc, char** argv)
         generate_preprocessed_structures();
     else if (compilation_type == STENCIL_HEADER)
         generate_header();
+    else if (compilation_type == STENCIL_PROCESS)
+        generate_library_hooks();
 
     // print_symbol_table();
 

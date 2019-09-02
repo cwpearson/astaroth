@@ -39,6 +39,24 @@ typedef struct {
     AcReal* out[NUM_VTXBUF_HANDLES];
 } VertexBufferArray;
 
+struct device_s {
+    int id;
+    AcMeshInfo local_config;
+
+    // Concurrency
+    cudaStream_t streams[NUM_STREAM_TYPES];
+
+    // Memory
+    VertexBufferArray vba;
+    AcReal* reduce_scratchpad;
+    AcReal* reduce_result;
+
+#if PACKED_DATA_TRANSFERS
+// Declare memory for buffers needed for packed data transfers here
+// AcReal* data_packing_buffer;
+#endif
+};
+
 __constant__ AcMeshInfo d_mesh_info;
 static int __device__ __forceinline__
 DCONST(const AcIntParam param)
@@ -88,24 +106,6 @@ static dim3 rk3_tpb(32, 1, 4);
 #if PACKED_DATA_TRANSFERS // Defined in device.cuh
 // #include "kernels/pack_unpack.cuh"
 #endif
-
-struct device_s {
-    int id;
-    AcMeshInfo local_config;
-
-    // Concurrency
-    cudaStream_t streams[NUM_STREAM_TYPES];
-
-    // Memory
-    VertexBufferArray vba;
-    AcReal* reduce_scratchpad;
-    AcReal* reduce_result;
-
-#if PACKED_DATA_TRANSFERS
-// Declare memory for buffers needed for packed data transfers here
-// AcReal* data_packing_buffer;
-#endif
-};
 
 // clang-format off
 static __global__ void dummy_kernel(void) { DCONST((AcIntParam)0); DCONST((AcInt3Param)0); DCONST((AcRealParam)0); DCONST((AcReal3Param)0); }
@@ -303,8 +303,9 @@ acDeviceAutoOptimize(const Device device)
 
                 cudaEventRecord(tstart); // ---------------------------------------- Timing start
 
+                acDeviceLoadScalarConstant(device, STREAM_DEFAULT, AC_dt, FLT_EPSILON);
                 for (int i = 0; i < num_iterations; ++i)
-                    solve<2><<<bpg, tpb>>>(start, end, device->vba, FLT_EPSILON);
+                    solve<2><<<bpg, tpb>>>(start, end, device->vba);
 
                 cudaEventRecord(tstop); // ----------------------------------------- Timing end
                 cudaEventSynchronize(tstop);
@@ -600,12 +601,13 @@ acDeviceIntegrateSubstep(const Device device, const Stream stream, const int ste
                    (unsigned int)ceil(n.y / AcReal(tpb.y)), //
                    (unsigned int)ceil(n.z / AcReal(tpb.z)));
 
+    acDeviceLoadScalarConstant(device, stream, AC_dt, dt);
     if (step_number == 0)
-        solve<0><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
+        solve<0><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
     else if (step_number == 1)
-        solve<1><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
+        solve<1><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
     else
-        solve<2><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba, dt);
+        solve<2><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
 
     ERRCHK_CUDA_KERNEL();
 
