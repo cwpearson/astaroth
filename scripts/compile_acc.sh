@@ -8,17 +8,18 @@ fi
 
 KERNEL_DIR=${AC_HOME}"/src/core/kernels"
 ACC_DIR=${AC_HOME}"/acc"
-ACC_DEFAULT_HEADER="mhd_solver/stencil_defines.h"
 ACC_DEFAULT_SAS="mhd_solver/stencil_assembly.sas"
 ACC_DEFAULT_SPS="mhd_solver/stencil_process.sps"
+ACC_DEFAULT_HEADER="mhd_solver/stencil_definition.sdh"
+ACC_DEFAULT_INCLUDE_DIR="mhd_solver"
 
 ${ACC_DIR}/clean.sh
 ${ACC_DIR}/build_acc.sh
 
-
-ACC_HEADER=${ACC_DEFAULT_HEADER}
 ACC_SAS=${ACC_DEFAULT_SAS}
 ACC_SPS=${ACC_DEFAULT_SPS}
+ACC_HEADER=${ACC_DEFAULT_HEADER}
+ACC_INCLUDE_DIR=${ACC_DEFAULT_INCLUDE_DIR}
 
 while [ "$#" -gt 0 ]
 do
@@ -56,9 +57,17 @@ echo "Header file:" ${ACC_DIR}/${ACC_HEADER}
 echo "Assembly file: ${ACC_DIR}/${ACC_SAS}"
 echo "Process file: ${ACC_DIR}/${ACC_SPS}"
 
-cd ${KERNEL_DIR}
-${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SAS} ${ACC_DIR}/${ACC_HEADER}
-${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SPS} ${ACC_DIR}/${ACC_HEADER}
+cd ${ACC_DIR}/${ACC_INCLUDE_DIR}
+echo ${PWD}
+${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SAS}
+${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SPS}
+${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_HEADER}
 
-echo "Linking: " ${ACC_DIR}/${ACC_HEADER} " -> " ${AC_HOME}/include/stencil_defines.h
-ln -sf ${ACC_DIR}/${ACC_HEADER} ${AC_HOME}/include/stencil_defines.h
+echo "Moving stencil_assembly.cuh -> ${AC_HOME}/src/core/kernels"
+mv stencil_assembly.cuh ${AC_HOME}/src/core/kernels
+
+echo "Moving stencil_process.cuh -> ${AC_HOME}/src/core/kernels"
+mv stencil_process.cuh ${AC_HOME}/src/core/kernels
+
+echo "Moving stencil_defines.cuh -> ${AC_HOME}/include"
+mv stencil_defines.h ${AC_HOME}/include

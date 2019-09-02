@@ -26,7 +26,9 @@
  */
 #include "host_forcing.h"
 
-#include "src/core/math_utils.h"
+// #include "src/core/math_utils.h"
+#include <cmath>
+using namespace std;
 
 // The is a wrapper for genering random numbers with a chosen system.
 AcReal
@@ -36,7 +38,7 @@ get_random_number_01()
     return AcReal(rand()) / AcReal(RAND_MAX);
 }
 
-AcReal3
+static AcReal3
 cross(const AcReal3& a, const AcReal3& b)
 {
     AcReal3 c;
@@ -48,13 +50,13 @@ cross(const AcReal3& a, const AcReal3& b)
     return c;
 }
 
-AcReal
+static AcReal
 dot(const AcReal3& a, const AcReal3& b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-AcReal3
+static AcReal3
 vec_norm(const AcReal3& a)
 {
     AcReal3 c;
@@ -67,7 +69,7 @@ vec_norm(const AcReal3& a)
     return c;
 }
 
-AcReal3
+static AcReal3
 vec_multi_scal(const AcReal scal, const AcReal3& a)
 {
     AcReal3 c;

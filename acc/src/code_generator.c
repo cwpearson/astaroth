@@ -36,7 +36,8 @@
 ASTNode* root = NULL;
 
 static const char inout_name_prefix[] = "handle_";
-static bool doing_stencil_assembly    = true;
+typedef enum { STENCIL_ASSEMBLY, STENCIL_PROCESS, STENCIL_HEADER } CompilationType;
+static CompilationType compilation_type;
 
 /*
  * =============================================================================
@@ -53,16 +54,17 @@ static const char* translation_table[TRANSLATION_TABLE_SIZE] = {
     [WHILE] = "while",
     [FOR]   = "for",
     // Type specifiers
-    [VOID]   = "void",
-    [INT]    = "int",
-    [INT3]   = "int3",
-    [SCALAR] = "AcReal",
-    [VECTOR] = "AcReal3",
-    [MATRIX] = "AcMatrix",
+    [VOID]        = "void",
+    [INT]         = "int",
+    [INT3]        = "int3",
+    [SCALAR]      = "AcReal",
+    [VECTOR]      = "AcReal3",
+    [MATRIX]      = "AcMatrix",
+    [SCALARFIELD] = "AcReal",
     // Type qualifiers
-    [KERNEL] = "template <int step_number>  static "
-               "__global__", //__launch_bounds__(RK_THREADBLOCK_SIZE,
-                             // RK_LAUNCH_BOUND_MIN_BLOCKS),
+    [KERNEL] = "template <int step_number>  static __global__",
+    //__launch_bounds__(RK_THREADBLOCK_SIZE,
+    // RK_LAUNCH_BOUND_MIN_BLOCKS),
     [PREPROCESSED] = "static __device__ "
                      "__forceinline__",
     [CONSTANT] = "const",
@@ -212,11 +214,14 @@ translate_latest_symbol(void)
     // FUNCTION PARAMETER
     else if (symbol->type == SYMBOLTYPE_FUNCTION_PARAMETER) {
         if (symbol->type_qualifier == IN || symbol->type_qualifier == OUT) {
-            if (doing_stencil_assembly)
+            if (compilation_type == STENCIL_ASSEMBLY)
                 printf("const __restrict__ %s* %s", translate(symbol->type_specifier),
                        symbol->identifier);
-            else
+            else if (compilation_type == STENCIL_PROCESS)
                 printf("const %sData& %s", translate(symbol->type_specifier), symbol->identifier);
+            else
+                printf("Invalid compilation type %d, IN and OUT qualifiers not supported\n",
+                       compilation_type);
         }
         else {
             print_symbol(handle);
@@ -224,14 +229,18 @@ translate_latest_symbol(void)
     }
     // UNIFORM
     else if (symbol->type_qualifier == UNIFORM) {
+        // if (compilation_type != STENCIL_HEADER) {
+        //    printf("ERROR: %s can only be used in stencil headers\n", translation_table[UNIFORM]);
+        //}
         /* Do nothing */
     }
     // IN / OUT
     else if (symbol->type != SYMBOLTYPE_FUNCTION_PARAMETER &&
              (symbol->type_qualifier == IN || symbol->type_qualifier == OUT)) {
 
-        printf("static __device__ const %s %s%s", symbol->type_specifier == SCALAR ? "int" : "int3",
-               inout_name_prefix, symbol_table[handle].identifier);
+        printf("static __device__ const %s %s%s",
+               symbol->type_specifier == SCALARFIELD ? "int" : "int3", inout_name_prefix,
+               symbol_table[handle].identifier);
         if (symbol->type_specifier == VECTOR)
             printf(" = make_int3");
     }
@@ -309,9 +318,15 @@ traverse(const ASTNode* node)
         inside_kernel = true;
 
     // Kernel parameter boilerplate
-    const char* kernel_parameter_boilerplate = "GEN_KERNEL_PARAM_BOILERPLATE, ";
-    if (inside_kernel && node->type == NODE_FUNCTION_PARAMETER_DECLARATION)
-        printf("%s ", kernel_parameter_boilerplate);
+    const char* kernel_parameter_boilerplate = "GEN_KERNEL_PARAM_BOILERPLATE";
+    if (inside_kernel && node->type == NODE_FUNCTION_PARAMETER_DECLARATION) {
+        printf("%s", kernel_parameter_boilerplate);
+
+        if (node->lhs != NULL) {
+            printf("Compilation error: function parameters for Kernel functions not allowed!\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     // Kernel builtin variables boilerplate (read input/output arrays and setup
     // indices)
@@ -369,6 +384,8 @@ traverse(const ASTNode* node)
             //    printf("%s%s", inout_name_prefix, symbol->identifier);
             //}
             if (symbol->type_qualifier == UNIFORM) {
+                printf("DCONST(%s) ", symbol->identifier);
+                /*
                 if (symbol->type_specifier == SCALAR)
                     printf("DCONST_REAL(AC_%s) ", symbol->identifier);
                 else if (symbol->type_specifier == INT)
@@ -376,6 +393,7 @@ traverse(const ASTNode* node)
                 else
                     printf("INVALID UNIFORM type specifier %s with %s\n",
                            translate(symbol->type_specifier), symbol->identifier);
+                           */
             }
             else {
                 // Do a regular translation
@@ -545,14 +563,89 @@ generate_preprocessed_structures(void)
     ");
 }
 
+static void
+generate_header(void)
+{
+    printf("\n#pragma once\n");
+
+    // Int params
+    printf("#define AC_FOR_USER_INT_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == INT) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Int3 params
+    printf("#define AC_FOR_USER_INT3_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == INT3) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Scalar params
+    printf("#define AC_FOR_USER_REAL_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == SCALAR) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Vector params
+    printf("#define AC_FOR_USER_REAL3_PARAM_TYPES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == VECTOR) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Scalar fields
+    printf("#define AC_FOR_VTXBUF_HANDLES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == SCALARFIELD) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    /*
+    printf("\n");
+    printf("typedef struct {\n");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_qualifier == PREPROCESSED)
+            printf("%s %s;\n", translate(symbol_table[i].type_specifier),
+                   symbol_table[i].identifier);
+    }
+    printf("} %sData;\n", translate(SCALAR));
+    */
+}
+
+static void
+generate_library_hooks(void)
+{
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_qualifier == KERNEL) {
+            printf("GEN_DEVICE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
+            // printf("GEN_NODE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
+        }
+    }
+}
+
 int
 main(int argc, char** argv)
 {
     if (argc == 2) {
         if (!strcmp(argv[1], "-sas"))
-            doing_stencil_assembly = true;
+            compilation_type = STENCIL_ASSEMBLY;
         else if (!strcmp(argv[1], "-sps"))
-            doing_stencil_assembly = false;
+            compilation_type = STENCIL_PROCESS;
+        else if (!strcmp(argv[1], "-sdh"))
+            compilation_type = STENCIL_HEADER;
         else
             printf("Unknown flag %s. Generating stencil assembly.\n", argv[1]);
     }
@@ -560,8 +653,8 @@ main(int argc, char** argv)
         printf("Usage: ./acc [flags]\n"
                "Flags:\n"
                "\t-sas - Generates code for the stencil assembly stage\n"
-               "\t-sps - Generates code for the stencil processing "
-               "stage\n");
+               "\t-sps - Generates code for the stencil processing stage\n"
+               "\t-hh  - Generates stencil definitions from a header file\n");
         printf("\n");
         return EXIT_FAILURE;
     }
@@ -576,8 +669,12 @@ main(int argc, char** argv)
 
     // Traverse
     traverse(root);
-    if (doing_stencil_assembly)
+    if (compilation_type == STENCIL_ASSEMBLY)
         generate_preprocessed_structures();
+    else if (compilation_type == STENCIL_HEADER)
+        generate_header();
+    else if (compilation_type == STENCIL_PROCESS)
+        generate_library_hooks();
 
     // print_symbol_table();
 

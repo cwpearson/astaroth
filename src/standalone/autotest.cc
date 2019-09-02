@@ -75,6 +75,12 @@ static const InitType test_cases[] = {INIT_TYPE_RANDOM, INIT_TYPE_XWAVE,
                                       INIT_TYPE_GAUSSIAN_RADIAL_EXPL, INIT_TYPE_ABC_FLOW};
 // #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
+static inline bool
+is_valid(const ModelScalar a)
+{
+    return !isnan(a) && !isinf(a);
+}
+
 #if TEST_TYPE ==                                                                                   \
     QUICK_TEST // REGULAR TEST START HERE
                // --------------------------------------------------------------------------------------------------------------

@@ -45,6 +45,8 @@ typedef struct {
 #endif // __CUDACC__
 
 // Library flags
+#define STENCIL_ORDER (6)
+#define NGHOST (STENCIL_ORDER / 2)
 #define VERBOSE_PRINTING (1)
 
 // Built-in types and parameters
@@ -214,6 +216,9 @@ acVertexBufferIdx(const int i, const int j, const int k, const AcMeshInfo info)
            j * info.int_params[AC_mx] + //
            k * info.int_params[AC_mx] * info.int_params[AC_my];
 }
+
+/** Prints all parameters inside AcMeshInfo */
+void acPrintMeshInfo(const AcMeshInfo config);
 
 /*
 static inline int

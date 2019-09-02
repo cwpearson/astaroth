@@ -26,6 +26,8 @@
  */
 #pragma once
 
+#include "src/core/math_utils.h"
+
 #include <assert.h>
 
 static __device__ __forceinline__ int
@@ -321,65 +323,6 @@ read_data(const int i, const int j, const int k,
  * =============================================================================
  */
 
-static __host__ __device__ __forceinline__ AcReal3
-operator-(const AcReal3& a, const AcReal3& b)
-{
-    return (AcReal3){a.x - b.x, a.y - b.y, a.z - b.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-operator+(const AcReal3& a, const AcReal3& b)
-{
-    return (AcReal3){a.x + b.x, a.y + b.y, a.z + b.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-operator-(const AcReal3& a)
-{
-    return (AcReal3){-a.x, -a.y, -a.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal3 operator*(const AcReal a, const AcReal3& b)
-{
-    return (AcReal3){a * b.x, a * b.y, a * b.z};
-}
-
-static __host__ __device__ __forceinline__ AcReal
-dot(const AcReal3& a, const AcReal3& b)
-{
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-mul(const AcMatrix& aa, const AcReal3& x)
-{
-    return (AcReal3){dot(aa.row[0], x), dot(aa.row[1], x), dot(aa.row[2], x)};
-}
-
-static __host__ __device__ __forceinline__ AcReal3
-cross(const AcReal3& a, const AcReal3& b)
-{
-    AcReal3 c;
-
-    c.x = a.y * b.z - a.z * b.y;
-    c.y = a.z * b.x - a.x * b.z;
-    c.z = a.x * b.y - a.y * b.x;
-
-    return c;
-}
-
-static __host__ __device__ __forceinline__ bool
-is_valid(const AcReal& a)
-{
-    return !isnan(a) && !isinf(a);
-}
-
-static __host__ __device__ __forceinline__ bool
-is_valid(const AcReal3& a)
-{
-    return is_valid(a.x) && is_valid(a.y) && is_valid(a.z);
-}
-
 /*
  * =============================================================================
  * Level 1 (Stencil Processing Stage)
@@ -641,5 +584,55 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
            vertexIdx.z >= DCONST_INT(AC_nz_min));                                                  \
                                                                                                    \
     const int idx = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
+
+// clang-format off
+#define GEN_DEVICE_FUNC_HOOK(identifier)                                                           \
+    template <int step_number>                                                                     \
+    AcResult acDeviceKernel_##identifier(const Device device, const Stream stream,                 \
+                                         const int3 start, const int3 end)                         \
+    {                                                                                              \
+        cudaSetDevice(device->id);                                                                 \
+                                                                                                   \
+        const dim3 tpb(32, 1, 4);                                                                  \
+                                                                                                   \
+        const int3 n = end - start;                                                                \
+        const dim3 bpg((unsigned int)ceil(n.x / AcReal(tpb.x)),                                    \
+                       (unsigned int)ceil(n.y / AcReal(tpb.y)),                                    \
+                       (unsigned int)ceil(n.z / AcReal(tpb.z)));                                   \
+                                                                                                   \
+        identifier<step_number>                                                                    \
+            <<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);                   \
+        ERRCHK_CUDA_KERNEL();                                                                      \
+                                                                                                   \
+        return AC_SUCCESS;                                                                         \
+    }
+
+/*
+#define GEN_NODE_FUNC_HOOK(identifier)                                                             \
+    template <int step_number>                                                                     \
+    AcResult acNodeKernel_##identifier(const Node node, const Stream stream, const int3 start,     \
+                                       const int3 end)                                             \
+    {                                                                                              \
+        acNodeSynchronizeStream(node, stream);                                                     \
+                                                                                                   \
+        for (int i = 0; i < node->num_devices; ++i) {                                              \
+                                                                                                   \
+            const int3 d0 = (int3){NGHOST, NGHOST, NGHOST + i * node->subgrid.n.z};                \
+            const int3 d1 = d0 + (int3){node->subgrid.n.x, node->subgrid.n.y, node->subgrid.n.z};  \
+                                                                                                   \
+            const int3 da = max(start, d0);                                                        \
+            const int3 db = min(end, d1);                                                          \
+                                                                                                   \
+            if (db.z >= da.z) {                                                                    \
+                const int3 da_local = da - (int3){0, 0, i * node->subgrid.n.z};                    \
+                const int3 db_local = db - (int3){0, 0, i * node->subgrid.n.z};                    \
+                acDeviceKernel_ #identifier(node->devices[i], stream, isubstep, da_local,          \
+                                            db_local, dt);                                         \
+            }                                                                                      \
+        }                                                                                          \
+        return AC_SUCCESS;                                                                         \
+    }
+    */
+// clang-format on
 
 #include "stencil_process.cuh"

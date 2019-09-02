@@ -25,10 +25,10 @@
  *
  */
 #pragma once
-#include <cmath>
-using namespace std; // Potentially bad practice to declare namespace std here
-// #include <math.h>   // isnan, isinf // Overloads incorrect/bugged with GCC <= 6.0
-// #include <tgmath.h> // Even this does not work
+//#include <cmath>
+// using namespace std; // Potentially bad practice to declare namespace std here
+#include <math.h> // isnan, isinf // Overloads incorrect/bugged with GCC <= 6.0
+//#include <tgmath.h> // Even this does not work
 #include <stdlib.h> // rand
 
 template <class T>
@@ -66,16 +66,6 @@ sum(const T& a, const T& b)
 
 template <class T>
 static inline const T
-is_valid(const T& val)
-{
-    if (isnan(val) || isinf(val))
-        return false;
-    else
-        return true;
-}
-
-template <class T>
-static inline const T
 clamp(const T& val, const T& min, const T& max)
 {
     return val < min ? min : val > max ? max : val;
@@ -87,20 +77,85 @@ randr()
     return AcReal(rand()) / AcReal(RAND_MAX);
 }
 
-static inline int3
+static inline bool
+is_power_of_two(const unsigned val)
+{
+    return val && !(val & (val - 1));
+}
+
+#ifdef __CUDACC__
+#define HOST_DEVICE_INLINE __host__ __device__ __forceinline__
+#else
+#define HOST_DEVICE_INLINE inline
+#endif // __CUDACC__
+
+static HOST_DEVICE_INLINE AcReal3
+operator+(const AcReal3& a, const AcReal3& b)
+{
+    return (AcReal3){a.x + b.x, a.y + b.y, a.z + b.z};
+}
+
+static HOST_DEVICE_INLINE int3
 operator+(const int3& a, const int3& b)
 {
     return (int3){a.x + b.x, a.y + b.y, a.z + b.z};
 }
 
-static inline int3
+static HOST_DEVICE_INLINE AcReal3
+operator-(const AcReal3& a, const AcReal3& b)
+{
+    return (AcReal3){a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+static HOST_DEVICE_INLINE int3
 operator-(const int3& a, const int3& b)
 {
     return (int3){a.x - b.x, a.y - b.y, a.z - b.z};
 }
 
-static inline bool
-is_power_of_two(const unsigned val)
+static HOST_DEVICE_INLINE AcReal3
+operator-(const AcReal3& a)
 {
-    return val && !(val & (val - 1));
+    return (AcReal3){-a.x, -a.y, -a.z};
+}
+
+static HOST_DEVICE_INLINE AcReal3 operator*(const AcReal& a, const AcReal3& b)
+{
+    return (AcReal3){a * b.x, a * b.y, a * b.z};
+}
+
+static HOST_DEVICE_INLINE AcReal
+dot(const AcReal3& a, const AcReal3& b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+static HOST_DEVICE_INLINE AcReal3
+mul(const AcMatrix& aa, const AcReal3& x)
+{
+    return (AcReal3){dot(aa.row[0], x), dot(aa.row[1], x), dot(aa.row[2], x)};
+}
+
+static HOST_DEVICE_INLINE AcReal3
+cross(const AcReal3& a, const AcReal3& b)
+{
+    AcReal3 c;
+
+    c.x = a.y * b.z - a.z * b.y;
+    c.y = a.z * b.x - a.x * b.z;
+    c.z = a.x * b.y - a.y * b.x;
+
+    return c;
+}
+
+static HOST_DEVICE_INLINE bool
+is_valid(const AcReal a)
+{
+    return !isnan(a) && !isinf(a);
+}
+
+static HOST_DEVICE_INLINE bool
+is_valid(const AcReal3& a)
+{
+    return is_valid(a.x) && is_valid(a.y) && is_valid(a.z);
 }

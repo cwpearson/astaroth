@@ -32,14 +32,6 @@
 
 AcReal get_random_number_01();
 
-AcReal3 cross(const AcReal3& a, const AcReal3& b);
-
-AcReal dot(const AcReal3& a, const AcReal3& b);
-
-AcReal3 vec_norm(const AcReal3& a);
-
-AcReal3 vec_multi_scal(const AcReal scal, const AcReal3& a);
-
 AcReal3 helical_forcing_k_generator(const AcReal kmax, const AcReal kmin);
 
 void helical_forcing_e_generator(AcReal3* e_force, const AcReal3 k_force);
