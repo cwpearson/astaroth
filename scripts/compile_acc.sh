@@ -30,6 +30,12 @@ do
 			echo "compile_acc.sh -a custom_setup/custom_assembly.sas -p custom_setup/custom_process.sps --header custom_setup/custom_header.h"
 			exit 0
 			;;
+		-I|--include)
+			shift
+                        ACC_INCLUDE_DIR=${1}
+			shift
+                        echo "CUSTOM include dir!"
+			;;
 		--header)
 			shift
                         ACC_HEADER=${1}
