@@ -26,18 +26,18 @@ gradients(in VectorField uu)
 #if LSINK 
 Vector
 sink_gravity(int3 globalVertexIdx){
-    int accretion_switch = DCONST_INT(AC_switch_accretion);
+    int accretion_switch = AC_switch_accretion;
     if (accretion_switch == 1){
         Vector force_gravity;
-        const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                                         (globalVertexIdx.y - ny_min) * dsy,
-                                         (globalVertexIdx.z - nz_min) * dsz};
-        const Scalar sink_mass = DCONST_REAL(AC_M_sink);
-        const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
-                                         DCONST_REAL(AC_sink_pos_y),
-                                         DCONST_REAL(AC_sink_pos_z)}; 
+        const Vector grid_pos = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
+                                         (globalVertexIdx.y - AC_ny_min) * AC_dsy,
+                                         (globalVertexIdx.z - AC_nz_min) * AC_dsz};
+        const Scalar sink_mass = AC_M_sink;
+        const Vector sink_pos = (Vector){AC_sink_pos_x,
+                                         AC_sink_pos_y,
+                                         AC_sink_pos_z}; 
         const Scalar distance = length(grid_pos - sink_pos);
-        const Scalar soft = DCONST_REAL(AC_soft);
+        const Scalar soft = AC_soft;
         const Scalar gravity_magnitude = (AC_G_const * sink_mass) / pow(((distance * distance) +  soft*soft), 1.5);
         const Vector direction = (Vector){(sink_pos.x - grid_pos.x) / distance,
                                           (sink_pos.y - grid_pos.y) / distance,
@@ -56,9 +56,9 @@ sink_gravity(int3 globalVertexIdx){
 Scalar
 truelove_density(in ScalarField lnrho){
     const Scalar rho = exp(value(lnrho));
-    const Scalar Jeans_length_squared = (M_PI * cs2_sound) / (AC_G_const * rho);
-    const Scalar TJ_rho = ((M_PI) * ((dsx * dsx) / Jeans_length_squared) * cs2_sound) / (AC_G_const * dsx * dsx);
-    //TODO: dsx will cancel out, deal with it later for optimization.      
+    const Scalar Jeans_length_squared = (M_PI * AC_cs2_sound) / (AC_G_const * rho);
+    const Scalar TJ_rho = ((M_PI) * ((AC_dsx * AC_dsx) / Jeans_length_squared) * AC_cs2_sound) / (AC_G_const * AC_dsx * AC_dsx);
+    //TODO: AC_dsx will cancel out, deal with it later for optimization.      
  
     Scalar accretion_rho = TJ_rho;
        
@@ -67,15 +67,15 @@ truelove_density(in ScalarField lnrho){
 
 Scalar
 sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
-    const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                                     (globalVertexIdx.y - ny_min) * dsy,
-                                     (globalVertexIdx.z - nz_min) * dsz};
-    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
-                                     DCONST_REAL(AC_sink_pos_y),
-                                     DCONST_REAL(AC_sink_pos_z)};
-    const Scalar profile_range = DCONST_REAL(AC_accretion_range);
+    const Vector grid_pos = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
+                                     (globalVertexIdx.y - AC_ny_min) * AC_dsy,
+                                     (globalVertexIdx.z - AC_nz_min) * AC_dsz};
+    const Vector sink_pos = (Vector){AC_sink_pos_x,
+                                     AC_sink_pos_y,
+                                     AC_sink_pos_z};
+    const Scalar profile_range = AC_accretion_range;
     const Scalar accretion_distance = length(grid_pos - sink_pos);
-    int accretion_switch = DCONST_INT(AC_switch_accretion); 
+    int accretion_switch = AC_switch_accretion; 
     Scalar accretion_density; 
     Scalar weight;
 
@@ -90,10 +90,10 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
         
 //        const Scalar lnrho_min = Scalar(-10.0);  //TODO Define from astaroth.conf
         const Scalar lnrho_min = log(truelove_density(lnrho));
-//        const Scalar sink_mass = DCONST_REAL(AC_M_sink);
+//        const Scalar sink_mass = AC_M_sink;
 //        const Scalar B = Scalar(0.5);
 //        const Scalar k = Scalar(1.5);
-//        const Scalar rate = B * (pow(sink_mass, k) / (dsx * dsy * dsz));
+//        const Scalar rate = B * (pow(sink_mass, k) / (AC_dsx * AC_dsy * AC_dsz));
         Scalar rate;     
         if (value(lnrho) > lnrho_min) {
             rate = (exp(value(lnrho)) - exp(lnrho_min)) / dt;
@@ -110,15 +110,15 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
 
 Vector
 sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
-    const Vector grid_pos = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                                     (globalVertexIdx.y - ny_min) * dsy,
-                                     (globalVertexIdx.z - nz_min) * dsz};
-    const Vector sink_pos = (Vector){DCONST_REAL(AC_sink_pos_x),
-                                     DCONST_REAL(AC_sink_pos_y),
-                                     DCONST_REAL(AC_sink_pos_z)};
-    const Scalar profile_range = DCONST_REAL(AC_accretion_range);
+    const Vector grid_pos = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
+                                     (globalVertexIdx.y - AC_ny_min) * AC_dsy,
+                                     (globalVertexIdx.z - AC_nz_min) * AC_dsz};
+    const Vector sink_pos = (Vector){AC_sink_pos_x,
+                                     AC_sink_pos_y,
+                                     AC_sink_pos_z};
+    const Scalar profile_range = AC_accretion_range;
     const Scalar accretion_distance = length(grid_pos - sink_pos);   
-    int accretion_switch = DCONST_INT(AC_switch_accretion); 
+    int accretion_switch = AC_switch_accretion; 
     Vector accretion_velocity; 
 
     if (accretion_switch == 1){
@@ -187,7 +187,7 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
                        //Gravity term
                        + sink_gravity(globalVertexIdx) 
                        //Corresponding loss of momentum
-                       -     //(Scalar(1.0) / Scalar( (dsx*dsy*dsz) * exp(value(lnrho)))) *  // Correction factor by unit mass
+                       -     //(Scalar(1.0) / Scalar( (AC_dsx*AC_dsy*AC_dsz) * exp(value(lnrho)))) *  // Correction factor by unit mass
     	                 sink_accretion_velocity(globalVertexIdx, uu, dt) // As in Lee et al.(2014)
                        ; 
     #else
@@ -238,7 +238,7 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar d
     #if LSINK
           + sink_gravity(globalVertexIdx)
           //Corresponding loss of momentum
-          -     //(Scalar(1.0) / Scalar( (dsx*dsy*dsz) * exp(value(lnrho)))) *  // Correction factor by unit mass
+          -     //(Scalar(1.0) / Scalar( (AC_dsx*AC_dsy*AC_dsz) * exp(value(lnrho)))) *  // Correction factor by unit mass
     	    sink_accretion_velocity(globalVertexIdx, uu, dt) // As in Lee et al.(2014)
                                               ; 
     #else
@@ -335,7 +335,7 @@ heat_transfer(in VectorField uu, in ScalarField lnrho, in ScalarField tt)
 #if LFORCING
 Vector
     simple_vortex_forcing(Vector a, Vector b, Scalar magnitude){
-    int accretion_switch = DCONST_INT(AC_switch_accretion); 
+    int accretion_switch = AC_switch_accretion; 
     
     if (accretion_switch == 0){
         return magnitude * cross(normalized(b - a), (Vector){ 0, 0, 1}); // Vortex
@@ -345,7 +345,7 @@ Vector
 }        
 Vector
     simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude){
-    int accretion_switch = DCONST_INT(AC_switch_accretion);
+    int accretion_switch = AC_switch_accretion;
     if (accretion_switch == 0){            
         return magnitude * (1 / length(b - a)) * normalized(b - a); // Outward flow
     } else {
@@ -392,24 +392,24 @@ helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vecto
 Vector
 forcing(int3 globalVertexIdx, Scalar dt)
 {
-    int accretion_switch = DCONST_INT(AC_switch_accretion);
+    int accretion_switch = AC_switch_accretion;
     if (accretion_switch == 0){
 
-        Vector a = Scalar(.5) * (Vector){globalGridN.x * dsx,
-                                         globalGridN.y * dsy,
-                                         globalGridN.z * dsz}; // source (origin)
-        Vector xx = (Vector){(globalVertexIdx.x - nx_min) * dsx,
-                            (globalVertexIdx.y - ny_min) * dsy,
-                            (globalVertexIdx.z - nz_min) * dsz}; // sink (current index)
-        const Scalar cs2 = cs2_sound;
+        Vector a = Scalar(.5) * (Vector){globalGridN.x * AC_dsx,
+                                         globalGridN.y * AC_dsy,
+                                         globalGridN.z * AC_dsz}; // source (origin)
+        Vector xx = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
+                            (globalVertexIdx.y - AC_ny_min) * AC_dsy,
+                            (globalVertexIdx.z - AC_nz_min) * AC_dsz}; // sink (current index)
+        const Scalar cs2 = AC_cs2_sound;
         const Scalar cs = sqrt(cs2);
     
         //Placeholders until determined properly
-        Scalar magnitude = DCONST_REAL(AC_forcing_magnitude);
-        Scalar phase     = DCONST_REAL(AC_forcing_phase);
-        Vector k_force   = (Vector){  DCONST_REAL(AC_k_forcex),   DCONST_REAL(AC_k_forcey),   DCONST_REAL(AC_k_forcez)};
-        Vector ff_re     = (Vector){DCONST_REAL(AC_ff_hel_rex), DCONST_REAL(AC_ff_hel_rey), DCONST_REAL(AC_ff_hel_rez)};
-        Vector ff_im     = (Vector){DCONST_REAL(AC_ff_hel_imx), DCONST_REAL(AC_ff_hel_imy), DCONST_REAL(AC_ff_hel_imz)};
+        Scalar magnitude = AC_forcing_magnitude;
+        Scalar phase     = AC_forcing_phase;
+        Vector k_force   = (Vector){AC_k_forcex,   AC_k_forcey,   AC_k_forcez};
+        Vector ff_re     = (Vector){AC_ff_hel_rex, AC_ff_hel_rey, AC_ff_hel_rez};
+        Vector ff_im     = (Vector){AC_ff_hel_imx, AC_ff_hel_imy, AC_ff_hel_imz};
     
     
         //Determine that forcing funtion type at this point.
@@ -418,7 +418,7 @@ forcing(int3 globalVertexIdx, Scalar dt)
         Vector force   = helical_forcing(magnitude, k_force, xx, ff_re,ff_im, phase);
     
         //Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
-        const Scalar NN = cs*sqrt(DCONST_REAL(AC_kaver)*cs);
+        const Scalar NN = cs*sqrt(AC_kaver*cs);
         //MV: Like in the Pencil Code. I don't understandf the logic here.
         force.x = sqrt(dt)*NN*force.x;
         force.y = sqrt(dt)*NN*force.y;
@@ -490,7 +490,7 @@ solve()
     out_accretion = rk3(out_accretion, accretion, sink_accretion(globalVertexIdx, lnrho, dt), dt);// unit now is rho!
           
     if (step_number == 2) {
-        out_accretion = out_accretion * dsx * dsy * dsz;// unit is now mass!
+        out_accretion = out_accretion * AC_dsx * AC_dsy * AC_dsz;// unit is now mass!
     }
 #endif
 }

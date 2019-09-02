@@ -89,7 +89,7 @@ uniform Scalar AC_ff_hel_imx;
 uniform Scalar AC_ff_hel_imy;
 uniform Scalar AC_ff_hel_imz;
 //  Additional helper params  //  (deduced from other params do not set these directly!)
-uniform Scalar AC_G_CONST;
+uniform Scalar AC_G_const;
 uniform Scalar AC_GM_star;
 uniform Scalar AC_unit_mass;
 uniform Scalar AC_sq2GM_star;
@@ -128,3 +128,8 @@ uniform ScalarField VTXBUF_UUZ;
 #else
 uniform ScalarField VTXBUF_LNRHO;
 #endif
+
+#if LSINK
+uniform ScalarField VTXBUF_ACCRETION;
+#endif
+
