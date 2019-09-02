@@ -38,6 +38,8 @@ sink_gravity(int3 globalVertexIdx){
                                          AC_sink_pos_z}; 
         const Scalar distance = length(grid_pos - sink_pos);
         const Scalar soft = AC_soft;
+        //MV: The commit 083ff59 had AC_G_const defined wrong here in DSL making it exxessively strong.
+        //MV: Scalar gravity_magnitude = ... below is correct! 
         const Scalar gravity_magnitude = (AC_G_const * sink_mass) / pow(((distance * distance) +  soft*soft), 1.5);
         const Vector direction = (Vector){(sink_pos.x - grid_pos.x) / distance,
                                           (sink_pos.y - grid_pos.y) / distance,
