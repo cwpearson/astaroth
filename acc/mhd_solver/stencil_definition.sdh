@@ -15,6 +15,14 @@ uniform int AC_save_steps;
 uniform int AC_bin_steps;
 uniform int AC_bc_type;
 
+// Added these here. Otherwise DSL does not recognize them
+uniform int AC_nx_min;
+uniform int AC_ny_min;
+uniform int AC_nz_min;
+uniform int AC_nx_max;
+uniform int AC_ny_max;
+uniform int AC_nz_max;
+
 // Real params
 uniform Scalar AC_dt;
 // Spacing

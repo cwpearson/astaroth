@@ -26,7 +26,7 @@ gradients(in VectorField uu)
 #if LSINK 
 Vector
 sink_gravity(int3 globalVertexIdx){
-    int accretion_switch = AC_switch_accretion;
+    int accretion_switch = int(AC_switch_accretion);
     if (accretion_switch == 1){
         Vector force_gravity;
         const Vector grid_pos = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
