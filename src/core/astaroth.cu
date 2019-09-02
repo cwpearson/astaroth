@@ -22,15 +22,16 @@
 #include "math_utils.h" // int3 + int3
 
 #define AC_GEN_STR(X) #X
-const char* intparam_names[]   = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
+const char* intparam_names[]    = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
                                 AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
-const char* int3param_names[]  = {AC_FOR_BUILTIN_INT3_PARAM_TYPES(AC_GEN_STR) //
+const char* int3param_names[]   = {AC_FOR_BUILTIN_INT3_PARAM_TYPES(AC_GEN_STR) //
                                  AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR)};
-const char* realparam_names[]  = {AC_FOR_BUILTIN_REAL_PARAM_TYPES(AC_GEN_STR) //
+const char* realparam_names[]   = {AC_FOR_BUILTIN_REAL_PARAM_TYPES(AC_GEN_STR) //
                                  AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR)};
-const char* real3param_names[] = {AC_FOR_BUILTIN_REAL3_PARAM_TYPES(AC_GEN_STR) //
+const char* real3param_names[]  = {AC_FOR_BUILTIN_REAL3_PARAM_TYPES(AC_GEN_STR) //
                                   AC_FOR_USER_REAL3_PARAM_TYPES(AC_GEN_STR)};
-const char* vtxbuf_names[]     = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
+const char* scalararray_names[] = {AC_FOR_SCALARARRAY_HANDLES(AC_GEN_STR)};
+const char* vtxbuf_names[]      = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 #undef AC_GEN_STR
 
 static const int num_nodes = 1;

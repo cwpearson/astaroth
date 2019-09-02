@@ -124,6 +124,11 @@ static HOST_DEVICE_INLINE AcReal3 operator*(const AcReal& a, const AcReal3& b)
     return (AcReal3){a * b.x, a * b.y, a * b.z};
 }
 
+static HOST_DEVICE_INLINE AcReal3 operator*(const AcReal3& b, const AcReal& a)
+{
+    return (AcReal3){a * b.x, a * b.y, a * b.z};
+}
+
 static HOST_DEVICE_INLINE AcReal
 dot(const AcReal3& a, const AcReal3& b)
 {

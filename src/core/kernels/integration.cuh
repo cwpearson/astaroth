@@ -70,11 +70,11 @@ create_rotz(const AcReal radians)
 #define cos __cosf
 #define exp __expf
 */
-#define sin sinf
-#define cos cosf
-#define exp expf
-#define rsqrt rsqrtf // hardware reciprocal sqrt
-#endif               // AC_DOUBLE_PRECISION == 0
+//#define sin sinf
+//#define cos cosf
+//#define exp expf
+//#define rsqrt rsqrtf // hardware reciprocal sqrt
+#endif // AC_DOUBLE_PRECISION == 0
 
 /*
  * =============================================================================

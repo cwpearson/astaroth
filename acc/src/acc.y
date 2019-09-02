@@ -16,8 +16,8 @@ int yyget_lineno();
 %token CONSTANT IN OUT UNIFORM
 %token IDENTIFIER NUMBER
 %token RETURN
-%token SCALAR VECTOR MATRIX SCALARFIELD
-%token VOID INT INT3
+%token SCALAR VECTOR MATRIX SCALARFIELD SCALARARRAY
+%token VOID INT INT3 COMPLEX
 %token IF ELSE FOR WHILE ELIF
 %token LEQU LAND LOR LLEQU
 %token KERNEL PREPROCESSED
@@ -210,6 +210,8 @@ type_specifier: VOID                                                            
               | VECTOR                                                                  { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = VECTOR;  }
               | MATRIX                                                                  { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = MATRIX;  }
               | SCALARFIELD                                                             { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = SCALARFIELD;  }
+              | SCALARARRAY                                                             { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = SCALARARRAY;  }
+              | COMPLEX                                                                 { $$ = astnode_create(NODE_TYPE_SPECIFIER, NULL, NULL); $$->token = COMPLEX;  }
               ;
 
 identifier: IDENTIFIER                                                                  { $$ = astnode_create(NODE_IDENTIFIER, NULL, NULL); astnode_set_buffer(yytext, $$); }
