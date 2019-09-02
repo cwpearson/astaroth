@@ -41,6 +41,10 @@
 #include "src/core/math_utils.h"
 #include "timer_hires.h"
 
+//NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call. 
+#define LFORCING (0)
+#define LSINK (1)
+
 // Window
 SDL_Renderer* renderer      = NULL;
 static SDL_Window* window   = NULL;

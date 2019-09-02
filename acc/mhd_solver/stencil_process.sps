@@ -456,8 +456,8 @@ out ScalarField out_tt(VTXBUF_TEMPERATURE);
 #endif
 
 #if LSINK
-in Scalar accretion = VTXBUF_ACCRETION;
-out Scalar out_accretion = VTXBUF_ACCRETION;
+in ScalarField accretion(VTXBUF_ACCRETION);
+out ScalarField out_accretion(VTXBUF_ACCRETION);
 #endif
 
 Kernel void
@@ -471,13 +471,13 @@ solve()
 #endif
 
 #if LENTROPY
-    out_uu = rk3(out_uu, uu, momentum(uu, lnrho, ss, aa), dt);
+    out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, ss, aa, dt), dt);
     out_ss = rk3(out_ss, ss, entropy(ss, uu, lnrho, aa), dt);
 #elif LTEMPERATURE
-    out_uu = rk3(out_uu, uu, momentum(uu, lnrho, tt), dt);
+    out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, tt, dt), dt);
     out_tt = rk3(out_tt, tt, heat_transfer(uu, lnrho, tt), dt);
 #else
-    out_uu = rk3(out_uu, uu, momentum(uu, lnrho), dt);
+    out_uu = rk3(out_uu, uu, momentum(globalVertexIdx, uu, lnrho, dt), dt);
 #endif
 
 #if LFORCING

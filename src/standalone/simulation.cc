@@ -40,6 +40,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+//NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call. 
+#define LFORCING (0)
+#define LSINK (1)
+
 // Write all setting info into a separate ascii file. This is done to guarantee
 // that we have the data specifi information in the thing, even though in
 // principle these things are in the astaroth.conf.
@@ -254,9 +258,7 @@ run_simulation(void)
     //  acUpdate_sink_particle() will do the similar trick to the device.
 
     /* Step the simulation */
-#if LSINK
-    AcReal accreted_mass = 0.0;
-#endif
+    AcReal accreted_mass = 0.0; AcReal sink_mass = 0.0;
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
@@ -265,7 +267,7 @@ run_simulation(void)
 
         const AcReal sum_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
         accreted_mass = accreted_mass + sum_mass;
-        AcReal sink_mass = 0.0;
+        sink_mass = 0.0;
 	sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
         acLoadDeviceConstant(AC_M_sink, sink_mass);
         vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
