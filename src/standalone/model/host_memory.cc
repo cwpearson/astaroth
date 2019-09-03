@@ -227,16 +227,18 @@ simple_uniform_core(AcMesh* mesh)
     const double zorig   = mesh->info.real_params[AC_zorig];
     double xx, yy, zz, RR;
     double delx, dely, delz;
-    double tanhRR;
+    double core_profile;
 
     //TEMPORARY TEST INPUT PARAMETERS
     const double core_radius = DX*32.0;
     const double trans = DX*12.0;
+    const double epsilon = DX*2.0;
     const double vel_scale = mesh->info.real_params[AC_ampl_uu];
     double abso_vel;
 
     RR = 1.0;
     printf("%e %e %e \n", RR, trans, core_radius);
+     
 
     for (int k = 0; k < mz; k++) {
         for (int j = 0; j < my; j++) {
@@ -251,9 +253,9 @@ simple_uniform_core(AcMesh* mesh)
                 delz   = zz;
                 RR     = sqrt(delx*delx + dely*dely + delz*delz);
 
-                //tanhRR = double(-0.5)*tanh((core_radius-RR)/trans) + double(0.5)
+                //core_profile = double(-0.5)*tanh((core_radius-RR)/trans) + double(0.5)
                 //         + double(0.1);
-                tanhRR = double(1.0);
+                core_profile = pow(RR+epsilon, -2.0);   //double(1.0);
                 AcReal RR_inner_bound = mesh->info.real_params[AC_soft]/AcReal(2.0);
 
                 if (RR >= RR_inner_bound) {
@@ -268,7 +270,7 @@ simple_uniform_core(AcMesh* mesh)
                }
 
 
-                mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(exp(ampl_lnrho)*tanhRR);
+                mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(exp(ampl_lnrho)*core_profile);
                 mesh->vertex_buffer[VTXBUF_UUX][idx]   = -abso_vel * (yy / RR);
                 mesh->vertex_buffer[VTXBUF_UUY][idx]   =  abso_vel * (xx / RR);
                 mesh->vertex_buffer[VTXBUF_UUZ][idx]   = double(0.0);
