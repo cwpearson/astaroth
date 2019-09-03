@@ -67,6 +67,7 @@ truelove_density(in ScalarField lnrho){
     return accretion_rho;
 }
 
+// This controls accretion of density/mass to the sink particle. 
 Scalar
 sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     const Vector grid_pos = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
@@ -82,7 +83,6 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     Scalar weight;
 
     if (accretion_switch == 1){   
-//    const Scalar weight = exp(-(accretion_distance/profile_range));   
         // Step function weighting 
         if ((accretion_distance) <= profile_range){
             weight = Scalar(1.0);
@@ -90,12 +90,8 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
             weight = Scalar(0.0);
         }
         
-//        const Scalar lnrho_min = Scalar(-10.0);  //TODO Define from astaroth.conf
+        //Truelove criterion is used as a kind of arbitrary density floor. 
         const Scalar lnrho_min = log(truelove_density(lnrho));
-//        const Scalar sink_mass = AC_M_sink;
-//        const Scalar B = Scalar(0.5);
-//        const Scalar k = Scalar(1.5);
-//        const Scalar rate = B * (pow(sink_mass, k) / (AC_dsx * AC_dsy * AC_dsz));
         Scalar rate;     
         if (value(lnrho) > lnrho_min) {
             rate = (exp(value(lnrho)) - exp(lnrho_min)) / dt;
@@ -104,12 +100,12 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
         }
         accretion_density = weight * rate ;
     } else {
-        accretion_density = 0; 
+        accretion_density = Scalar(0.0); 
     }
     return accretion_density;
 } 
 
-
+// This controls accretion of velocity to the sink particle. 
 Vector
 sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
     const Vector grid_pos = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
@@ -126,6 +122,7 @@ sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
     if (accretion_switch == 1){
         Scalar weight;
         // Step function weighting 
+        // MV: This is too aggeressive creating velocity artefacts. 
         if ((accretion_distance) <= profile_range){
         weight = Scalar(1.0);
         } else {
@@ -133,6 +130,8 @@ sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
         }
 
         Vector rate;     
+        // MV: Could we use divergence here ephasize velocitie which are compressive and 
+        // MV: not absorbins stuff that would not be accreted anyway? 
         if (length(value(uu)) > Scalar(0.0)) {
             rate = (Scalar(1.0)/dt) * value(uu);
         } else { 
