@@ -216,40 +216,18 @@ simple_uniform_core(AcMesh* mesh)
     const int my = mesh->info.int_params[AC_my];
     const int mz = mesh->info.int_params[AC_mz];
 
-    //const int nx_min = mesh->info.int_params[AC_nx_min];
-    //const int nx_max = mesh->info.int_params[AC_nx_max];
-    //const int ny_min = mesh->info.int_params[AC_ny_min];
-    //const int ny_max = mesh->info.int_params[AC_ny_max];
-    //const int nz_min = mesh->info.int_params[AC_nz_min];
-    //const int nz_max = mesh->info.int_params[AC_nz_max];
-
     const double DX = mesh->info.real_params[AC_dsx];
     const double DY = mesh->info.real_params[AC_dsy];
     const double DZ = mesh->info.real_params[AC_dsz];
 
     const double ampl_lnrho = mesh->info.real_params[AC_ampl_lnrho];
-    //const double AMPL_UU = mesh->info.real_params[AC_ampl_uu];
-    // const double SQ2GM   = mesh->info.real_params[AC_sq2GM_star];
-    // const double GM = mesh->info.real_params[AC_GM_star];
-    // const double M_star  = mesh->info.real_params[AC_M_star];
-    // const double G_CONST = mesh->info.real_params[AC_G_CONST];
-
-    // const double unit_length   = mesh->info.real_params[AC_unit_length];
-    // const double unit_density  = mesh->info.real_params[AC_unit_density];
-    // const double unit_velocity = mesh->info.real_params[AC_unit_velocity];
 
     const double xorig   = mesh->info.real_params[AC_xorig];
     const double yorig   = mesh->info.real_params[AC_yorig];
     const double zorig   = mesh->info.real_params[AC_zorig];
-    //const double trans = mesh->info.real_params[AC_trans];
     double xx, yy, zz, RR;
     double delx, dely, delz;
-    //double u_x, u_y, u_z;
     double tanhRR;
-
-    //const double sink_pos_x = mesh->info.real_params[AC_sink_pos_x];
-    //const double sink_pos_y = mesh->info.real_params[AC_sink_pos_y];
-    //const double sink_pos_z = mesh->info.real_params[AC_sink_pos_z];
 
     //TEMPORARY TEST INPUT PARAMETERS
     const double core_radius = DX*32.0;
@@ -276,20 +254,24 @@ simple_uniform_core(AcMesh* mesh)
                 //tanhRR = double(-0.5)*tanh((core_radius-RR)/trans) + double(0.5)
                 //         + double(0.1);
                 tanhRR = double(1.0);
+                AcReal RR_inner_bound = mesh->info.real_params[AC_soft]/AcReal(2.0);
 
-                if (RR >= mesh->info.real_params[AC_soft]) {
-               
+                if (RR >= RR_inner_bound) {
                     abso_vel = vel_scale * sqrt(2.0 * mesh->info.real_params[AC_G_const] * mesh->info.real_params[AC_M_sink_init] / RR);
                 } else {
+                    abso_vel = vel_scale * sqrt(2.0 * mesh->info.real_params[AC_G_const] * mesh->info.real_params[AC_M_sink_init] / RR_inner_bound);
+                }
+
+               if (RR <= sqrt(DX*DX + DY*DY + DZ*DZ)) {
                     abso_vel = 0.0;
                     RR = 1.0;
-                }
+               }
 
 
                 mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(exp(ampl_lnrho)*tanhRR);
-                mesh->vertex_buffer[VTXBUF_UUX][idx] = -abso_vel * (yy / RR);
-                mesh->vertex_buffer[VTXBUF_UUY][idx] = abso_vel * (xx / RR);
-                mesh->vertex_buffer[VTXBUF_UUZ][idx] = double(0.0);
+                mesh->vertex_buffer[VTXBUF_UUX][idx]   = -abso_vel * (yy / RR);
+                mesh->vertex_buffer[VTXBUF_UUY][idx]   =  abso_vel * (xx / RR);
+                mesh->vertex_buffer[VTXBUF_UUZ][idx]   = double(0.0);
 
             }
         }
