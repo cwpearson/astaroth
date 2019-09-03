@@ -78,6 +78,12 @@ typedef struct {
         FUNC(AC_mx), \
         FUNC(AC_my), \
         FUNC(AC_mz), \
+        FUNC(AC_nx_min), \
+        FUNC(AC_ny_min), \
+        FUNC(AC_nz_min), \
+        FUNC(AC_nx_max), \
+        FUNC(AC_ny_max), \
+        FUNC(AC_nz_max), \
         FUNC(AC_mxy),\
         FUNC(AC_nxy),\
         FUNC(AC_nxyz),\

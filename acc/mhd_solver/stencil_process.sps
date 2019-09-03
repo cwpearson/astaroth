@@ -29,9 +29,9 @@ sink_gravity(int3 globalVertexIdx){
     int accretion_switch = int(AC_switch_accretion);
     if (accretion_switch == 1){
         Vector force_gravity;
-        const Vector grid_pos = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
-                                         (globalVertexIdx.y - AC_ny_min) * AC_dsy,
-                                         (globalVertexIdx.z - AC_nz_min) * AC_dsz};
+        const Vector grid_pos = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
+                                         (globalVertexIdx.y - DCONST(AC_ny_min)) * AC_dsy,
+                                         (globalVertexIdx.z - DCONST(AC_nz_min)) * AC_dsz};
         const Scalar sink_mass = AC_M_sink;
         const Vector sink_pos = (Vector){AC_sink_pos_x,
                                          AC_sink_pos_y,
@@ -69,9 +69,9 @@ truelove_density(in ScalarField lnrho){
 
 Scalar
 sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
-    const Vector grid_pos = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
-                                     (globalVertexIdx.y - AC_ny_min) * AC_dsy,
-                                     (globalVertexIdx.z - AC_nz_min) * AC_dsz};
+    const Vector grid_pos = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
+                                     (globalVertexIdx.y - DCONST(AC_ny_min)) * AC_dsy,
+                                     (globalVertexIdx.z - DCONST(AC_nz_min)) * AC_dsz};
     const Vector sink_pos = (Vector){AC_sink_pos_x,
                                      AC_sink_pos_y,
                                      AC_sink_pos_z};
@@ -112,9 +112,9 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
 
 Vector
 sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
-    const Vector grid_pos = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
-                                     (globalVertexIdx.y - AC_ny_min) * AC_dsy,
-                                     (globalVertexIdx.z - AC_nz_min) * AC_dsz};
+    const Vector grid_pos = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
+                                     (globalVertexIdx.y - DCONST(AC_ny_min)) * AC_dsy,
+                                     (globalVertexIdx.z - DCONST(AC_nz_min)) * AC_dsz};
     const Vector sink_pos = (Vector){AC_sink_pos_x,
                                      AC_sink_pos_y,
                                      AC_sink_pos_z};
@@ -400,9 +400,9 @@ forcing(int3 globalVertexIdx, Scalar dt)
         Vector a = Scalar(.5) * (Vector){globalGridN.x * AC_dsx,
                                          globalGridN.y * AC_dsy,
                                          globalGridN.z * AC_dsz}; // source (origin)
-        Vector xx = (Vector){(globalVertexIdx.x - AC_nx_min) * AC_dsx,
-                            (globalVertexIdx.y - AC_ny_min) * AC_dsy,
-                            (globalVertexIdx.z - AC_nz_min) * AC_dsz}; // sink (current index)
+        Vector xx = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
+                             (globalVertexIdx.y - DCONST(AC_ny_min)) * AC_dsy,
+                             (globalVertexIdx.z - DCONST(AC_nz_min)) * AC_dsz}; // sink (current index)
         const Scalar cs2 = AC_cs2_sound;
         const Scalar cs = sqrt(cs2);
     
