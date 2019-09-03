@@ -92,6 +92,12 @@ write_mesh_info(const AcMeshInfo* config)
     fprintf(infotxt, "real AC_cs2_sound  %e \n", (double)config->real_params[AC_cs2_sound]);
     fprintf(infotxt, "real AC_cv_sound   %e \n", (double)config->real_params[AC_cv_sound]);
 
+    //Physical units
+    fprintf(infotxt, "real AC_unit_density  %e \n", (double)config->real_params[AC_unit_density]);
+    fprintf(infotxt, "real AC_unit_velocity %e \n", (double)config->real_params[AC_unit_velocity]);
+    fprintf(infotxt, "real AC_unit_mass     %e \n", (double)config->real_params[AC_unit_mass    ]);
+    fprintf(infotxt, "real AC_unit_length   %e \n", (double)config->real_params[AC_unit_length  ]);
+
     //Here I'm still trying to copy the structure of the code above, and see if this will work for sink particle. 
     //I haven't fully undertand what these lines do but I'll read up on them soon. This is still yet experimental.
     // Sink particle 

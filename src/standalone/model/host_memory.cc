@@ -227,12 +227,12 @@ simple_uniform_core(AcMesh* mesh)
     const double zorig   = mesh->info.real_params[AC_zorig];
     double xx, yy, zz, RR;
     double delx, dely, delz;
-    double core_profile;
+    double core_profile, core_coeff;
 
     //TEMPORARY TEST INPUT PARAMETERS
     const double core_radius = DX*32.0;
     const double trans = DX*12.0;
-    const double epsilon = DX*2.0;
+    //const double epsilon = DX*2.0;
     const double vel_scale = mesh->info.real_params[AC_ampl_uu];
     double abso_vel;
 
@@ -253,15 +253,19 @@ simple_uniform_core(AcMesh* mesh)
                 delz   = zz;
                 RR     = sqrt(delx*delx + dely*dely + delz*delz);
 
-                //core_profile = double(-0.5)*tanh((core_radius-RR)/trans) + double(0.5)
-                //         + double(0.1);
-                core_profile = pow(RR+epsilon, -2.0);   //double(1.0);
                 AcReal RR_inner_bound = mesh->info.real_params[AC_soft]/AcReal(2.0);
 
+                core_coeff   = (exp(ampl_lnrho)  * mesh->info.real_params[AC_cs2_sound]) /
+                               (double(4.0)*M_PI * mesh->info.real_params[AC_G_const]);
+                     
                 if (RR >= RR_inner_bound) {
-                    abso_vel = vel_scale * sqrt(2.0 * mesh->info.real_params[AC_G_const] * mesh->info.real_params[AC_M_sink_init] / RR);
+                    abso_vel = vel_scale * sqrt(2.0 * mesh->info.real_params[AC_G_const] 
+                                                    * mesh->info.real_params[AC_M_sink_init] / RR);
+                    core_profile = pow(RR, -2.0);   //double(1.0);
                 } else {
-                    abso_vel = vel_scale * sqrt(2.0 * mesh->info.real_params[AC_G_const] * mesh->info.real_params[AC_M_sink_init] / RR_inner_bound);
+                    abso_vel = vel_scale * sqrt(2.0 * mesh->info.real_params[AC_G_const] 
+                                                    * mesh->info.real_params[AC_M_sink_init] / RR_inner_bound);
+                    core_profile = pow(RR_inner_bound, -2.0);   //double(1.0);
                 }
 
                if (RR <= sqrt(DX*DX + DY*DY + DZ*DZ)) {
@@ -270,7 +274,7 @@ simple_uniform_core(AcMesh* mesh)
                }
 
 
-                mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(exp(ampl_lnrho)*core_profile);
+                mesh->vertex_buffer[VTXBUF_LNRHO][idx] = log(core_coeff*core_profile);
                 mesh->vertex_buffer[VTXBUF_UUX][idx]   = -abso_vel * (yy / RR);
                 mesh->vertex_buffer[VTXBUF_UUY][idx]   =  abso_vel * (xx / RR);
                 mesh->vertex_buffer[VTXBUF_UUZ][idx]   = double(0.0);
