@@ -83,9 +83,11 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     Scalar weight;
 
     if (accretion_switch == 1){   
-        // Step function weighting 
         if ((accretion_distance) <= profile_range){
-            weight = Scalar(1.0);
+            //weight = Scalar(1.0);
+            //Hann window function
+            Scalar window_ratio = accretion_distance/profile_range;
+            weight = Scalar(0.5)*(Scalar(1.0) - cos(Scalar(2.0)*M_PI*window_ratio));
         } else {
             weight = Scalar(0.0);
         }
@@ -121,13 +123,18 @@ sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
 
     if (accretion_switch == 1){
         Scalar weight;
-        // Step function weighting 
-        // MV: This is too aggeressive creating velocity artefacts. 
+        // Step function weighting
+        // Arch of a cosine function? 
+        // Cubic spline x^3 - x in range [-0.5 , 0.5] 
         if ((accretion_distance) <= profile_range){
-        weight = Scalar(1.0);
+            //weight = Scalar(1.0);
+            //Hann window function
+            Scalar window_ratio = accretion_distance/profile_range;
+            weight = Scalar(0.5)*(Scalar(1.0) - cos(Scalar(2.0)*M_PI*window_ratio));
         } else {
-        weight = Scalar(0.0);
+            weight = Scalar(0.0);
         }
+
 
         Vector rate;     
         // MV: Could we use divergence here ephasize velocitie which are compressive and 
