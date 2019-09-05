@@ -448,6 +448,16 @@ acDeviceLoadInt3Constant(const Device device, const Stream stream, const AcInt3P
 }
 
 AcResult
+acDeviceLoadScalarArray(const Device device, const Stream stream, const ScalarArrayHandle handle,
+                        const AcReal* data, const size_t num)
+{
+    cudaSetDevice(device->id);
+    ERRCHK_CUDA(cudaMemcpyAsync(device->vba.profiles[handle], data, sizeof(data[0]) * num,
+                                cudaMemcpyHostToDevice, device->streams[stream]));
+    return AC_SUCCESS;
+}
+
+AcResult
 acDeviceLoadMeshInfo(const Device device, const Stream stream, const AcMeshInfo device_config)
 {
     cudaSetDevice(device->id);
