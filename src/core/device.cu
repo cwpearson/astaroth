@@ -449,10 +449,15 @@ acDeviceLoadInt3Constant(const Device device, const Stream stream, const AcInt3P
 
 AcResult
 acDeviceLoadScalarArray(const Device device, const Stream stream, const ScalarArrayHandle handle,
-                        const AcReal* data, const size_t num)
+                        const size_t start, const AcReal* data, const size_t num)
 {
     cudaSetDevice(device->id);
-    ERRCHK_CUDA(cudaMemcpyAsync(device->vba.profiles[handle], data, sizeof(data[0]) * num,
+
+    ERRCHK(start + num <= max(device->local_config.int_params[AC_mx],
+                              max(device->local_config.int_params[AC_my],
+                                  device->local_config.int_params[AC_mz])));
+
+    ERRCHK_CUDA(cudaMemcpyAsync(&device->vba.profiles[handle][start], data, sizeof(data[0]) * num,
                                 cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
 }

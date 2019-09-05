@@ -63,8 +63,8 @@ AcResult acDeviceLoadInt3Constant(const Device device, const Stream stream, cons
 
 /** */
 AcResult acDeviceLoadScalarArray(const Device device, const Stream stream,
-                                 const ScalarArrayHandle handle, const AcReal* data,
-                                 const size_t num);
+                                 const ScalarArrayHandle handle, const size_t start,
+                                 const AcReal* data, const size_t num);
 
 /** */
 AcResult acDeviceLoadMeshInfo(const Device device, const Stream stream,
