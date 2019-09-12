@@ -1,4 +1,4 @@
-# Astaroth specification and user manual
+a# Astaroth specification and user manual
 
 Copyright (C) 2014-2019, Johannes Pekkila, Miikka Vaisala.
 
@@ -227,7 +227,7 @@ Synchronization is done using `Stream` primitives, defined as
 ```C
 typedef enum { STREAM_DEFAULT, STREAM_0, ..., STREAM_16, NUM_STREAMS } Stream;
 #define STREAM_ALL (NUM_STREAMS)
-```. 
+```
 
 Functions queued in the same stream will be executed sequentially. If two or more consequent
 functions are queued in different streams, then these functions may execute in parallel. Finally,
@@ -276,8 +276,7 @@ Since we allow the user to operate on subsets of the computational domain in use
 AcResult acDeviceSwapBuffers(const Device device);
 AcResult acNodeSwapBuffers(const Node node);
 ```
-> All functions provided with the API operate on input buffers and ensure that the complete result
-is available in the input buffer when the function has completed. User-specified kernels are exceptions and write the result to output buffers. Therefore buffers have to be swapped only after calling user-specified kernels.
+> **NOTE**: All functions provided with the API operate on input buffers and ensure that the complete result is available in the input buffer when the function has completed. User-specified kernels are exceptions and write the result to output buffers. Therefore buffers have to be swapped only after calling user-specified kernels.
 
 ## Devices
 
