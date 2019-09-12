@@ -217,46 +217,81 @@ AcResult acNodeReduceVec(const Node node, const Stream stream_type, const Reduct
                          const VertexBufferHandle vtxbuf2, AcReal* result);
 ```
 
-### Synchronization
+### Stream synchronization
 
-The functions for synchronizing with certain stream and swapping input and output buffers are
-defined as follows. Reductions and boundary conditions declared in the previous subsection operate
-in-place on the input array, while integration places the result in the output buffer.
-Therefore ac*SwapBuffers() should always be called after an integration substep has been completed.
+All library functions that take a `Stream` as a parameter are asynchronous. When calling these functions,
+the control returns immediately back to the host even if the called device function has not yet completed.
+Therefore special care must be taken in order to ensure proper synchronization.
 
-The node layer introduces two new functions in addition to synchronization and swapping functions,
-acNodeSynchronizeVertexBuffer and acNodeSynchronizeMesh. These functions communicate the overlapping
-vertices between neighboring devices.
-Note that part of the overlapping ghost zone is also communicated when synchronizing vertex buffers
-and meshes. Therefore the data in this part of the ghost zone must be up to date before calling
-the communication functions.
-
+Synchronization is done using `Stream` primitives, defined as
 ```C
-AcResult acDeviceSynchronizeStream(const Device device, const Stream stream);
-AcResult acDeviceSwapBuffers(const Device device);
+typedef enum { STREAM_DEFAULT, STREAM_0, ..., STREAM_16, NUM_STREAMS } Stream;
+#define STREAM_ALL (NUM_STREAMS)
+```. 
 
-AcResult acNodeSynchronizeStream(const Node node, const Stream stream);
-AcResult acNodeSwapBuffers(const Node node);
+Functions queued in the same stream will be executed sequentially. If two or more consequent
+functions are queued in different streams, then these functions may execute in parallel. Finally,
+there is a barrier synchronization function, which blocks until all functions in some stream have
+completed. The Astaroth API provides barrier synchronization with functions `acDeviceSynchronize` and
+`acNodeSynchronize`. All streams can be synchronized at once by passing the alias `STREAM_ALL` to
+the synchronization function.
+
+Usage of streams is demonstrated with the following example.
+```C
+funcA(STREAM_0);
+funcB(STREAM_0); // Blocks until funcA has completed
+funcC(STREAM_1); // May execute in parallel with funcB
+synchronizeStream(STREAM_ALL); // Blocks until functions in all streams have completed
+funcD(STREAM_2); // Is started when command returns from synchronizeStream()
+```
+
+### Data synchronization
+
+Stream synchronization works in the same fashion on node and device layers. However, on the node
+layer one has to take in account that a portion of the mesh is shared between devices and that the
+data is always up to date.
+
+In stencil computations, the mesh is surrounded by a halo, where data is only used for updating grid
+points near the boundaries of the simulation domain. A portion of this halo is shared by neighboring
+devices. As there is no way of knowing when the user has completed operations on the mesh, the data
+communication between neighboring devices must be explicitly triggered. For this purpose, we provide
+the functions
+```C
+AcResult acNodeSynchronizeMesh(const Node node, const Stream stream);
 AcResult acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
                                        const VertexBufferHandle vtxbuf_handle);
-AcResult acNodeSynchronizeMesh(const Node node, const Stream stream);
+
 ```
+
+> **NOTE**: Local halos must be up to date before synchronizing the data. Local halos are the grid points outside the computational domain which are used only by a single device. The mesh is distributed to multiple devices by blocking along the z axis. If there are *n* devices and the z-dimension of the computational domain is *nz*, then each device is assigned *nz / n* two-dimensional planes. For example with two devices, the data block that has to be up to date ranges from *(0, 0, nz)* to *(mx, my, nz + 2 * NGHOST)* 
+
+### Input and output buffers
+
+The mesh is duplicated to input and output buffers for performance reasons. The input buffers are
+read-only in user-specified compute kernels, which allows us to read them via the texture cache optimized
+for spatially local memory accesses. The results of compute kernels are written into the output buffers.
+
+Since we allow the user to operate on subsets of the computational domain in user-specified kernels, we have no way to know when the output buffers are complete and can be swapped. Therefore the user should explicitly state when the input and output buffer should be swapped. This is done via the API calls
+```C
+AcResult acDeviceSwapBuffers(const Device device);
+AcResult acNodeSwapBuffers(const Node node);
+```
+> All functions provided with the API operate on input buffers and ensure that the complete result
+is available in the input buffer when the function has completed. User-specified kernels are exceptions and write the result to output buffers. Therefore buffers have to be swapped only after calling user-specified kernels.
 
 ## Devices
 
-The data type Device is a handle to some single device and is used in the Device layer functions to specify which device should execute the function. A device is created and destroyed with the following interface functions.
+`Device` is a handle to some single device and is used in device layer functions to specify which device should execute the function. A `Device` is created and destroyed with the following interface functions.
 ```C
 AcResult acDeviceCreate(const int device_id, const AcMeshInfo device_config, Device* device);
-
 AcResult acDeviceDestroy(Device device);
 ```
 
 ## Nodes
 
-The data type Node is a handle to some node, which consists of multiple devices. The Node handle is used to specify which node the Node layer functions should operate in. A node is created and destroyed with the following interface functions.
+`Node` is a handle to some compute node which consists of multiple devices. The `Node` handle is used to specify which node the node layer functions should operate in. A node is created and destroyed with the following interface functions.
 ```C
 AcResult acNodeCreate(const int id, const AcMeshInfo node_config, Node* node);
-
 AcResult acNodeDestroy(Node node);
 ```
 
@@ -278,7 +313,7 @@ typedef struct {
 ## Meshes
 
 Meshes are the primary structures for passing information to the library and kernels. The definition
-of a mesh is declared as
+of a `Mesh` is declared as
 ```C
 typedef struct {
     int int_params[NUM_INT_PARAMS];
@@ -320,8 +355,6 @@ int mz = info.int_params[AC_mz];
 after initialization.
 
 
-
-
 ### Decomposition
 Grids and subgrids contain the dimensions of the the mesh decomposed to multiple devices.
 ```C
@@ -330,13 +363,52 @@ typedef struct {
     int3 n; // Size of the computational domain (without ghost zones)
 } Grid;
 ```
-Each device is assigned a block of data 
 
+As briefly discussed in the section Data synchronization, a `Mesh` is distributed to multiple devices
+by blocking the data along the *z*-axis. Given the mesh dimensions *(mx, my, mz)*, its computational
+domain *(nx, ny, nz)* and *n* number of devices, then each device is assigned a mesh of size
+*(mx, my, 2 * NGHOST + nz/n)* and a computational domain of size *(nx, ny, nz/n)*.
 
-## Streams and synchronization
+Let *i* be the device id. The portion of the halos shared by neighboring devices is then *(0, 0, i * nz/n)* - *(mx, my, 2 * NGHOST + i * nz/n)*. The functions `acNodeSynchronizeVertexBuffer` and `acNodeSynchronizeMesh` communicate these shared areas among the devices in the node.
 
 ## Integration, reductions and boundary conditions
 
+The library provides the following functions for integration, reductions and computing periodic boundary conditions.
+```C
+AcResult acDeviceIntegrateSubstep(const Device device, const Stream stream, const int step_number,
+                                  const int3 start, const int3 end, const AcReal dt);
+AcResult acDevicePeriodicBoundcondStep(const Device device, const Stream stream,
+                                       const VertexBufferHandle vtxbuf_handle, const int3 start,
+                                       const int3 end);
+AcResult acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 start,
+                                    const int3 end);
+AcResult acDeviceReduceScal(const Device device, const Stream stream, const ReductionType rtype,
+                            const VertexBufferHandle vtxbuf_handle, AcReal* result);
+AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const ReductionType rtype,
+                           const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                           const VertexBufferHandle vtxbuf2, AcReal* result);
+
+AcResult acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_number,
+                                const int3 start, const int3 end, const AcReal dt);
+AcResult acNodeIntegrate(const Node node, const AcReal dt);
+AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream,
+                                     const VertexBufferHandle vtxbuf_handle);
+AcResult acNodePeriodicBoundconds(const Node node, const Stream stream);
+AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
+                          const VertexBufferHandle vtxbuf_handle, AcReal* result);
+AcResult acNodeReduceVec(const Node node, const Stream stream_type, const ReductionType rtype,
+                         const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                         const VertexBufferHandle vtxbuf2, AcReal* result);
+```
+
+Finally, there's a library function that is automatically generated for all user-specified `Kernel`
+functions written with the Astaroth DSL,
+```C
+AcResult acDeviceKernel_##identifier(const Device device, const Stream stream,
+                                     const int3 start, const int3 end);
+```
+Where `##identifier` is replaced with the name of the user-specified kernel. For example, a device
+function `Kernel solve()` can be called with `acDeviceKernel_solve()` via the API.
 
 # Astaroth DSL
 
