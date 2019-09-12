@@ -127,9 +127,9 @@ typedef enum {
     STREAM_14,
     STREAM_15,
     STREAM_16,
-    NUM_STREAM_TYPES
+    NUM_STREAMS
 } Stream;
-#define STREAM_ALL (NUM_STREAM_TYPES)
+#define STREAM_ALL (NUM_STREAMS)
 
 #define AC_GEN_ID(X) X
 typedef enum {

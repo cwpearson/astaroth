@@ -46,7 +46,7 @@ struct device_s {
     AcMeshInfo local_config;
 
     // Concurrency
-    cudaStream_t streams[NUM_STREAM_TYPES];
+    cudaStream_t streams[NUM_STREAMS];
 
     // Memory
     VertexBufferArray vba;
@@ -163,7 +163,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     printf("Success!\n");
 
     // Concurrency
-    for (int i = 0; i < NUM_STREAM_TYPES; ++i) {
+    for (int i = 0; i < NUM_STREAMS; ++i) {
         cudaStreamCreateWithPriority(&device->streams[i], cudaStreamNonBlocking, 0);
     }
 
@@ -228,7 +228,7 @@ acDeviceDestroy(Device device)
 #endif
 
     // Concurrency
-    for (int i = 0; i < NUM_STREAM_TYPES; ++i) {
+    for (int i = 0; i < NUM_STREAMS; ++i) {
         cudaStreamDestroy(device->streams[i]);
     }
 
