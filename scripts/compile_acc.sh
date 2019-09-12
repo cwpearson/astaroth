@@ -5,6 +5,7 @@ then
        echo "ASTAROTH_HOME environment variable not set, run \"source ./sourceme.sh\" in Astaroth home directory"
        exit 1
 fi
+OUTPUT_DIR=${PWD}
 
 KERNEL_DIR=${AC_HOME}"/src/core/kernels"
 ACC_DIR=${AC_HOME}"/acc"
@@ -69,11 +70,11 @@ ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SAS}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SPS}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_HEADER}
 
-echo "Moving stencil_assembly.cuh -> ${AC_HOME}/src/core/kernels"
-mv stencil_assembly.cuh ${AC_HOME}/src/core/kernels
+echo "Moving stencil_assembly.cuh -> ${OUTPUT_DIR}"
+mv stencil_assembly.cuh ${OUTPUT_DIR}
 
-echo "Moving stencil_process.cuh -> ${AC_HOME}/src/core/kernels"
-mv stencil_process.cuh ${AC_HOME}/src/core/kernels
+echo "Moving stencil_process.cuh -> ${OUTPUT_DIR}"
+mv stencil_process.cuh ${OUTPUT_DIR}
 
-echo "Moving stencil_defines.cuh -> ${AC_HOME}/include"
-mv stencil_defines.h ${AC_HOME}/include
+echo "Moving stencil_defines.cuh -> ${OUTPUT_DIR}"
+mv stencil_defines.h ${OUTPUT_DIR}

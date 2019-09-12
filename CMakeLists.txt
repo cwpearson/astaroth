@@ -50,6 +50,7 @@ endif ()
 ## Include directories
 include_directories(.)
 include_directories(include)
+include_directories(${CMAKE_BINARY_DIR})
 
 ## Subdirectories
 add_subdirectory(src/core) # The core library
