@@ -296,8 +296,8 @@ renderer_quit(void)
     return 0;
 }
 
-//static int init_type = INIT_TYPE_GAUSSIAN_RADIAL_EXPL;
-static int init_type = INIT_TYPE_SIMPLE_CORE;
+static int init_type = INIT_TYPE_GAUSSIAN_RADIAL_EXPL;
+//static int init_type = INIT_TYPE_SIMPLE_CORE;
 
 static bool
 running(AcMesh* mesh)
