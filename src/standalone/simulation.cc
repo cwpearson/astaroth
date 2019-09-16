@@ -186,8 +186,8 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* di
         fprintf(diag_file, "%e %e %e ", double(buf_min), double(buf_rms), double(buf_max));
     }
 
-    if ((sink_mass >= 0.0) || (accreted_mass >= 0.0)) {
-        fprintf(diag_file, "%e %e ", sink_mass, accreted_mass);
+    if ((sink_mass >= AcReal(0.0)) || (accreted_mass >= AcReal(0.0))) {
+        fprintf(diag_file, "%e %e ", double(sink_mass), double(accreted_mass));
     }
 
     fprintf(diag_file, "\n");
@@ -208,8 +208,8 @@ run_simulation(void)
 
     AcMesh* mesh = acmesh_create(mesh_info);
     // TODO: This need to be possible to define in astaroth.conf
-    //acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
-    acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh);
+    acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
+    //acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh); //Initial condition for a collapse test 
 
 #if LSINK
     vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
@@ -285,6 +285,18 @@ run_simulation(void)
             on_off_switch = 1;
         }
         acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
+
+        //MV: Old TODOs to remind of eventual future directions.  
+        //TODO_SINK acUpdate_sink_particle()
+        //  3. Velocity of the particle)
+        // TODO_SINK acAdvect_sink_particle()
+        //  1. Calculate the equation of motion for the sink particle.
+        //  NOTE: Might require embedding with acIntegrate(dt).
+        // TODO_SINK acAccrete_sink_particle()
+        //  2. Transfer momentum into sink particle
+        //  (OPTIONAL: Affection the motion of the particle)
+        //  NOTE: Might require embedding with acIntegrate(dt).
+        //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference.
 #else
 	accreted_mass = -1.0; sink_mass = -1.0;
 #endif
@@ -295,27 +307,7 @@ run_simulation(void)
 #endif
 
 
-       //TODO_SINK acUpdate_sink_particle()
-       //  Update properties of the sing particle for acIntegrate(). Essentially:
-       //  1. Location of the particle
-       //  2. Mass of the particle
-       //  3. Velocity of the particle)
-       //  These can be used for calculating he gravitational field. 
-       //  This is my first comment! by Jack
-       //  This is my second comment! by Jack
         acIntegrate(dt);
-        // TODO_SINK acAdvect_sink_particle()
-        //  THIS IS OPTIONAL. We will start from unmoving particle.
-        //  1. Calculate the equation of motion for the sink particle.
-        //  NOTE: Might require embedding with acIntegrate(dt).
-
-        // TODO_SINK acAccrete_sink_particle()
-        //  Calculate accretion of the sink particle from the surrounding medium
-        //  1. Transfer density into sink particle mass
-        //  2. Transfer momentum into sink particle
-        //  (OPTIONAL: Affection the motion of the particle)
-        //  NOTE: Might require embedding with acIntegrate(dt).
-        //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference.
 
         t_step += dt;
 
@@ -329,9 +321,10 @@ run_simulation(void)
             */
 
             print_diagnostics(i, dt, t_step, diag_file, sink_mass, accreted_mass);
-            printf("sink mass is: %.15e \n", sink_mass); 
-            printf("accreted mass is: %.15e \n", accreted_mass); 
-
+#if LSINK
+            printf("sink mass is: %.15e \n", double(sink_mass)); 
+            printf("accreted mass is: %.15e \n", double(accreted_mass)); 
+#endif
             /*
                 We would also might want an XY-average calculating funtion,
                 which can be very useful when observing behaviour of turbulent
