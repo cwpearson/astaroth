@@ -26,7 +26,9 @@ while [ "$#" -gt 0 ]
 do
 	case $1 in
 		-h|--help)
-			echo "You can set a custom files for DSL under the path $AC_HOME/"
+			echo "This script will help to compile DSL to CUDA code."
+			echo "The resulting kernels will be stored to $OUTPUT_DIR."
+			echo "You can set a custom files for DSL under the path $AC_DIR/"
 			echo "Example:"
 			echo "compile_acc.sh -a custom_setup/custom_assembly.sas -p custom_setup/custom_process.sps --header custom_setup/custom_header.h"
 			exit 0
