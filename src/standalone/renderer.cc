@@ -42,8 +42,8 @@
 #include "timer_hires.h"
 
 //NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call. 
-#define LFORCING (0)
-#define LSINK (1)
+#define LFORCING (1)
+#define LSINK (0)
 
 // Window
 SDL_Renderer* renderer      = NULL;

@@ -41,8 +41,8 @@
 #include <sys/types.h>
 
 //NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call. 
-#define LFORCING (0)
-#define LSINK (1)
+#define LFORCING (1)
+#define LSINK (0)
 
 // Write all setting info into a separate ascii file. This is done to guarantee
 // that we have the data specifi information in the thing, even though in
