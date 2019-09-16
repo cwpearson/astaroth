@@ -127,9 +127,9 @@ typedef enum {
     STREAM_14,
     STREAM_15,
     STREAM_16,
-    NUM_STREAM_TYPES
+    NUM_STREAMS
 } Stream;
-#define STREAM_ALL (NUM_STREAM_TYPES)
+#define STREAM_ALL (NUM_STREAMS)
 
 #define AC_GEN_ID(X) X
 typedef enum {
@@ -157,6 +157,11 @@ typedef enum {
 } AcReal3Param;
 
 typedef enum {
+    AC_FOR_SCALARARRAY_HANDLES(AC_GEN_ID) //
+    NUM_SCALARARRAY_HANDLES
+} ScalarArrayHandle;
+
+typedef enum {
     AC_FOR_VTXBUF_HANDLES(AC_GEN_ID) //
     NUM_VTXBUF_HANDLES
 } VertexBufferHandle;
@@ -166,6 +171,7 @@ extern const char* intparam_names[];
 extern const char* int3param_names[];
 extern const char* realparam_names[];
 extern const char* real3param_names[];
+extern const char* scalararray_names[];
 extern const char* vtxbuf_names[];
 
 typedef struct {

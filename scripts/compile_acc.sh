@@ -5,6 +5,7 @@ then
        echo "ASTAROTH_HOME environment variable not set, run \"source ./sourceme.sh\" in Astaroth home directory"
        exit 1
 fi
+OUTPUT_DIR=${PWD}
 
 KERNEL_DIR=${AC_HOME}"/src/core/kernels"
 ACC_DIR=${AC_HOME}"/acc"
@@ -25,10 +26,18 @@ while [ "$#" -gt 0 ]
 do
 	case $1 in
 		-h|--help)
-			echo "You can set a custom files for DSL under the path $AC_HOME/"
+			echo "This script will help to compile DSL to CUDA code."
+			echo "The resulting kernels will be stored to $OUTPUT_DIR."
+			echo "You can set a custom files for DSL under the path $AC_DIR/"
 			echo "Example:"
 			echo "compile_acc.sh -a custom_setup/custom_assembly.sas -p custom_setup/custom_process.sps --header custom_setup/custom_header.h"
 			exit 0
+			;;
+		-I|--include)
+			shift
+                        ACC_INCLUDE_DIR=${1}
+			shift
+                        echo "CUSTOM include dir!"
 			;;
 		--header)
 			shift
@@ -63,11 +72,11 @@ ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SAS}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_SPS}
 ${ACC_DIR}/compile.sh ${ACC_DIR}/${ACC_HEADER}
 
-echo "Moving stencil_assembly.cuh -> ${AC_HOME}/src/core/kernels"
-mv stencil_assembly.cuh ${AC_HOME}/src/core/kernels
+echo "Moving stencil_assembly.cuh -> ${OUTPUT_DIR}"
+mv stencil_assembly.cuh ${OUTPUT_DIR}
 
-echo "Moving stencil_process.cuh -> ${AC_HOME}/src/core/kernels"
-mv stencil_process.cuh ${AC_HOME}/src/core/kernels
+echo "Moving stencil_process.cuh -> ${OUTPUT_DIR}"
+mv stencil_process.cuh ${OUTPUT_DIR}
 
-echo "Moving stencil_defines.cuh -> ${AC_HOME}/include"
-mv stencil_defines.h ${AC_HOME}/include
+echo "Moving stencil_defines.cuh -> ${OUTPUT_DIR}"
+mv stencil_defines.h ${OUTPUT_DIR}

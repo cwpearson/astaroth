@@ -61,6 +61,8 @@ static const char* translation_table[TRANSLATION_TABLE_SIZE] = {
     [VECTOR]      = "AcReal3",
     [MATRIX]      = "AcMatrix",
     [SCALARFIELD] = "AcReal",
+    [SCALARARRAY] = "const AcReal* __restrict__",
+    [COMPLEX]     = "acComplex",
     // Type qualifiers
     [KERNEL] = "template <int step_number>  static __global__",
     //__launch_bounds__(RK_THREADBLOCK_SIZE,
@@ -380,20 +382,13 @@ traverse(const ASTNode* node)
         if (handle >= 0) { // The variable exists in the symbol table
             const Symbol* symbol = &symbol_table[handle];
 
-            // if (symbol->type_qualifier == OUT) {
-            //    printf("%s%s", inout_name_prefix, symbol->identifier);
-            //}
             if (symbol->type_qualifier == UNIFORM) {
-                printf("DCONST(%s) ", symbol->identifier);
-                /*
-                if (symbol->type_specifier == SCALAR)
-                    printf("DCONST_REAL(AC_%s) ", symbol->identifier);
-                else if (symbol->type_specifier == INT)
-                    printf("DCONST_INT(AC_%s) ", symbol->identifier);
-                else
-                    printf("INVALID UNIFORM type specifier %s with %s\n",
-                           translate(symbol->type_specifier), symbol->identifier);
-                           */
+                if (inside_kernel && symbol->type_specifier == SCALARARRAY) {
+                    printf("buffer.profiles[%s] ", symbol->identifier);
+                }
+                else {
+                    printf("DCONST(%s) ", symbol->identifier);
+                }
             }
             else {
                 // Do a regular translation
@@ -608,6 +603,15 @@ generate_header(void)
     printf("#define AC_FOR_VTXBUF_HANDLES(FUNC)");
     for (int i = 0; i < num_symbols; ++i) {
         if (symbol_table[i].type_specifier == SCALARFIELD) {
+            printf("\\\nFUNC(%s),", symbol_table[i].identifier);
+        }
+    }
+    printf("\n\n");
+
+    // Scalar arrays
+    printf("#define AC_FOR_SCALARARRAY_HANDLES(FUNC)");
+    for (int i = 0; i < num_symbols; ++i) {
+        if (symbol_table[i].type_specifier == SCALARARRAY) {
             printf("\\\nFUNC(%s),", symbol_table[i].identifier);
         }
     }

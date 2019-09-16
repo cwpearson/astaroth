@@ -37,6 +37,8 @@
 typedef struct {
     AcReal* in[NUM_VTXBUF_HANDLES];
     AcReal* out[NUM_VTXBUF_HANDLES];
+
+    AcReal* profiles[NUM_SCALARARRAY_HANDLES];
 } VertexBufferArray;
 
 struct device_s {
@@ -44,7 +46,7 @@ struct device_s {
     AcMeshInfo local_config;
 
     // Concurrency
-    cudaStream_t streams[NUM_STREAM_TYPES];
+    cudaStream_t streams[NUM_STREAMS];
 
     // Memory
     VertexBufferArray vba;
@@ -97,6 +99,32 @@ DCONST(const VertexBufferHandle handle)
 //#define globalMeshN_min // Placeholder
 #define d_multigpu_offset (d_mesh_info.int3_params[AC_multigpu_offset])
 //#define d_multinode_offset (d_mesh_info.int3_params[AC_multinode_offset]) // Placeholder
+//#include <thrust/complex.h>
+// using namespace thrust;
+#include <cuComplex.h>
+#if AC_DOUBLE_PRECISION == 1
+typedef cuDoubleComplex acComplex;
+#define acComplex(x, y) make_cuDoubleComplex(x, y)
+#else
+typedef cuFloatComplex acComplex;
+#define acComplex(x, y) make_cuFloatComplex(x, y)
+#endif
+static __device__ inline acComplex
+exp(const acComplex& val)
+{
+    return acComplex(exp(val.x) * cos(val.y), exp(val.x) * sin(val.y));
+}
+static __device__ inline acComplex operator*(const AcReal& a, const acComplex& b)
+{
+    return (acComplex){a * b.x, a * b.y};
+}
+
+static __device__ inline acComplex operator*(const acComplex& a, const acComplex& b)
+{
+    return (acComplex){a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x};
+}
+//#include <complex>
+
 #include "kernels/boundconds.cuh"
 #include "kernels/integration.cuh"
 #include "kernels/reductions.cuh"
@@ -135,16 +163,26 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     printf("Success!\n");
 
     // Concurrency
-    for (int i = 0; i < NUM_STREAM_TYPES; ++i) {
+    for (int i = 0; i < NUM_STREAMS; ++i) {
         cudaStreamCreateWithPriority(&device->streams[i], cudaStreamNonBlocking, 0);
     }
 
     // Memory
+    // VBA in/out
     const size_t vba_size_bytes = acVertexBufferSizeBytes(device_config);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.in[i], vba_size_bytes));
         ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.out[i], vba_size_bytes));
     }
+    // VBA Profiles
+    const size_t profile_size_bytes = sizeof(AcReal) * max(device_config.int_params[AC_mx],
+                                                           max(device_config.int_params[AC_my],
+                                                               device_config.int_params[AC_mz]));
+    for (int i = 0; i < NUM_SCALARARRAY_HANDLES; ++i) {
+        ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.profiles[i], profile_size_bytes));
+    }
+
+    // Reductions
     ERRCHK_CUDA_ALWAYS(
         cudaMalloc(&device->reduce_scratchpad, acVertexBufferCompdomainSizeBytes(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->reduce_result, sizeof(AcReal)));
@@ -178,6 +216,10 @@ acDeviceDestroy(Device device)
         cudaFree(device->vba.in[i]);
         cudaFree(device->vba.out[i]);
     }
+    for (int i = 0; i < NUM_SCALARARRAY_HANDLES; ++i) {
+        cudaFree(device->vba.profiles[i]);
+    }
+
     cudaFree(device->reduce_scratchpad);
     cudaFree(device->reduce_result);
 
@@ -186,7 +228,7 @@ acDeviceDestroy(Device device)
 #endif
 
     // Concurrency
-    for (int i = 0; i < NUM_STREAM_TYPES; ++i) {
+    for (int i = 0; i < NUM_STREAMS; ++i) {
         cudaStreamDestroy(device->streams[i]);
     }
 
@@ -402,6 +444,21 @@ acDeviceLoadInt3Constant(const Device device, const Stream stream, const AcInt3P
     const size_t offset = (size_t)&d_mesh_info.int3_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
                                         cudaMemcpyHostToDevice, device->streams[stream]));
+    return AC_SUCCESS;
+}
+
+AcResult
+acDeviceLoadScalarArray(const Device device, const Stream stream, const ScalarArrayHandle handle,
+                        const size_t start, const AcReal* data, const size_t num)
+{
+    cudaSetDevice(device->id);
+
+    ERRCHK(start + num <= max(device->local_config.int_params[AC_mx],
+                              max(device->local_config.int_params[AC_my],
+                                  device->local_config.int_params[AC_mz])));
+
+    ERRCHK_CUDA(cudaMemcpyAsync(&device->vba.profiles[handle][start], data, sizeof(data[0]) * num,
+                                cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
 }
 

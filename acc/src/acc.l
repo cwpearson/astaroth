@@ -15,8 +15,10 @@ L [a-zA-Z_]
 "void"      { return VOID; } /* Rest of the types inherited from C */
 "int"       { return INT; }
 "int3"      { return INT3; }
+"Complex"   { return COMPLEX; }
 "ScalarField" { return SCALARFIELD; }
 "VectorField" { return VECTOR; }
+"ScalarArray" { return SCALARARRAY; }
 
 "Kernel"       { return KERNEL; } /* Function specifiers */
 "Preprocessed" { return PREPROCESSED; }
