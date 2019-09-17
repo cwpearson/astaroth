@@ -34,6 +34,7 @@
         FUNC(INIT_TYPE_XWAVE), \
         FUNC(INIT_TYPE_GAUSSIAN_RADIAL_EXPL), \
         FUNC(INIT_TYPE_ABC_FLOW) , \
+        FUNC(INIT_TYPE_SIMPLE_CORE), \
         FUNC(INIT_TYPE_VEDGE), \
         FUNC(INIT_TYPE_VEDGEX), \
         FUNC(INIT_TYPE_RAYLEIGH_TAYLOR), \
@@ -47,6 +48,8 @@ typedef enum { AC_FOR_INIT_TYPES(AC_GEN_ID), NUM_INIT_TYPES } InitType;
 extern const char* init_type_names[]; // Defined in host_memory.cc
 
 AcMesh* acmesh_create(const AcMeshInfo& mesh_info);
+
+void vertex_buffer_set(const VertexBufferHandle& key, const AcReal& val, AcMesh* mesh);
 
 void acmesh_clear(AcMesh* mesh);
 

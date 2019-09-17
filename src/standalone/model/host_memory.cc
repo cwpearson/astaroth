@@ -71,7 +71,7 @@ acmesh_create(const AcMeshInfo& mesh_info)
     return mesh;
 }
 
-static void
+void
 vertex_buffer_set(const VertexBufferHandle& key, const AcReal& val, AcMesh* mesh)
 {
     const int n = acVertexBufferSize(mesh->info);
@@ -206,6 +206,83 @@ inflow_vedge(AcMesh* mesh)
         }
     }
 }
+
+// This is the initial condition type for the infalling vedge in the pseudodisk
+// model.
+void
+simple_uniform_core(AcMesh* mesh)
+{
+    const int mx = mesh->info.int_params[AC_mx];
+    const int my = mesh->info.int_params[AC_my];
+    const int mz = mesh->info.int_params[AC_mz];
+
+    const double DX = mesh->info.real_params[AC_dsx];
+    const double DY = mesh->info.real_params[AC_dsy];
+    const double DZ = mesh->info.real_params[AC_dsz];
+
+    const double ampl_lnrho = mesh->info.real_params[AC_ampl_lnrho];
+
+    const double xorig   = mesh->info.real_params[AC_xorig];
+    const double yorig   = mesh->info.real_params[AC_yorig];
+    const double zorig   = mesh->info.real_params[AC_zorig];
+
+    const double G_const = mesh->info.real_params[AC_G_const]; 
+    const double M_sink_init = mesh->info.real_params[AC_M_sink_init];
+    const double cs2_sound = mesh->info.real_params[AC_cs2_sound];
+
+    const double RR_inner_bound = mesh->info.real_params[AC_soft]/AcReal(2.0);
+    const double core_coeff   = (exp(ampl_lnrho)  * cs2_sound) / (double(4.0)*M_PI * G_const);
+
+    double xx, yy, zz, RR;
+    double core_profile;
+
+    //TEMPORARY TEST INPUT PARAMETERS
+    const double core_radius = DX*32.0;
+    const double trans = DX*12.0;
+    //const double epsilon = DX*2.0;
+    const double vel_scale = mesh->info.real_params[AC_ampl_uu];
+    double abso_vel;
+
+    RR = 1.0;
+    printf("%e %e %e \n", RR, trans, core_radius);
+     
+
+    for (int k = 0; k < mz; k++) {
+        for (int j = 0; j < my; j++) {
+            for (int i = 0; i < mx; i++) {
+                int idx = i + j*mx + k*mx*my;
+                xx     = DX * double(i) - xorig;
+                yy     = DY * double(j) - yorig;
+                zz     = DZ * double(k) - zorig;
+
+                RR     = sqrt(xx*xx + yy*yy + zz*zz);
+                     
+                if (RR >= RR_inner_bound) {
+                    abso_vel = vel_scale * sqrt(2.0 * G_const 
+                                                    * M_sink_init / RR);
+                    core_profile = pow(RR, -2.0);   //double(1.0);
+                } else {
+                    abso_vel = vel_scale * sqrt(2.0 * AC_G_const 
+                                                    * AC_M_sink_init / RR_inner_bound);
+                    core_profile = pow(RR_inner_bound, -2.0);   //double(1.0);
+                }
+
+               if (RR <= sqrt(DX*DX + DY*DY + DZ*DZ)) {
+                    abso_vel = 0.0;
+                    RR = 1.0;
+               }
+
+
+                mesh->vertex_buffer[VTXBUF_LNRHO][idx] = AcReal(log(core_coeff*core_profile));
+                mesh->vertex_buffer[VTXBUF_UUX][idx]   = AcReal(-abso_vel * (yy / RR));
+                mesh->vertex_buffer[VTXBUF_UUY][idx]   = AcReal( abso_vel * (xx / RR));
+                mesh->vertex_buffer[VTXBUF_UUZ][idx]   = AcReal(0.0);
+
+            }
+        }
+    }
+}
+
 
 // This is the initial condition type for the infalling vedge in the pseudodisk
 // model.
@@ -564,6 +641,7 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
     }
     case INIT_TYPE_GAUSSIAN_RADIAL_EXPL:
         acmesh_clear(mesh);
+        vertex_buffer_set(VTXBUF_LNRHO, mesh->info.real_params[AC_ampl_lnrho], mesh);
         // acmesh_init_to(INIT_TYPE_RANDOM, mesh);
         gaussian_radial_explosion(mesh);
 
@@ -580,6 +658,10 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
                 }
             }
         }
+        break;
+    case INIT_TYPE_SIMPLE_CORE:
+        acmesh_clear(mesh);
+        simple_uniform_core(mesh);
         break;
     case INIT_TYPE_VEDGE:
         acmesh_clear(mesh);

@@ -40,6 +40,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+// NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
+#define LFORCING (1)
+#define LSINK (0)
+
 // Write all setting info into a separate ascii file. This is done to guarantee
 // that we have the data specifi information in the thing, even though in
 // principle these things are in the astaroth.conf.
@@ -56,37 +60,76 @@ write_mesh_info(const AcMeshInfo* config)
 
     infotxt = fopen("mesh_info.list", "w");
 
+    /*
+    // JP: this could be done shorter and with smaller chance for errors with the following
+    // (modified from acPrintMeshInfo() in astaroth.cu)
+
+    for (int i = 0; i < NUM_INT_PARAMS; ++i)
+        fprintf(infotxt, "int %s: %d\n", intparam_names[i], config.int_params[i]);
+
+    for (int i = 0; i < NUM_INT3_PARAMS; ++i)
+        fprintf(infotxt, "int3 %s: (%d, %d, %d)\n", int3param_names[i], config.int3_params[i].x,
+                                                                        config.int3_params[i].y,
+                                                                        config.int3_params[i].z);
+
+    for (int i = 0; i < NUM_REAL_PARAMS; ++i)
+        fprintf(infotxt, "real %s: %g\n", realparam_names[i], double(config.real_params[i]));
+
+    for (int i = 0; i < NUM_REAL3_PARAMS; ++i)
+        fprintf(infotxt, "real %s: (%g, %g, %g)\n", real3param_names[i],
+                                                    double(config.real3_params[i].x),
+                                                    double(config.real3_params[i].y),
+                                                    double(config.real3_params[i].z));
+    */
+
     // Total grid dimensions
-    fprintf(infotxt, "int  AC_mx        %i \n", config->int_params[AC_mx]);
-    fprintf(infotxt, "int  AC_my        %i \n", config->int_params[AC_my]);
-    fprintf(infotxt, "int  AC_mz        %i \n", config->int_params[AC_mz]);
+    fprintf(infotxt, "int  AC_mx         %i \n", config->int_params[AC_mx]);
+    fprintf(infotxt, "int  AC_my         %i \n", config->int_params[AC_my]);
+    fprintf(infotxt, "int  AC_mz         %i \n", config->int_params[AC_mz]);
 
     // Bounds for the computational domain, i.e. nx_min <= i < nx_max
-    fprintf(infotxt, "int  AC_nx_min    %i \n", config->int_params[AC_nx_min]);
-    fprintf(infotxt, "int  AC_nx_max    %i \n", config->int_params[AC_nx_max]);
-    fprintf(infotxt, "int  AC_ny_min    %i \n", config->int_params[AC_ny_min]);
-    fprintf(infotxt, "int  AC_ny_max    %i \n", config->int_params[AC_ny_max]);
-    fprintf(infotxt, "int  AC_nz_min    %i \n", config->int_params[AC_nz_min]);
-    fprintf(infotxt, "int  AC_nz_max    %i \n", config->int_params[AC_nz_max]);
+    fprintf(infotxt, "int  AC_nx_min     %i \n", config->int_params[AC_nx_min]);
+    fprintf(infotxt, "int  AC_nx_max     %i \n", config->int_params[AC_nx_max]);
+    fprintf(infotxt, "int  AC_ny_min     %i \n", config->int_params[AC_ny_min]);
+    fprintf(infotxt, "int  AC_ny_max     %i \n", config->int_params[AC_ny_max]);
+    fprintf(infotxt, "int  AC_nz_min     %i \n", config->int_params[AC_nz_min]);
+    fprintf(infotxt, "int  AC_nz_max     %i \n", config->int_params[AC_nz_max]);
 
     // Spacing
-    fprintf(infotxt, "real AC_dsx       %e \n", (double)config->real_params[AC_dsx]);
-    fprintf(infotxt, "real AC_dsy       %e \n", (double)config->real_params[AC_dsy]);
-    fprintf(infotxt, "real AC_dsz       %e \n", (double)config->real_params[AC_dsz]);
-    fprintf(infotxt, "real AC_inv_dsx   %e \n", (double)config->real_params[AC_inv_dsx]);
-    fprintf(infotxt, "real AC_inv_dsy   %e \n", (double)config->real_params[AC_inv_dsy]);
-    fprintf(infotxt, "real AC_inv_dsz   %e \n", (double)config->real_params[AC_inv_dsz]);
-    fprintf(infotxt, "real AC_dsmin     %e \n", (double)config->real_params[AC_dsmin]);
+    fprintf(infotxt, "real AC_dsx        %e \n", (double)config->real_params[AC_dsx]);
+    fprintf(infotxt, "real AC_dsy        %e \n", (double)config->real_params[AC_dsy]);
+    fprintf(infotxt, "real AC_dsz        %e \n", (double)config->real_params[AC_dsz]);
+    fprintf(infotxt, "real AC_inv_dsx    %e \n", (double)config->real_params[AC_inv_dsx]);
+    fprintf(infotxt, "real AC_inv_dsy    %e \n", (double)config->real_params[AC_inv_dsy]);
+    fprintf(infotxt, "real AC_inv_dsz    %e \n", (double)config->real_params[AC_inv_dsz]);
+    fprintf(infotxt, "real AC_dsmin      %e \n", (double)config->real_params[AC_dsmin]);
 
     /* Additional helper params */
     // Int helpers
-    fprintf(infotxt, "int  AC_mxy       %i \n", config->int_params[AC_mxy]);
-    fprintf(infotxt, "int  AC_nxy       %i \n", config->int_params[AC_nxy]);
-    fprintf(infotxt, "int  AC_nxyz      %i \n", config->int_params[AC_nxyz]);
+    fprintf(infotxt, "int  AC_mxy        %i \n", config->int_params[AC_mxy]);
+    fprintf(infotxt, "int  AC_nxy        %i \n", config->int_params[AC_nxy]);
+    fprintf(infotxt, "int  AC_nxyz       %i \n", config->int_params[AC_nxyz]);
 
     // Real helpers
-    fprintf(infotxt, "real AC_cs2_sound %e \n", (double)config->real_params[AC_cs2_sound]);
-    fprintf(infotxt, "real AC_cv_sound  %e \n", (double)config->real_params[AC_cv_sound]);
+    fprintf(infotxt, "real AC_cs2_sound  %e \n", (double)config->real_params[AC_cs2_sound]);
+    fprintf(infotxt, "real AC_cv_sound   %e \n", (double)config->real_params[AC_cv_sound]);
+
+    // Physical units
+    fprintf(infotxt, "real AC_unit_density  %e \n", (double)config->real_params[AC_unit_density]);
+    fprintf(infotxt, "real AC_unit_velocity %e \n", (double)config->real_params[AC_unit_velocity]);
+    fprintf(infotxt, "real AC_unit_mass     %e \n", (double)config->real_params[AC_unit_mass]);
+    fprintf(infotxt, "real AC_unit_length   %e \n", (double)config->real_params[AC_unit_length]);
+
+    // Here I'm still trying to copy the structure of the code above, and see if this will work for
+    // sink particle. I haven't fully undertand what these lines do but I'll read up on them soon.
+    // This is still yet experimental.
+    // Sink particle
+    fprintf(infotxt, "real AC_sink_pos_x %e \n", (double)config->real_params[AC_sink_pos_x]);
+    fprintf(infotxt, "real AC_sink_pos_y %e \n", (double)config->real_params[AC_sink_pos_y]);
+    fprintf(infotxt, "real AC_sink_pos_z %e \n", (double)config->real_params[AC_sink_pos_z]);
+    fprintf(infotxt, "real AC_M_sink     %e \n", (double)config->real_params[AC_M_sink]);
+    fprintf(infotxt, "real AC_soft     %e \n", (double)config->real_params[AC_soft]);
+    fprintf(infotxt, "real AC_G_const     %e \n", (double)config->real_params[AC_G_const]);
 
     fclose(infotxt);
 }
@@ -135,7 +178,8 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
 // This function prints out the diagnostic values to std.out and also saves and
 // appends an ascii file to contain all the result.
 static inline void
-print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file)
+print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file,
+                  const AcReal sink_mass, const AcReal accreted_mass)
 {
 
     AcReal buf_rms, buf_max, buf_min;
@@ -165,6 +209,10 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* di
         fprintf(diag_file, "%e %e %e ", double(buf_min), double(buf_rms), double(buf_max));
     }
 
+    if ((sink_mass >= AcReal(0.0)) || (accreted_mass >= AcReal(0.0))) {
+        fprintf(diag_file, "%e %e ", double(sink_mass), double(accreted_mass));
+    }
+
     fprintf(diag_file, "\n");
 }
 
@@ -184,6 +232,11 @@ run_simulation(void)
     AcMesh* mesh = acmesh_create(mesh_info);
     // TODO: This need to be possible to define in astaroth.conf
     acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
+    // acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh); //Initial condition for a collapse test
+
+#if LSINK
+    vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
+#endif
 
     acInit(mesh_info);
     acLoad(*mesh);
@@ -199,11 +252,17 @@ run_simulation(void)
         fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
                 vtxbuf_names[i]);
     }
-
+#if LSINK
+    fprintf(diag_file, "sink_mass  accreted_mass  ");
+#endif
     fprintf(diag_file, "\n");
 
     write_mesh_info(&mesh_info);
-    print_diagnostics(0, AcReal(.0), t_step, diag_file);
+#if LSINK
+    print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0);
+#else
+    print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0);
+#endif
 
     acBoundcondStep();
     acStore(mesh);
@@ -228,35 +287,52 @@ run_simulation(void)
     //  acUpdate_sink_particle() will do the similar trick to the device.
 
     /* Step the simulation */
+    AcReal accreted_mass = 0.0;
+    AcReal sink_mass     = 0.0;
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
+
+#if LSINK
+
+        const AcReal sum_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
+        accreted_mass         = accreted_mass + sum_mass;
+        sink_mass             = 0.0;
+        sink_mass             = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
+        acLoadDeviceConstant(AC_M_sink, sink_mass);
+        vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
+
+        int on_off_switch;
+        if (i < 1) {
+            on_off_switch = 0; // accretion is off till certain amount of steps.
+        }
+        else {
+            on_off_switch = 1;
+        }
+        acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
+
+        // MV: Old TODOs to remind of eventual future directions.
+        // TODO_SINK acUpdate_sink_particle()
+        //  3. Velocity of the particle)
+        // TODO_SINK acAdvect_sink_particle()
+        //  1. Calculate the equation of motion for the sink particle.
+        //  NOTE: Might require embedding with acIntegrate(dt).
+        // TODO_SINK acAccrete_sink_particle()
+        //  2. Transfer momentum into sink particle
+        //  (OPTIONAL: Affection the motion of the particle)
+        //  NOTE: Might require embedding with acIntegrate(dt).
+        //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference.
+#else
+        accreted_mass = -1.0;
+        sink_mass     = -1.0;
+#endif
 
 #if LFORCING
         const ForcingParams forcing_params = generateForcingParams(mesh_info);
         loadForcingParamsToDevice(forcing_params);
 #endif
 
-        // TODO_SINK acUpdate_sink_particle()
-        //  Update properties of the sing particle for acIntegrate(). Essentially:
-        //  1. Location of the particle
-        //  2. Mass of the particle
-        //  (3. Velocity of the particle)
-        //  These can be used for calculating he gravitational field.
-
         acIntegrate(dt);
-        // TODO_SINK acAdvect_sink_particle()
-        //  THIS IS OPTIONAL. We will start from unmoving particle.
-        //  1. Calculate the equation of motion for the sink particle.
-        //  NOTE: Might require embedding with acIntegrate(dt).
-
-        // TODO_SINK acAccrete_sink_particle()
-        //  Calculate accretion of the sink particle from the surrounding medium
-        //  1. Transfer density into sink particle mass
-        //  2. Transfer momentum into sink particle
-        //  (OPTIONAL: Affection the motion of the particle)
-        //  NOTE: Might require embedding with acIntegrate(dt).
-        //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference.
 
         t_step += dt;
 
@@ -269,8 +345,11 @@ run_simulation(void)
                 timeseries.ts.
             */
 
-            print_diagnostics(i, dt, t_step, diag_file);
-
+            print_diagnostics(i, dt, t_step, diag_file, sink_mass, accreted_mass);
+#if LSINK
+            printf("sink mass is: %.15e \n", double(sink_mass));
+            printf("accreted mass is: %.15e \n", double(accreted_mass));
+#endif
             /*
                 We would also might want an XY-average calculating funtion,
                 which can be very useful when observing behaviour of turbulent

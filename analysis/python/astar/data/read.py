@@ -78,6 +78,8 @@ class Mesh:
         if self.ok:
 
             self.ss, timestamp, ok = read_bin('VTXBUF_ENTROPY', fdir, fnum, self.minfo)
+
+            self.accretion, timestamp, ok = read_bin('VTXBUF_ACCRETION', fdir, fnum, self.minfo)
  
             #TODO Generalize is a dict. Do not hardcode!  
             uux, timestamp, ok = read_bin('VTXBUF_UUX', fdir, fnum, self.minfo)
@@ -116,6 +118,7 @@ def parse_ts(fdir, fname):
         line[i] = line[i].replace('VTXBUF_', "")
         line[i] = line[i].replace('UU', "uu")
         line[i] = line[i].replace('_total', "tot")
+        line[i] = line[i].replace('ACCRETION', "acc")
         line[i] = line[i].replace('A', "aa")
         line[i] = line[i].replace('LNRHO', "lnrho")
         line[i] = line[i].replace('ENTROPY', "ss")

@@ -125,22 +125,25 @@ update_config(AcMeshInfo* config)
                                        config->real_params[AC_gamma];
 
     AcReal G_CONST_CGS = AcReal(
-        6.674e-8);                   // g/cm3/s GGS definition //TODO define in a separate module
+        6.674e-8); // cm^3/(g*s^2) GGS definition //TODO define in a separate module
     AcReal M_sun = AcReal(1.989e33); // g solar mass
 
-    config->real_params[AC_M_star] = config->real_params[AC_M_star] * M_sun /
-                                     ((config->real_params[AC_unit_length] *
-                                       config->real_params[AC_unit_length] *
-                                       config->real_params[AC_unit_length]) *
-                                      config->real_params[AC_unit_density]);
+    config->real_params[AC_unit_mass] = (config->real_params[AC_unit_length] *
+                                         config->real_params[AC_unit_length] *
+                                         config->real_params[AC_unit_length]) *
+                                        config->real_params[AC_unit_density];
 
-    config->real_params[AC_G_CONST] = G_CONST_CGS / ((config->real_params[AC_unit_velocity] *
+    config->real_params[AC_M_sink] = config->real_params[AC_M_sink_Msun] * M_sun /
+                                     config->real_params[AC_unit_mass];
+    config->real_params[AC_M_sink_init] = config->real_params[AC_M_sink_Msun] * M_sun /
+                                          config->real_params[AC_unit_mass];
+
+    config->real_params[AC_G_const] = G_CONST_CGS / ((config->real_params[AC_unit_velocity] *
                                                       config->real_params[AC_unit_velocity]) /
                                                      (config->real_params[AC_unit_density] *
+                                                      config->real_params[AC_unit_length] *
                                                       config->real_params[AC_unit_length]));
 
-    config->real_params[AC_GM_star] = config->real_params[AC_M_star] *
-                                      config->real_params[AC_G_CONST];
     config->real_params[AC_sq2GM_star] = AcReal(sqrt(AcReal(2) * config->real_params[AC_GM_star]));
 
 #if VERBOSE_PRINTING // Defined in astaroth.h
