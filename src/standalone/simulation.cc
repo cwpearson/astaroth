@@ -40,7 +40,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-//NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call. 
+// NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
 #define LFORCING (1)
 #define LSINK (0)
 
@@ -92,22 +92,23 @@ write_mesh_info(const AcMeshInfo* config)
     fprintf(infotxt, "real AC_cs2_sound  %e \n", (double)config->real_params[AC_cs2_sound]);
     fprintf(infotxt, "real AC_cv_sound   %e \n", (double)config->real_params[AC_cv_sound]);
 
-    //Physical units
+    // Physical units
     fprintf(infotxt, "real AC_unit_density  %e \n", (double)config->real_params[AC_unit_density]);
     fprintf(infotxt, "real AC_unit_velocity %e \n", (double)config->real_params[AC_unit_velocity]);
-    fprintf(infotxt, "real AC_unit_mass     %e \n", (double)config->real_params[AC_unit_mass    ]);
-    fprintf(infotxt, "real AC_unit_length   %e \n", (double)config->real_params[AC_unit_length  ]);
+    fprintf(infotxt, "real AC_unit_mass     %e \n", (double)config->real_params[AC_unit_mass]);
+    fprintf(infotxt, "real AC_unit_length   %e \n", (double)config->real_params[AC_unit_length]);
 
-    //Here I'm still trying to copy the structure of the code above, and see if this will work for sink particle. 
-    //I haven't fully undertand what these lines do but I'll read up on them soon. This is still yet experimental.
-    // Sink particle 
+    // Here I'm still trying to copy the structure of the code above, and see if this will work for
+    // sink particle. I haven't fully undertand what these lines do but I'll read up on them soon.
+    // This is still yet experimental.
+    // Sink particle
     fprintf(infotxt, "real AC_sink_pos_x %e \n", (double)config->real_params[AC_sink_pos_x]);
     fprintf(infotxt, "real AC_sink_pos_y %e \n", (double)config->real_params[AC_sink_pos_y]);
     fprintf(infotxt, "real AC_sink_pos_z %e \n", (double)config->real_params[AC_sink_pos_z]);
     fprintf(infotxt, "real AC_M_sink     %e \n", (double)config->real_params[AC_M_sink]);
     fprintf(infotxt, "real AC_soft     %e \n", (double)config->real_params[AC_soft]);
     fprintf(infotxt, "real AC_G_const     %e \n", (double)config->real_params[AC_G_const]);
-    
+
     fclose(infotxt);
 }
 
@@ -155,8 +156,8 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
 // This function prints out the diagnostic values to std.out and also saves and
 // appends an ascii file to contain all the result.
 static inline void
-print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file, 
-		  const AcReal sink_mass, const AcReal accreted_mass)
+print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file,
+                  const AcReal sink_mass, const AcReal accreted_mass)
 {
 
     AcReal buf_rms, buf_max, buf_min;
@@ -209,7 +210,7 @@ run_simulation(void)
     AcMesh* mesh = acmesh_create(mesh_info);
     // TODO: This need to be possible to define in astaroth.conf
     acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, mesh);
-    //acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh); //Initial condition for a collapse test 
+    // acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh); //Initial condition for a collapse test
 
 #if LSINK
     vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
@@ -264,7 +265,8 @@ run_simulation(void)
     //  acUpdate_sink_particle() will do the similar trick to the device.
 
     /* Step the simulation */
-    AcReal accreted_mass = 0.0; AcReal sink_mass = 0.0;
+    AcReal accreted_mass = 0.0;
+    AcReal sink_mass     = 0.0;
     for (int i = 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
@@ -272,22 +274,23 @@ run_simulation(void)
 #if LSINK
 
         const AcReal sum_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
-        accreted_mass = accreted_mass + sum_mass;
-        sink_mass = 0.0;
-	sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
+        accreted_mass         = accreted_mass + sum_mass;
+        sink_mass             = 0.0;
+        sink_mass             = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
         acLoadDeviceConstant(AC_M_sink, sink_mass);
         vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
-        
+
         int on_off_switch;
         if (i < 1) {
-            on_off_switch = 0; //accretion is off till certain amount of steps.
-        } else {
+            on_off_switch = 0; // accretion is off till certain amount of steps.
+        }
+        else {
             on_off_switch = 1;
         }
         acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
 
-        //MV: Old TODOs to remind of eventual future directions.  
-        //TODO_SINK acUpdate_sink_particle()
+        // MV: Old TODOs to remind of eventual future directions.
+        // TODO_SINK acUpdate_sink_particle()
         //  3. Velocity of the particle)
         // TODO_SINK acAdvect_sink_particle()
         //  1. Calculate the equation of motion for the sink particle.
@@ -298,14 +301,14 @@ run_simulation(void)
         //  NOTE: Might require embedding with acIntegrate(dt).
         //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference.
 #else
-	accreted_mass = -1.0; sink_mass = -1.0;
+        accreted_mass = -1.0;
+        sink_mass     = -1.0;
 #endif
 
 #if LFORCING
         const ForcingParams forcing_params = generateForcingParams(mesh_info);
         loadForcingParamsToDevice(forcing_params);
 #endif
-
 
         acIntegrate(dt);
 
@@ -322,8 +325,8 @@ run_simulation(void)
 
             print_diagnostics(i, dt, t_step, diag_file, sink_mass, accreted_mass);
 #if LSINK
-            printf("sink mass is: %.15e \n", double(sink_mass)); 
-            printf("accreted mass is: %.15e \n", double(accreted_mass)); 
+            printf("sink mass is: %.15e \n", double(sink_mass));
+            printf("accreted mass is: %.15e \n", double(accreted_mass));
 #endif
             /*
                 We would also might want an XY-average calculating funtion,

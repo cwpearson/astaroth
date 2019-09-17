@@ -41,7 +41,7 @@
 #include "src/core/math_utils.h"
 #include "timer_hires.h"
 
-//NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call. 
+// NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
 #define LFORCING (1)
 #define LSINK (0)
 
@@ -297,7 +297,7 @@ renderer_quit(void)
 }
 
 static int init_type = INIT_TYPE_GAUSSIAN_RADIAL_EXPL;
-//static int init_type = INIT_TYPE_SIMPLE_CORE;
+// static int init_type = INIT_TYPE_SIMPLE_CORE;
 
 static bool
 running(AcMesh* mesh)
@@ -396,10 +396,10 @@ run_renderer(void)
 /* Step the simulation */
 #if LSINK
         const AcReal sum_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
-	accreted_mass = accreted_mass + sum_mass;
-	AcReal sink_mass = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
-        printf("sink mass is: %e \n", sink_mass); 
-        printf("accreted mass is: %e \n", accreted_mass); 
+        accreted_mass         = accreted_mass + sum_mass;
+        AcReal sink_mass      = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
+        printf("sink mass is: %e \n", sink_mass);
+        printf("accreted mass is: %e \n", accreted_mass);
         acLoadDeviceConstant(AC_M_sink, sink_mass);
         vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
 #endif
@@ -409,11 +409,9 @@ run_renderer(void)
         loadForcingParamsToDevice(forcing_params);
 #endif
 
-
 #if 1
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
-
 
         acIntegrate(dt);
 #else
