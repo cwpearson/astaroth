@@ -60,6 +60,28 @@ write_mesh_info(const AcMeshInfo* config)
 
     infotxt = fopen("mesh_info.list", "w");
 
+    /*
+    // JP: this could be done shorter and with smaller chance for errors with the following
+    // (modified from acPrintMeshInfo() in astaroth.cu)
+
+    for (int i = 0; i < NUM_INT_PARAMS; ++i)
+        fprintf(infotxt, "int %s: %d\n", intparam_names[i], config.int_params[i]);
+
+    for (int i = 0; i < NUM_INT3_PARAMS; ++i)
+        fprintf(infotxt, "int3 %s: (%d, %d, %d)\n", int3param_names[i], config.int3_params[i].x,
+                                                                        config.int3_params[i].y,
+                                                                        config.int3_params[i].z);
+
+    for (int i = 0; i < NUM_REAL_PARAMS; ++i)
+        fprintf(infotxt, "real %s: %g\n", realparam_names[i], double(config.real_params[i]));
+
+    for (int i = 0; i < NUM_REAL3_PARAMS; ++i)
+        fprintf(infotxt, "real %s: (%g, %g, %g)\n", real3param_names[i],
+                                                    double(config.real3_params[i].x),
+                                                    double(config.real3_params[i].y),
+                                                    double(config.real3_params[i].z));
+    */
+
     // Total grid dimensions
     fprintf(infotxt, "int  AC_mx         %i \n", config->int_params[AC_mx]);
     fprintf(infotxt, "int  AC_my         %i \n", config->int_params[AC_my]);
