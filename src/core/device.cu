@@ -119,6 +119,11 @@ static __device__ inline acComplex operator*(const AcReal& a, const acComplex& b
     return (acComplex){a * b.x, a * b.y};
 }
 
+static __device__ inline acComplex operator*(const acComplex& b, const AcReal& a)
+{
+    return (acComplex){a * b.x, a * b.y};
+}
+
 static __device__ inline acComplex operator*(const acComplex& a, const acComplex& b)
 {
     return (acComplex){a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x};
@@ -135,9 +140,16 @@ static dim3 rk3_tpb(32, 1, 4);
 // #include "kernels/pack_unpack.cuh"
 #endif
 
-// clang-format off
-static __global__ void dummy_kernel(void) { DCONST((AcIntParam)0); DCONST((AcInt3Param)0); DCONST((AcRealParam)0); DCONST((AcReal3Param)0); }
-// clang-format on
+static __global__ void
+dummy_kernel(void)
+{
+    DCONST((AcIntParam)0);
+    DCONST((AcInt3Param)0);
+    DCONST((AcRealParam)0);
+    DCONST((AcReal3Param)0);
+    acComplex a = exp(AcReal(1) * acComplex(1, 1) * AcReal(1));
+    a* a;
+}
 
 AcResult
 acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_handle)
