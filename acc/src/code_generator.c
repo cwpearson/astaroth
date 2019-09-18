@@ -650,8 +650,10 @@ main(int argc, char** argv)
             compilation_type = STENCIL_PROCESS;
         else if (!strcmp(argv[1], "-sdh"))
             compilation_type = STENCIL_HEADER;
-        else
+        else {
             printf("Unknown flag %s. Generating stencil assembly.\n", argv[1]);
+            return EXIT_FAILURE;
+        }
     }
     else {
         printf("Usage: ./acc [flags]\n"
@@ -685,4 +687,5 @@ main(int argc, char** argv)
     // Cleanup
     astnode_destroy(root);
     // printf("COMPILATION SUCCESS\n");
+    return EXIT_SUCCESS;
 }

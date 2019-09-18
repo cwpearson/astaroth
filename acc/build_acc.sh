@@ -6,14 +6,14 @@ COMPILER_NAME="acc"
 SRC_DIR=${PWD}/src
 BUILD_DIR=${PWD}/build
 
-echo "Created" ${BUILD_DIR}
+echo "-- Compiling acc:" ${BUILD_DIR}
 
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-echo ${BASE_DIR}
-echo ${SRC_DIR}
-echo ${BUILD_DIR}
+#echo ${BASE_DIR}
+#echo ${SRC_DIR}
+#echo ${BUILD_DIR}
 
 # Generate Bison headers
 bison --verbose -d ${SRC_DIR}/${COMPILER_NAME}.y
