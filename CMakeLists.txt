@@ -40,6 +40,15 @@ else ()
 endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
+if (BUILD_RT_VISUALIZATION)
+## SDL2
+execute_process (
+    COMMAND ./setup_dependencies.sh
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty
+)
+add_subdirectory(3rdparty/SDL2)
+endif ()
+
 ## Defines
 if (DOUBLE_PRECISION)
     add_definitions(-DAC_DOUBLE_PRECISION=1)
