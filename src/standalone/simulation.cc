@@ -223,11 +223,11 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* di
 */
 
 int
-run_simulation(void)
+run_simulation(const char* config_path)
 {
     /* Parse configs */
     AcMeshInfo mesh_info;
-    load_config(&mesh_info);
+    load_config(config_path, &mesh_info);
 
     AcMesh* mesh = acmesh_create(mesh_info);
     // TODO: This need to be possible to define in astaroth.conf

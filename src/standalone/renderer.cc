@@ -354,11 +354,11 @@ check_input(const float& dt)
 }
 
 int
-run_renderer(void)
+run_renderer(const char* config_path)
 {
     /* Parse configs */
     AcMeshInfo mesh_info;
-    load_config(&mesh_info);
+    load_config(config_path, &mesh_info);
     renderer_init(mesh_info.int_params[AC_mx], mesh_info.int_params[AC_my]);
 
     AcMesh* mesh = acmesh_create(mesh_info);
@@ -455,7 +455,7 @@ run_renderer(void)
 #else // BUILD_RT_VISUALIZATION == 0
 #include "src/core/errchk.h"
 int
-run_renderer(void)
+run_renderer(const char* /*config_path*/)
 {
     WARNING("Real-time visualization module not built. Set BUILD_RT_VISUALIZATION=ON with cmake.");
     return 1;

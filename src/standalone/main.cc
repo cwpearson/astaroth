@@ -73,16 +73,24 @@ main(int argc, char* argv[])
     for (int i = 0; i < argc; ++i)
         printf("%d: %s\n", i, argv[i]);
 
+    const size_t buf_size = 256;
+    char config_path[buf_size];
+    (argc == 3) ? strncpy(config_path, argv[2], buf_size)
+                : strncpy(config_path, AC_DEFAULT_CONFIG, buf_size);
+
+    printf("Config path: %s\n", config_path);
     if (argc == 1) {
-        return run_renderer();
+        return run_renderer(config_path);
     }
-    else if (argc == 2) {
+    else if (argc == 2 || argc == 3) {
         if (strcmp(argv[1], "-t") == 0)
-            return run_autotest();
+            return run_autotest(config_path);
         else if (strcmp(argv[1], "-b") == 0)
-            return run_benchmark();
+            return run_benchmark(config_path);
         else if (strcmp(argv[1], "-s") == 0)
-            return run_simulation();
+            return run_simulation(config_path);
+        else if (strcmp(argv[1], "-r") == 0)
+            return run_renderer(config_path);
         else
             WARNING("Unrecognized option");
     }

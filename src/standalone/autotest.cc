@@ -456,7 +456,7 @@ check_rk3(const AcMeshInfo& mesh_info)
 }
 
 int
-run_autotest(void)
+run_autotest(const char* config_path)
 {
 #if GEN_TEST_RESULT == 1
     char testresult_path[256];
@@ -471,7 +471,7 @@ run_autotest(void)
 
     /* Parse configs */
     AcMeshInfo config;
-    load_config(&config);
+    load_config(config_path, &config);
 
     if (STENCIL_ORDER > 6)
         printf("WARNING!!! If the stencil order is larger than the computational domain some "

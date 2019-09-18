@@ -30,11 +30,4 @@ target_link_libraries(astaroth_standalone PRIVATE astaroth_core "${OpenMP_CXX_FL
 
 add_executable(ac_run main.cc)
 target_link_libraries(ac_run PRIVATE astaroth_standalone)
-
-# Define the config directory
-if (ALTER_CONF)
-    # ASTAROTH_CONF_PATH supplied by ac_mkbuilddir.sh
-    target_compile_definitions(astaroth_standalone PRIVATE CONFIG_PATH="${ASTAROTH_CONF_PATH}/")
-else()
-    target_compile_definitions(astaroth_standalone PRIVATE CONFIG_PATH="${CMAKE_SOURCE_DIR}/config/")
-endif()
+add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")

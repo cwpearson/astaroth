@@ -159,14 +159,16 @@ update_config(AcMeshInfo* config)
 \return 0 on success, -1 if there are potentially uninitialized values.
 */
 int
-load_config(AcMeshInfo* config)
+load_config(const char* config_path, AcMeshInfo* config)
 {
     int retval = 0;
+    ERRCHK(config_path);
+
     // memset reads the second parameter as a byte even though it says int in
     // the function declaration
     memset(config, (uint8_t)0xFF, sizeof(*config));
 
-    parse_config(CONFIG_PATH "astaroth.conf", config);
+    parse_config(config_path, config);
     update_config(config);
 
     // sizeof(config) must be a multiple of 4 bytes for this to work

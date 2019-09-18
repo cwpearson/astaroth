@@ -41,13 +41,13 @@
 #include <vector>
 
 int
-run_benchmark(void)
+run_benchmark(const char* config_path)
 {
     const int nn        = 256;
     const int num_iters = 100;
 
     AcMeshInfo mesh_info;
-    load_config(&mesh_info);
+    load_config(config_path, &mesh_info);
     mesh_info.int_params[AC_nx] = nn;
     mesh_info.int_params[AC_ny] = mesh_info.int_params[AC_nx];
     mesh_info.int_params[AC_nz] = mesh_info.int_params[AC_nx];
