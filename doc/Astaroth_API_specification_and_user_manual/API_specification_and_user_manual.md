@@ -477,7 +477,7 @@ it for performing three-dimensional stencil computations cache efficiently. The 
 comprises of three closely related languages, which correspond to distinct stages in the stencil
 pipeline shown in the following figure.
 
-![alt text](https://bitbucket.org/jpekkila/astaroth/src/master/doc/Astaroth_API_specification_and_user_manual/stencilpipeline.png "Stencil Pipeline").
+![Figure: Stencil pipeline](https://bitbucket.org/jpekkila/astaroth/src/master/doc/Astaroth_API_specification_and_user_manual/stencilpipeline.png "Stencil Pipeline").
 
 | Stage              | File ending | Description                                                                                                                                                                     |
 |--------------------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -494,9 +494,21 @@ directory as a cmake option like so: ```cmake -DDSL_MODULE_DIR="some/user/dir" .
 
 ## Data types
 
-## Uniforms
+In addition to basic datatypes in C/C++/CUDA, such as int and int3, we provide the following datatypes with the DSL.
 
-### Control flow and implementing switches
+| Data type   |  Description                                                                                                                                                                                                                                                                                                                      | C/C++/CUDA equivalent                                                                                |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| Scalar      |  32- or 64-bit floating-point number                                                                                                                                                                                                                                                                                              | float or double                                                                                      |
+| Vector      | A tuple of three 32- or 64-bit floating-point numbers                                                                                                                                                                                                                                                                             | float3 or double3                                                                                    |
+| Complex     | A tuple of two 32- or 64-bit floating-point numbers. The real part is stored in member .x, while the imaginary component is in .y. Basic operations, such as multiplication, are defined as built-in functions.                                                                                                                   | std::complex<float> or std::complex<double>                                                          |
+| Matrix      | A tuple of three Vectors. Is stored in column-major order, f.ex. Matrix[i][j] is the component on row i, column j. (TODO recheck specs.)                                                                                                                                                                                          | float3[3] or double3[3]                                                                              |
+| ScalarArray | A one-dimensional array of Scalars stored in device memory. Given mesh dimensions (mx, my, mz), consists of max(mx, max(my, mz)) elements.                                                                                                                                                                                        | float[] or double[]                                                                                  |
+| ScalarField | An abstraction of a three-dimensional scalar field stored in device memory. Is implemented as a handle to a one-dimensional Scalar array consisting of input and output segments. The data is stored linearly in order i + j * mx + k * mx * my, given some vertex index (i, j, k) and mesh constisting of (mx, my, mz) vertices. | float[2][] or double[2][]                                                                            |
+| VectorField | An abstraction of a three-dimensional vector field stored in device memory. Is implemented as a tuple of three ScalarField handles.                                                                                                                                                                                               | Three distinct float[2][] or double[2][] arrays for each component. Stored as a structure of arrays. |
+
+## Built-in variables and functions
+
+## Control flow
 // Runtime constants are as fast as compile-time constants as long as
 // 1) They are not placed in tight loops, especially those that inlcude global memory accesses, that could be unrolled
 // 2) They are not multiplied with each other
@@ -504,14 +516,14 @@ directory as a cmake option like so: ```cmake -DDSL_MODULE_DIR="some/user/dir" .
 
 // Safe and efficient to use as switches
 
-## Vertex buffers
+## Uniforms
+// Device constants
+// Loaded at runtime
 
-### Input and output buffers
+## Kernels
 
-## Built-in variables and functions
+// in and out
 
-## Functions
+## Preprocessed functions
 
-### Kernel
-
-### Preprocessed
+// Reading input fields
