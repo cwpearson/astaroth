@@ -477,7 +477,7 @@ it for performing three-dimensional stencil computations cache efficiently. The 
 comprises of three closely related languages, which correspond to distinct stages in the stencil
 pipeline shown in the following figure.
 
-![Figure: Stencil pipeline](https://bitbucket.org/jpekkila/astaroth/src/master/doc/Astaroth_API_specification_and_user_manual/stencilpipeline.png "Stencil Pipeline").
+![Figure: Stencil pipeline.](./doc/Astaroth_API_specification_and_user_manual/stencil_pipeline.svg "Stencil Pipeline")
 
 | Stage              | File ending | Description                                                                                                                                                                     |
 |--------------------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
