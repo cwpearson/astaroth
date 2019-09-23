@@ -73,12 +73,13 @@ main(int argc, char* argv[])
     for (int i = 0; i < argc; ++i)
         printf("%d: %s\n", i, argv[i]);
 
-    const size_t buf_size = 256;
-    char config_path[buf_size];
-    (argc == 3) ? strncpy(config_path, argv[2], buf_size)
-                : strncpy(config_path, AC_DEFAULT_CONFIG, buf_size);
+    char* config_path;
+    (argc == 3) ? config_path = strdup(argv[2])
+                : config_path = strdup(AC_DEFAULT_CONFIG);
 
     printf("Config path: %s\n", config_path);
+    ERRCHK(config_path);
+
     if (argc == 1) {
         return run_renderer(config_path);
     }
@@ -98,5 +99,6 @@ main(int argc, char* argv[])
         WARNING("Too many options given");
     }
 
+    free(config_path);
     return EXIT_FAILURE;
 }
