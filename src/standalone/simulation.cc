@@ -60,76 +60,28 @@ write_mesh_info(const AcMeshInfo* config)
 
     infotxt = fopen("mesh_info.list", "w");
 
-    /*
+    fprintf(infotxt, "size_t %s %lu \n", "AcRealSize", sizeof(AcReal));
+
     // JP: this could be done shorter and with smaller chance for errors with the following
     // (modified from acPrintMeshInfo() in astaroth.cu)
+    // MV: Now adapted into working condition. E.g. removed useless / harmful formatting. 
 
     for (int i = 0; i < NUM_INT_PARAMS; ++i)
-        fprintf(infotxt, "int %s: %d\n", intparam_names[i], config.int_params[i]);
+        fprintf(infotxt, "int %s %d\n", intparam_names[i], config->int_params[i]);
 
     for (int i = 0; i < NUM_INT3_PARAMS; ++i)
-        fprintf(infotxt, "int3 %s: (%d, %d, %d)\n", int3param_names[i], config.int3_params[i].x,
-                                                                        config.int3_params[i].y,
-                                                                        config.int3_params[i].z);
+        fprintf(infotxt, "int3 %s  %d %d %d\n", int3param_names[i], config->int3_params[i].x,
+                                                                        config->int3_params[i].y,
+                                                                        config->int3_params[i].z);
 
     for (int i = 0; i < NUM_REAL_PARAMS; ++i)
-        fprintf(infotxt, "real %s: %g\n", realparam_names[i], double(config.real_params[i]));
+        fprintf(infotxt, "real %s %g\n", realparam_names[i], double(config->real_params[i]));
 
     for (int i = 0; i < NUM_REAL3_PARAMS; ++i)
-        fprintf(infotxt, "real %s: (%g, %g, %g)\n", real3param_names[i],
-                                                    double(config.real3_params[i].x),
-                                                    double(config.real3_params[i].y),
-                                                    double(config.real3_params[i].z));
-    */
-
-    // Total grid dimensions
-    fprintf(infotxt, "int  AC_mx         %i \n", config->int_params[AC_mx]);
-    fprintf(infotxt, "int  AC_my         %i \n", config->int_params[AC_my]);
-    fprintf(infotxt, "int  AC_mz         %i \n", config->int_params[AC_mz]);
-
-    // Bounds for the computational domain, i.e. nx_min <= i < nx_max
-    fprintf(infotxt, "int  AC_nx_min     %i \n", config->int_params[AC_nx_min]);
-    fprintf(infotxt, "int  AC_nx_max     %i \n", config->int_params[AC_nx_max]);
-    fprintf(infotxt, "int  AC_ny_min     %i \n", config->int_params[AC_ny_min]);
-    fprintf(infotxt, "int  AC_ny_max     %i \n", config->int_params[AC_ny_max]);
-    fprintf(infotxt, "int  AC_nz_min     %i \n", config->int_params[AC_nz_min]);
-    fprintf(infotxt, "int  AC_nz_max     %i \n", config->int_params[AC_nz_max]);
-
-    // Spacing
-    fprintf(infotxt, "real AC_dsx        %e \n", (double)config->real_params[AC_dsx]);
-    fprintf(infotxt, "real AC_dsy        %e \n", (double)config->real_params[AC_dsy]);
-    fprintf(infotxt, "real AC_dsz        %e \n", (double)config->real_params[AC_dsz]);
-    fprintf(infotxt, "real AC_inv_dsx    %e \n", (double)config->real_params[AC_inv_dsx]);
-    fprintf(infotxt, "real AC_inv_dsy    %e \n", (double)config->real_params[AC_inv_dsy]);
-    fprintf(infotxt, "real AC_inv_dsz    %e \n", (double)config->real_params[AC_inv_dsz]);
-    fprintf(infotxt, "real AC_dsmin      %e \n", (double)config->real_params[AC_dsmin]);
-
-    /* Additional helper params */
-    // Int helpers
-    fprintf(infotxt, "int  AC_mxy        %i \n", config->int_params[AC_mxy]);
-    fprintf(infotxt, "int  AC_nxy        %i \n", config->int_params[AC_nxy]);
-    fprintf(infotxt, "int  AC_nxyz       %i \n", config->int_params[AC_nxyz]);
-
-    // Real helpers
-    fprintf(infotxt, "real AC_cs2_sound  %e \n", (double)config->real_params[AC_cs2_sound]);
-    fprintf(infotxt, "real AC_cv_sound   %e \n", (double)config->real_params[AC_cv_sound]);
-
-    // Physical units
-    fprintf(infotxt, "real AC_unit_density  %e \n", (double)config->real_params[AC_unit_density]);
-    fprintf(infotxt, "real AC_unit_velocity %e \n", (double)config->real_params[AC_unit_velocity]);
-    fprintf(infotxt, "real AC_unit_mass     %e \n", (double)config->real_params[AC_unit_mass]);
-    fprintf(infotxt, "real AC_unit_length   %e \n", (double)config->real_params[AC_unit_length]);
-
-    // Here I'm still trying to copy the structure of the code above, and see if this will work for
-    // sink particle. I haven't fully undertand what these lines do but I'll read up on them soon.
-    // This is still yet experimental.
-    // Sink particle
-    fprintf(infotxt, "real AC_sink_pos_x %e \n", (double)config->real_params[AC_sink_pos_x]);
-    fprintf(infotxt, "real AC_sink_pos_y %e \n", (double)config->real_params[AC_sink_pos_y]);
-    fprintf(infotxt, "real AC_sink_pos_z %e \n", (double)config->real_params[AC_sink_pos_z]);
-    fprintf(infotxt, "real AC_M_sink     %e \n", (double)config->real_params[AC_M_sink]);
-    fprintf(infotxt, "real AC_soft     %e \n", (double)config->real_params[AC_soft]);
-    fprintf(infotxt, "real AC_G_const     %e \n", (double)config->real_params[AC_G_const]);
+        fprintf(infotxt, "real3 %s  %g %g %g\n", real3param_names[i],
+                                                    double(config->real3_params[i].x),
+                                                    double(config->real3_params[i].y),
+                                                    double(config->real3_params[i].z));
 
     fclose(infotxt);
 }
