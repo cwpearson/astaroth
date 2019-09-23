@@ -51,10 +51,19 @@ def read_meshtxt(fdir, fname):
         line = line.split()
         if line[0] == 'int':
             contents[line[1]] = np.int(line[2])
+            print(line[1], contents[line[1]])
+        elif line[0] == 'int3':
+            contents[line[1]] = [np.int(line[2]), np.int(line[3]), np.int(line[4])]
+            print(line[1], contents[line[1]])
         elif line[0] == 'real':
             contents[line[1]] = np.float(line[2])
+            print(line[1], contents[line[1]])
+        elif line[0] == 'real3':
+            contents[line[1]] = [np.float(line[2]), np.float(line[3]), np.float(line[4])]
+            print(line[1], contents[line[1]])
         else: 
-            print('ERROR: ' + line[0] +' no recognized!')
+            print(line)
+            print('ERROR: ' + line[0] +' not recognized!')
 
     return contents
 
