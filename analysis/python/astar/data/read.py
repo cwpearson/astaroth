@@ -33,8 +33,8 @@ def read_bin(fname, fdir, fnum, minfo, numtype=np.longdouble):
         timestamp = array[0]
 
         array = np.reshape(array[1:], (minfo.contents['AC_mx'], 
-                                   minfo.contents['AC_my'], 
-                                   minfo.contents['AC_mz']), order='F')
+                                       minfo.contents['AC_my'], 
+                                       minfo.contents['AC_mz']), order='F')
     else:
         array = None
         timestamp = None

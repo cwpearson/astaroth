@@ -60,7 +60,16 @@ write_mesh_info(const AcMeshInfo* config)
 
     infotxt = fopen("mesh_info.list", "w");
 
+    // Determine endianness
+    unsigned int EE = 1;
+    char *CC = (char*) &EE;
+    const int endianness = (int) *C; 
+    // endianness = 0 -> big endian 
+    // endianness = 1 -> little endian
+
     fprintf(infotxt, "size_t %s %lu \n", "AcRealSize", sizeof(AcReal));
+
+    fprintf(infotxt, "int %s %i \n", "endian", endianness);
 
     // JP: this could be done shorter and with smaller chance for errors with the following
     // (modified from acPrintMeshInfo() in astaroth.cu)
@@ -115,13 +124,13 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
         save_ptr = fopen(bin_filename, "wb");
 
         // Start file with time stamp
-        long double write_long_buf = (long double)t_step;
-        fwrite(&write_long_buf, sizeof(long double), 1, save_ptr);
+        AcReal write_long_buf = (AcReal)t_step;
+        fwrite(&write_long_buf, sizeof(AcReal), 1, save_ptr);
         // Grid data
         for (size_t i = 0; i < n; ++i) {
             const AcReal point_val     = save_mesh.vertex_buffer[VertexBufferHandle(w)][i];
-            long double write_long_buf = (long double)point_val;
-            fwrite(&write_long_buf, sizeof(long double), 1, save_ptr);
+            AcReal write_long_buf = (AcReal)point_val;
+            fwrite(&write_long_buf, sizeof(AcReal), 1, save_ptr);
         }
         fclose(save_ptr);
     }
