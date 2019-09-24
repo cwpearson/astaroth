@@ -63,7 +63,7 @@ write_mesh_info(const AcMeshInfo* config)
     // Determine endianness
     unsigned int EE = 1;
     char *CC = (char*) &EE;
-    const int endianness = (int) *C; 
+    const int endianness = (int) *CC; 
     // endianness = 0 -> big endian 
     // endianness = 1 -> little endian
 
