@@ -1,5 +1,0 @@
-build
-testbin
-
-# Except this file
-!.gitignore

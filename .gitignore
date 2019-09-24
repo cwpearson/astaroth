@@ -22,6 +22,4 @@ makefile~
 *~
 
 build/
-src/core/kernels/stencil_assembly.cuh
-src/core/kernels/stencil_process.cuh
 tests/
