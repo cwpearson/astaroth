@@ -18,11 +18,9 @@ pipelines:
     scheduled:
     - step:
         script: # Modify the commands below to build your repository.
-          - source ./sourceme.sh
           - mkdir -p build && cd build
           - apt-get update
           - apt-get install -y cmake flex bison
-          - ../scripts/compile_acc.sh
-          - cmake ..
+          - cmake -DDSL_MODULE_DIR="acc/mhd_solver" ..
           - make -j
           # - ./ac_run -t

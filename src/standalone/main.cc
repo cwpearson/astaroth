@@ -73,16 +73,25 @@ main(int argc, char* argv[])
     for (int i = 0; i < argc; ++i)
         printf("%d: %s\n", i, argv[i]);
 
+    char* config_path;
+    (argc == 3) ? config_path = strdup(argv[2])
+                : config_path = strdup(AC_DEFAULT_CONFIG);
+
+    printf("Config path: %s\n", config_path);
+    ERRCHK(config_path);
+
     if (argc == 1) {
-        return run_renderer();
+        return run_renderer(config_path);
     }
-    else if (argc == 2) {
+    else if (argc == 2 || argc == 3) {
         if (strcmp(argv[1], "-t") == 0)
-            return run_autotest();
+            return run_autotest(config_path);
         else if (strcmp(argv[1], "-b") == 0)
-            return run_benchmark();
+            return run_benchmark(config_path);
         else if (strcmp(argv[1], "-s") == 0)
-            return run_simulation();
+            return run_simulation(config_path);
+        else if (strcmp(argv[1], "-r") == 0)
+            return run_renderer(config_path);
         else
             WARNING("Unrecognized option");
     }
@@ -90,5 +99,6 @@ main(int argc, char* argv[])
         WARNING("Too many options given");
     }
 
+    free(config_path);
     return EXIT_FAILURE;
 }

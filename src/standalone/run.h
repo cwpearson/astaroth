@@ -26,10 +26,10 @@
  */
 #pragma once
 
-int run_autotest(void);
+int run_autotest(const char* config_path);
 
-int run_simulation(void);
+int run_simulation(const char* config_path);
 
-int run_benchmark(void);
+int run_benchmark(const char* config_path);
 
-int run_renderer(void);
+int run_renderer(const char* config_path);

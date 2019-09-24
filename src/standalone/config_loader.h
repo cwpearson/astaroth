@@ -26,7 +26,7 @@
 #include "astaroth.h"
 
 /** Loads data from the config file */
-int load_config(AcMeshInfo* config);
+int load_config(const char* config_path, AcMeshInfo* config);
 
 /** Recalculates the portion of int parameters which get their values from nx,
  * ny and nz. Must be called after modifying the config struct or otherwise
