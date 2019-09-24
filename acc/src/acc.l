@@ -1,4 +1,5 @@
 %option yylineno
+%option noyywrap
 
 D [0-9]
 L [a-zA-Z_]

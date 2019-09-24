@@ -8,4 +8,3 @@ add_flex_bison_dependency(acc_lexer acc_parser)
 
 add_executable(acc code_generator.c ${BISON_acc_parser_OUTPUTS} ${FLEX_acc_lexer_OUTPUTS})
 target_include_directories(acc PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(acc ${FLEX_LIBRARIES})
