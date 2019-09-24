@@ -163,6 +163,7 @@ static void
 rm_symbol(const int handle)
 {
     assert(handle >= 0 && handle < num_symbols);
+    assert(num_symbols > 0);
 
     if (&symbol_table[handle] != &symbol_table[num_symbols - 1])
         memcpy(&symbol_table[handle], &symbol_table[num_symbols - 1], sizeof(Symbol));
@@ -179,7 +180,7 @@ print_symbol(const int handle)
                             symbol_table[handle].identifier};
     const size_t num_fields = sizeof(fields) / sizeof(fields[0]);
 
-    for (int i = 0; i < num_fields; ++i)
+    for (size_t i = 0; i < num_fields; ++i)
         if (fields[i])
             printf("%s ", fields[i]);
 }
@@ -252,19 +253,19 @@ translate_latest_symbol(void)
     }
 }
 
-static void
+static inline void
 print_symbol_table(void)
 {
     for (int i = 0; i < num_symbols; ++i) {
         printf("%d: ", i);
-        const char* fields[]    = {translate(symbol_table[i].type_qualifier),
+        const char* fields[] = {translate(symbol_table[i].type_qualifier),
                                 translate(symbol_table[i].type_specifier),
                                 symbol_table[i].identifier};
-        const size_t num_fields = sizeof(fields) / sizeof(fields[0]);
 
-        for (int i = 0; i < num_fields; ++i)
-            if (fields[i])
-                printf("%s ", fields[i]);
+        const size_t num_fields = sizeof(fields) / sizeof(fields[0]);
+        for (size_t j = 0; j < num_fields; ++j)
+            if (fields[j])
+                printf("%s ", fields[j]);
 
         if (symbol_table[i].type == SYMBOLTYPE_FUNCTION)
             printf("(function)");

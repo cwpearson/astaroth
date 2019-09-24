@@ -235,4 +235,5 @@ int
 yyerror(const char* str)
 {
     fprintf(stderr, "%s on line %d when processing char %d: [%s]\n", str, yyget_lineno(), *yytext, yytext);
+    return EXIT_FAILURE;
 }
