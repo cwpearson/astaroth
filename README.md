@@ -22,11 +22,13 @@ If you encounter issues, recheck that the 3rd party libraries were successfully 
 
 ### New approach
 
-``
-mkdir whatever && cd whatever # Sourcing not required anymore
-cmake -DDSL_MODULE_DIR=acc/mhd_solver .. && make -j
-./ac_run -t ../config/astaroth.conf
-``
+
+1. `mkdir whatever && cd whatever # Sourcing not required anymore`
+
+1. `cmake -DDSL_MODULE_DIR=acc/mhd_solver .. && make -j`
+
+1. `./ac_run -t ../config/astaroth.conf`
+
 
 ### Method I: In the code directory (DEPRECATED. REVISE.)
 
