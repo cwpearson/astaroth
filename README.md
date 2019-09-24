@@ -19,7 +19,16 @@ There are two ways to build the code as instructed below.
 
 If you encounter issues, recheck that the 3rd party libraries were successfully built during the previous step.
 
-### Method I: In the code directory
+
+### New approach
+
+``
+mkdir whatever && cd whatever # Sourcing not required anymore
+cmake -DDSL_MODULE_DIR=acc/mhd_solver .. && make -j
+./ac_run -t ../config/astaroth.conf
+``
+
+### Method I: In the code directory (DEPRECATED. REVISE.)
 
 1. `cd build/`
 1. `cmake -DDOUBLE_PRECISION=OFF -DBUILD_DEBUG=OFF ..` (Use `cmake -D CMAKE_C_COMPILER=icc -D CMAKE_CXX_COMPILER=icpc -DDOUBLE_PRECISION=OFF -DBUILD_DEBUG=OFF ..` if compiling on TIARA)
@@ -28,7 +37,7 @@ If you encounter issues, recheck that the 3rd party libraries were successfully 
 
 Edit `config/astaroth.conf` to change the numerical setup. 
 
-### Method II: With a script in a custom build directory (RECOMMENDED) 
+### Method II: With a script in a custom build directory (DEPRECATED. REVISE.) 
 
 1. `source sourceme.sh` to add relevant directories to the `PATH`
 1. `ac_mkbuilddir.sh -b my_build_dir/` to set up a custom build directory. There are also other options available. See `ac_mkbuilddir.sh -h` for more. 
