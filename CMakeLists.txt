@@ -28,13 +28,9 @@ option(BUILD_MPI_TEST           "Builds a C program to test whether MPI works"  
 option(DOUBLE_PRECISION         "Generates double precision code"                           OFF)
 option(MULTIGPU_ENABLED         "If enabled, uses all the available GPUs"                   ON)
 
-## Compile the Astaroth Code compiler
-find_package(FLEX)
-find_package(BISON)
-execute_process (
-    COMMAND ./build_acc.sh
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/acc
-)
+## Compile the Astaroth Code Compiler
+add_subdirectory(acc)
+
 # NOTE: Manually defined DSL_MODULE_DIR must be set relative to the project root, not the actual
 # build directory!
 # NO! ../acc/mhd_solver
@@ -50,12 +46,13 @@ set(DSL_HEADERS "${PROJECT_BINARY_DIR}/stencil_assembly.cuh"
                 "${PROJECT_BINARY_DIR}/stencil_process.cuh"
                 "${PROJECT_BINARY_DIR}/stencil_defines.h")
 add_custom_command (
-    COMMENT "Building AC objects ${DSL_MODULE_DIR}"
+    COMMENT "Building ACC objects ${DSL_MODULE_DIR}"
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/compile_acc_module.sh ${DSL_MODULE_DIR}
     DEPENDS ${DSL_SOURCES}
     OUTPUT ${DSL_HEADERS}
 )
 add_custom_target(dsl_headers ALL DEPENDS ${DSL_HEADERS})
+add_dependencies(dsl_headers acc)
 
 ## Build types
 # Available types (case-sensitive):
