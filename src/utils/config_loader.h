@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 /** Loads data from the config file */
-int acLoadConfig(const char* config_path, AcMeshInfo* config);
+AcResult acLoadConfig(const char* config_path, AcMeshInfo* config);
 
 #ifdef __cplusplus
 } // extern "C"

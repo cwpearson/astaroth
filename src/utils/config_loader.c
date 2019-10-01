@@ -109,12 +109,12 @@ update_config(AcMeshInfo* config)
 
 /**
 \brief Loads data from astaroth.conf into a config struct.
-\return 0 on success, -1 if there are potentially uninitialized values.
+\return AC_SUCCESS on success, AC_FAILURE if there are potentially uninitialized values.
 */
-int
+AcResult
 acLoadConfig(const char* config_path, AcMeshInfo* config)
 {
-    int retval = 0;
+    int retval = AC_SUCCESS;
     assert(config_path);
 
     // memset reads the second parameter as a byte even though it says int in
@@ -136,7 +136,7 @@ acLoadConfig(const char* config_path, AcMeshInfo* config)
         if (((uint32_t*)config)[i] == (uint32_t)0xFFFFFFFF) {
             fprintf(stderr, "Some config values may be uninitialized. "
                             "See that all are defined in astaroth.conf\n");
-            retval = -1;
+            retval = AC_FAILURE;
         }
     }
     return retval;
