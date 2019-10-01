@@ -18,10 +18,12 @@ find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PA
 ## Project settings
 project(astaroth C CXX)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ## Options
 option(BUILD_DEBUG              "Builds the program with extensive error checking"          OFF)
 option(BUILD_STANDALONE         "Builds the standalone Astaroth"                            ON)
+option(BUILD_UTILS              "Builds the utility library"                                ON)
 option(BUILD_RT_VISUALIZATION   "Builds the module for real-time visualization using SDL2"  OFF)
 option(BUILD_C_API_TEST         "Builds a C program to test whether the API is conformant"  OFF)
 option(BUILD_MPI_TEST           "Builds a C program to test whether MPI works"              OFF)
@@ -99,4 +101,9 @@ endif ()
 
 if (BUILD_MPI_TEST)
     add_subdirectory(src/mpitest)
+endif ()
+
+if (BUILD_UTILS)
+    add_subdirectory(src/utils)
+    add_subdirectory(src/exampleproject) # TODO this should not be here
 endif ()
