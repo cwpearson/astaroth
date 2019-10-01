@@ -512,24 +512,217 @@ In addition to basic datatypes in C/C++/CUDA, such as int and int3, we provide t
 | ScalarField | An abstraction of a three-dimensional scalar field stored in device memory. Is implemented as a handle to a one-dimensional Scalar array consisting of input and output segments. The data is stored linearly in order i + j * mx + k * mx * my, given some vertex index (i, j, k) and mesh constisting of (mx, my, mz) vertices. | float[2][] or double[2][]                                                                            |
 | VectorField | An abstraction of a three-dimensional vector field stored in device memory. Is implemented as a tuple of three ScalarField handles.                                                                                                                                                                                               | Three distinct float[2][] or double[2][] arrays for each component. Stored as a structure of arrays. |
 
-## Built-in variables and functions
-
 ## Control flow
-// Runtime constants are as fast as compile-time constants as long as
-// 1) They are not placed in tight loops, especially those that inlcude global memory accesses, that could be unrolled
-// 2) They are not multiplied with each other
-// 3) At least 32 neighboring threads in the x-axis access the same constant
 
-// Safe and efficient to use as switches
+Conditional statements are expressed with the `if-else` construct. Unlike in C and C++, we require
+that the scope of the `if-else` statement is explicitly declared using braces `{` and `}` in order
+to avoid the ambiguity in the case
+```C
+if (a)
+    b;
+if (c)
+    d;
+else
+    e;
+```
 
-## Uniforms
-// Device constants
-// Loaded at runtime
+
+The syntax for conditional statements, even if there is only a single `if`, is
+```C
+if (a) {
+    b;
+}
+```
 
 ## Kernels
 
-// in and out
+Kernels are small programs executed on the device. Each kernel comprises of all the pipeline stages
+discussed in previous sections. Functions qualified with the type qualifier `Kernel` are analogous
+to `main` functions of host code. 
+
+Kernels must be declared in stencil processing files. DSL kernels can be called from host code
+using the API function
+```C
+AcResult acDeviceKernel_##identifier(const Device device, const Stream stream,
+                                     const int3 start, const int3 end);
+```
+, where ##identifier is the name of the kernel function.
+
+The following built-in variables are available in `Kernel`s.
+| Built-in variable | Description                                                                                                                                                                               |
+|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| vertexIdx         | Holds the local index of the currently processed vertex.                                                                                                                                  |
+| globalVertexIdx   | Holds the global index of the currently processed vertex. If there is only single device, then vertexIdx is the same as globalVertexIdx. Otherwise globalVertexIdx is offset accordingly. |
+| globalGridN       | Holds the dimensions of the computational domain.                                                                                                                                         |
 
 ## Preprocessed functions
 
-// Reading input fields
+The type qualifier `Preprocessed` indicates which functions should be evaluated immediately when
+entering a `Kernel` function. The return values of `Preprocessed` functions are cached and calling
+these functions during the stencil processing stage is essentially free. As main memory bandwidth is
+significantly slower than on-chip memories and registers, declaring reading-heavy functions as
+`Preprocessed` is critical for obtaining good performance in stencil codes. 
+
+`Preprocessed` functions may only be defined in stencil assembly files.
+
+The built-in variables `vertexIdx`, `globalVertexidx` and `globalGridN` are available in all
+`Preprocessed` functions.
+
+## Uniforms
+
+`Uniform`s are global device variables which stay constant for the duration of a kernel launch.
+`Uniform`s can be updated between kernel launches using the `acLoadScalarUniform` and related functions
+discussed in Section 'Loading and storing'. 
+
+`Uniform`s are declared in stencil definition headers. The header must be included in all files
+which use those uniforms. 
+
+`Uniform`s can be of type `Scalar`, `Vector`, `int`, `int3`, `ScalarField` and `ScalarArray`.
+
+> Note: As of 2019-10-01, the types `ScalarField` (DSL) and `VertexBuffer` (CUDA) are aliases of the
+same type. This naming may be changed in the future. 
+
+> Note: As of 2019-10-01, ScalarFields cannot be declared as uniforms. Instead, one should declare
+each component as a `ScalarField` and use them to construct a `VectorField` during the stencil
+processing stage. For example, `in VectorField(A, B, C);`, where `A`, `B` and `C` are
+`uniform ScalarField`s.
+
+> Note: As of 2019-10-01, `uniform`s cannot be assigned values in the stencil definition headers. 
+Instead, one should load the appropriate values during runtime using the `acLoadScalarUniform` and
+related functions.
+
+
+## Standard libraries
+
+> Not implemented
+
+## Performance considerations
+
+Uniforms are as fast as compile-time constants as long as
+
+0. The halting condition of a tight loop does not depend on an uniform or a variable, as this would prevent unrolling of the loop during compile-time. 
+0. Uniforms are not multiplied with each other. The result should be stored in an auxiliary uniform instead. For example, the result of `nx * ny` should be stored in a new `uniform nxy`
+0. At least 32 neighboring streams in the x-axis access the same `uniform`. That is, the vertices at vertexIdx.x = i... i + 32 should access the same `uniform` where i is a multiple of 32.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
