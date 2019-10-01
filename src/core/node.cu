@@ -429,7 +429,7 @@ acNodeLoadConstant(const Node node, const Stream stream, const AcRealParam param
     acNodeSynchronizeStream(node, stream);
     // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
-        acDeviceLoadScalarConstant(node->devices[i], stream, param, value);
+        acDeviceLoadScalarUniform(node->devices[i], stream, param, value);
     }
     return AC_SUCCESS;
 }

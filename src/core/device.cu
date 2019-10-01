@@ -357,7 +357,7 @@ acDeviceAutoOptimize(const Device device)
 
                 cudaEventRecord(tstart); // ---------------------------------------- Timing start
 
-                acDeviceLoadScalarConstant(device, STREAM_DEFAULT, AC_dt, FLT_EPSILON);
+                acDeviceLoadScalarUniform(device, STREAM_DEFAULT, AC_dt, FLT_EPSILON);
                 for (int i = 0; i < num_iterations; ++i)
                     solve<2><<<bpg, tpb>>>(start, end, device->vba);
 
@@ -416,7 +416,7 @@ acDeviceSwapBuffers(const Device device)
 }
 
 AcResult
-acDeviceLoadScalarConstant(const Device device, const Stream stream, const AcRealParam param,
+acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcRealParam param,
                            const AcReal value)
 {
     cudaSetDevice(device->id);
@@ -427,7 +427,7 @@ acDeviceLoadScalarConstant(const Device device, const Stream stream, const AcRea
 }
 
 AcResult
-acDeviceLoadVectorConstant(const Device device, const Stream stream, const AcReal3Param param,
+acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal3Param param,
                            const AcReal3 value)
 {
     cudaSetDevice(device->id);
@@ -438,7 +438,7 @@ acDeviceLoadVectorConstant(const Device device, const Stream stream, const AcRea
 }
 
 AcResult
-acDeviceLoadIntConstant(const Device device, const Stream stream, const AcIntParam param,
+acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntParam param,
                         const int value)
 {
     cudaSetDevice(device->id);
@@ -449,7 +449,7 @@ acDeviceLoadIntConstant(const Device device, const Stream stream, const AcIntPar
 }
 
 AcResult
-acDeviceLoadInt3Constant(const Device device, const Stream stream, const AcInt3Param param,
+acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Param param,
                          const int3 value)
 {
     cudaSetDevice(device->id);
@@ -670,7 +670,7 @@ acDeviceIntegrateSubstep(const Device device, const Stream stream, const int ste
                    (unsigned int)ceil(n.y / AcReal(tpb.y)), //
                    (unsigned int)ceil(n.z / AcReal(tpb.z)));
 
-    acDeviceLoadScalarConstant(device, stream, AC_dt, dt);
+    acDeviceLoadScalarUniform(device, stream, AC_dt, dt);
     if (step_number == 0)
         solve<0><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
     else if (step_number == 1)

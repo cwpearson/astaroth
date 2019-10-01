@@ -46,19 +46,19 @@ AcResult acDeviceSynchronizeStream(const Device device, const Stream stream);
 AcResult acDeviceSwapBuffers(const Device device);
 
 /** */
-AcResult acDeviceLoadScalarConstant(const Device device, const Stream stream,
+AcResult acDeviceLoadScalarUniform(const Device device, const Stream stream,
                                     const AcRealParam param, const AcReal value);
 
 /** */
-AcResult acDeviceLoadVectorConstant(const Device device, const Stream stream,
+AcResult acDeviceLoadVectorUniform(const Device device, const Stream stream,
                                     const AcReal3Param param, const AcReal3 value);
 
 /** */
-AcResult acDeviceLoadIntConstant(const Device device, const Stream stream, const AcIntParam param,
+AcResult acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntParam param,
                                  const int value);
 
 /** */
-AcResult acDeviceLoadInt3Constant(const Device device, const Stream stream, const AcInt3Param param,
+AcResult acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Param param,
                                   const int3 value);
 
 /** */
