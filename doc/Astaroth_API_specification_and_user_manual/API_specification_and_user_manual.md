@@ -462,7 +462,13 @@ function `Kernel solve()` can be called with `acDeviceKernel_solve()` via the AP
 
 # Astaroth Domain-Specific Language
 
-We designed the Astaroth Domain-specific Language (DSL) for expressing stencil computations in a high-level language that can be translated into efficient GPU kernels. The benefits of creating a DSL are two-fold. First, scientists using the language can focus on developing solvers and mathematical models using an easy-to-use language, while still achieving performance close to handwritten code. Second, procedures written in the DSL are decoupled from implementation, which allows us to extend the DSL compiler, say, to generate optimized code for several hardware generations without the users having to modify existing DSL sources.
+We designed the Astaroth Domain-specific Language (DSL) for expressing stencil computations in a
+high-level language that can be translated into efficient GPU kernels. The benefits of creating a
+DSL are two-fold. First, scientists using the language can focus on developing solvers and
+mathematical models using an easy-to-use language, while still achieving performance close to
+handwritten code. Second, procedures written in the DSL are decoupled from implementation, which
+allows us to extend the DSL compiler, say, to generate optimized code for several hardware
+generations without the users having to modify existing DSL sources.
 
 ## Overview
 
