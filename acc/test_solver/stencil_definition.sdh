@@ -1,0 +1,18 @@
+//JP NOTE IMPORTANT/////////////////////////////////////////////////////////////////////////////////
+// AC_dsx etc are defined here temporarily (otherwise does not compile).
+//
+// These should ultimately be defined in the standard DSL libraries.
+// See test_solver/stencil_assembly.sas for more info.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uniform Scalar AC_dsx;// TODO include these from the std lib
+uniform Scalar AC_dsy;
+uniform Scalar AC_dsz;
+uniform Scalar AC_inv_dsx;
+uniform Scalar AC_inv_dsy;
+uniform Scalar AC_inv_dsz;
+uniform Scalar AC_dt;
+
+uniform ScalarField VTXBUF_A;
+uniform ScalarField VTXBUF_B;
+uniform ScalarField VTXBUF_C;
