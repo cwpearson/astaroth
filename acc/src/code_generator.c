@@ -395,16 +395,29 @@ traverse(const ASTNode* node)
                 // Do a regular translation
                 if (translate(node->token))
                     printf("%s ", translate(node->token));
-                if (node->buffer)
-                    printf("%s ", node->buffer);
+                if (node->buffer) {
+                    if (node->type == NODE_REAL_NUMBER) {
+                        printf("%s(%s) ", translate(SCALAR),
+                               node->buffer); // Cast to correct precision
+                    }
+                    else {
+                        printf("%s ", node->buffer);
+                    }
+                }
             }
         }
         else {
             // Do a regular translation
             if (translate(node->token))
                 printf("%s ", translate(node->token));
-            if (node->buffer)
-                printf("%s ", node->buffer);
+            if (node->buffer) {
+                if (node->type == NODE_REAL_NUMBER) {
+                    printf("%s(%s) ", translate(SCALAR), node->buffer); // Cast to correct precision
+                }
+                else {
+                    printf("%s ", node->buffer);
+                }
+            }
         }
     }
 
