@@ -168,7 +168,10 @@ read_mesh(AcMesh& read_mesh, const int step, AcReal* t_step)
         for (size_t i = 0; i < n; ++i) {
             result = fread(&read_buf, sizeof(AcReal), 1, read_ptr);
             read_mesh.vertex_buffer[VertexBufferHandle(w)][i] = read_buf;
-            if (result != sizeof(AcReal)) {fprintf(stderr, "Reading error in %s, element %i\n", vtxbuf_names[w], int(i));}
+            if (int(result) != 1) {
+                fprintf(stderr, "Reading error in %s, element %i\n", vtxbuf_names[w], int(i));
+                fprintf(stderr, "Result = %i,  \n", int(result));
+            }
         }
         fclose(read_ptr);
     }
@@ -252,10 +255,12 @@ run_simulation(const char* config_path)
     diag_file = fopen("timeseries.ts", "a");
 
     // Generate the title row.
-    fprintf(diag_file, "step  t_step  dt  uu_total_min  uu_total_rms  uu_total_max  ");
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
-                vtxbuf_names[i]);
+    if (start_step == 0) {
+        fprintf(diag_file, "step  t_step  dt  uu_total_min  uu_total_rms  uu_total_max  ");
+        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+            fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
+                    vtxbuf_names[i]);
+        }
     }
 #if LSINK
     fprintf(diag_file, "sink_mass  accreted_mass  ");
