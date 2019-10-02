@@ -162,6 +162,21 @@ add_symbol(const SymbolType type, const int tqualifier, const int tspecifier, co
 }
 
 static void
+print_symbol2(const Symbol* symbol)
+{
+    const char* fields[] = {
+        translate(symbol->type_qualifier),
+        translate(symbol->type_specifier),
+        symbol->identifier,
+    };
+
+    const size_t num_fields = sizeof(fields) / sizeof(fields[0]);
+    for (size_t i = 0; i < num_fields; ++i)
+        if (fields[i])
+            fprintf(CUDAHEADER, "%s ", fields[i]);
+}
+
+static void
 print_symbol(const size_t handle)
 {
     assert(handle < SYMBOL_TABLE_SIZE);
@@ -212,11 +227,6 @@ print_symbol_table(void)
  * AST traversal
  * =============================================================================
  */
-static void
-translate_latest_symbol(void)
-{
-    // TODO
-}
 
 static void
 traverse(const ASTNode* node)
@@ -259,6 +269,24 @@ traverse(const ASTNode* node)
         if (symbol->type_qualifier == UNIFORM) {
             fprintf(CUDAHEADER, "DCONST(%s) ", symbol->identifier);
         }
+        else {
+            // print_symbol2(symbol);
+        }
+    }
+    else {
+        /*
+        // Translate literals
+        if (translate(node->token))
+            printf("%s ", translate(node->token));
+        if (node->buffer) {
+            if (node->type == NODE_REAL_NUMBER) {
+                printf("%s(%s) ", translate(SCALAR), node->buffer); // Cast to correct precision
+            }
+            else {
+                printf("%s ", node->buffer);
+            }
+        }
+        */
     }
 
     // Add new symbols to the symbol table
@@ -304,19 +332,29 @@ traverse(const ASTNode* node)
             tmp = tmp->parent;
             assert(tmp->type = NODE_FUNCTION_DECLARATION);
             const Symbol* parent_function = symboltable_lookup(tmp->lhs->rhs->buffer);
-            if (parent_function->type_qualifier == DEVICE)
-                fprintf(CUDAHEADER, "%s %s\ndeviceparam_%s", //
-                        translate(tqualifier), translate(tspecifier), identifier);
-            else if (parent_function->type_qualifier == PREPROCESSED)
-                fprintf(CUDAHEADER, "%s %s\npreprocessedparam_%s", //
-                        translate(tqualifier), translate(tspecifier), identifier);
-            else
-                fprintf(CUDAHEADER, "%s %s\notherparam_%s", //
-                        translate(tqualifier), translate(tspecifier), identifier);
+            assert(parent_function);
+
+            if (tqualifier == IN || tqualifier == OUT) {
+                if (parent_function->type_qualifier == 0 ||
+                    parent_function->type_qualifier == PREPROCESSED) {
+                    fprintf(CUDAHEADER, "const __restrict__ %s* %s", //
+                            translate(tspecifier), identifier);
+                }
+                else {
+                    fprintf(CUDAHEADER, "const %sData& %s", //
+                            translate(tspecifier), identifier);
+                }
+            }
         }
-        else { // Do a regular translation
-            // fprintf(CUDAHEADER, "%s %s %s", //
-            //        translate(tqualifier), translate(tspecifier), identifier);
+        else if (tqualifier == IN || tqualifier == OUT) { // Global in/out declarator
+            fprintf(CUDAHEADER, "static __device__ const ");
+            fprintf(CUDAHEADER, "%s ", tspecifier == SCALARFIELD ? "int" : "int3");
+            fprintf(CUDAHEADER, "handle_%s ", identifier);
+            fprintf(CUDAHEADER, "%s ", tspecifier == SCALARFIELD ? "" : "= make_int3");
+        }
+        else {
+            // Do a regular translation
+            print_symbol2(&symbol_table[num_symbols[current_nest] - 1]);
         }
     }
 
@@ -324,6 +362,7 @@ traverse(const ASTNode* node)
     if (node->type == NODE_COMPOUND_STATEMENT) {
         assert(current_nest > 0);
         --current_nest;
+
         printf("Dropped rest of the symbol table, from %lu to %lu\n", num_symbols[current_nest + 1],
                num_symbols[current_nest]);
     }
