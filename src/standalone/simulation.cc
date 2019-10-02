@@ -95,10 +95,7 @@ write_mesh_info(const AcMeshInfo* config)
     fclose(infotxt);
 }
 
-// This funtion writes a run state into a set of C binaries. For the sake of
-// accuracy, all floating point numbers are to be saved in long double precision
-// regardless of the choise of accuracy during runtime.
-static inline void
+// This funtion writes a run state into a set of C binaries. 
 save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
 {
     FILE* save_ptr;
@@ -133,6 +130,43 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
             fwrite(&write_long_buf, sizeof(AcReal), 1, save_ptr);
         }
         fclose(save_ptr);
+    }
+}
+
+// This funtion reads a run state from a set of C binaries. 
+read_mesh(AcMesh& read_mesh, const int step, AcReal* t_step)
+{
+    FILE* save_ptr;
+
+    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
+        const size_t n = acVertexBufferSize(read_mesh.info);
+
+        const char* buffername = vtxbuf_names[w];
+        char cstep[11];
+        char bin_filename[80] = "\0";
+
+        // sprintf(bin_filename, "");
+
+        sprintf(cstep, "%d", step);
+
+        strcat(bin_filename, buffername);
+        strcat(bin_filename, "_");
+        strcat(bin_filename, cstep);
+        strcat(bin_filename, ".mesh");
+
+        printf("Reading savefile %s \n", bin_filename);
+
+        read_ptr = fopen(bin_filename, "rb");
+
+        // Start file with time stamp
+        fread(t_step, sizeof(AcReal), 1, read_ptr);
+        // Read grid data
+        AcReal read_buf;
+        for (size_t i = 0; i < n; ++i) {
+            fread(&read_buf, sizeof(AcReal), 1, read_ptr);
+            read_mesh.vertex_buffer[VertexBufferHandle(w)][i] = read_buf;
+        }
+        fclose(read_ptr);
     }
 }
 
