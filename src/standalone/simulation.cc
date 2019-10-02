@@ -268,15 +268,20 @@ run_simulation(const char* config_path)
     fprintf(diag_file, "\n");
 
     write_mesh_info(&mesh_info);
+
+    if (start_step == 0) {
 #if LSINK
-    print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0);
+        print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0);
 #else
-    print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0);
+        print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0);
 #endif
+    }
 
     acBoundcondStep();
     acStore(mesh);
-    save_mesh(*mesh, 0, t_step);
+    if (start_step == 0) {
+        save_mesh(*mesh, 0, t_step);
+    }
 
     const int max_steps      = mesh_info.int_params[AC_max_steps];
     const int save_steps     = mesh_info.int_params[AC_save_steps];
