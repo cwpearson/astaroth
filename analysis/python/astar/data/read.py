@@ -21,20 +21,33 @@
 
 import numpy as np
 
+def set_dtype(endian, AcRealSize):
+    if endian == 0:
+        en = '>'
+    elif endian == 1: 
+        en = '<'
+    type_instruction = en + 'f' + str(AcRealSize)
+    print("type_instruction", type_instruction)
+    my_dtype = np.dtype(type_instruction)
+    return my_dtype
+
 def read_bin(fname, fdir, fnum, minfo, numtype=np.longdouble):
     '''Read in a floating point array'''
     filename = fdir + fname + '_' + fnum + '.mesh'
     datas = np.DataSource()
     read_ok = datas.exists(filename)
+
+    my_dtype = set_dtype(minfo.contents['endian'], minfo.contents['AcRealSize'])
+
     if read_ok:
         print(filename)
-        array = np.fromfile(filename, dtype=numtype)
+        array = np.fromfile(filename, dtype=my_dtype)
 
         timestamp = array[0]
 
         array = np.reshape(array[1:], (minfo.contents['AC_mx'], 
-                                   minfo.contents['AC_my'], 
-                                   minfo.contents['AC_mz']), order='F')
+                                       minfo.contents['AC_my'], 
+                                       minfo.contents['AC_mz']), order='F')
     else:
         array = None
         timestamp = None
@@ -50,6 +63,9 @@ def read_meshtxt(fdir, fname):
     for line in filetext:
         line = line.split()
         if line[0] == 'int':
+            contents[line[1]] = np.int(line[2])
+            print(line[1], contents[line[1]])
+        elif line[0] == 'size_t':
             contents[line[1]] = np.int(line[2])
             print(line[1], contents[line[1]])
         elif line[0] == 'int3':

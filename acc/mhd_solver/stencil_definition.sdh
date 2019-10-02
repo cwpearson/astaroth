@@ -14,9 +14,11 @@ uniform int AC_max_steps;
 uniform int AC_save_steps;
 uniform int AC_bin_steps;
 uniform int AC_bc_type;
+uniform int AC_start_step;
 
 // Real params
 uniform Scalar AC_dt;
+uniform Scalar AC_max_time;
 // Spacing
 uniform Scalar AC_dsx;
 uniform Scalar AC_dsy;

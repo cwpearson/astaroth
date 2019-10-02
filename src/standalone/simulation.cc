@@ -60,7 +60,16 @@ write_mesh_info(const AcMeshInfo* config)
 
     infotxt = fopen("mesh_info.list", "w");
 
+    // Determine endianness
+    unsigned int EE = 1;
+    char *CC = (char*) &EE;
+    const int endianness = (int) *CC; 
+    // endianness = 0 -> big endian 
+    // endianness = 1 -> little endian
+
     fprintf(infotxt, "size_t %s %lu \n", "AcRealSize", sizeof(AcReal));
+
+    fprintf(infotxt, "int %s %i \n", "endian", endianness);
 
     // JP: this could be done shorter and with smaller chance for errors with the following
     // (modified from acPrintMeshInfo() in astaroth.cu)
@@ -86,9 +95,7 @@ write_mesh_info(const AcMeshInfo* config)
     fclose(infotxt);
 }
 
-// This funtion writes a run state into a set of C binaries. For the sake of
-// accuracy, all floating point numbers are to be saved in long double precision
-// regardless of the choise of accuracy during runtime.
+// This funtion writes a run state into a set of C binaries. 
 static inline void
 save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
 {
@@ -115,15 +122,58 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
         save_ptr = fopen(bin_filename, "wb");
 
         // Start file with time stamp
-        long double write_long_buf = (long double)t_step;
-        fwrite(&write_long_buf, sizeof(long double), 1, save_ptr);
+        AcReal write_long_buf = (AcReal)t_step;
+        fwrite(&write_long_buf, sizeof(AcReal), 1, save_ptr);
         // Grid data
         for (size_t i = 0; i < n; ++i) {
             const AcReal point_val     = save_mesh.vertex_buffer[VertexBufferHandle(w)][i];
-            long double write_long_buf = (long double)point_val;
-            fwrite(&write_long_buf, sizeof(long double), 1, save_ptr);
+            AcReal write_long_buf = (AcReal)point_val;
+            fwrite(&write_long_buf, sizeof(AcReal), 1, save_ptr);
         }
         fclose(save_ptr);
+    }
+}
+
+// This funtion reads a run state from a set of C binaries.
+static inline void 
+read_mesh(AcMesh& read_mesh, const int step, AcReal* t_step)
+{
+    FILE* read_ptr;
+
+    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
+        const size_t n = acVertexBufferSize(read_mesh.info);
+
+        const char* buffername = vtxbuf_names[w];
+        char cstep[11];
+        char bin_filename[80] = "\0";
+
+        // sprintf(bin_filename, "");
+
+        sprintf(cstep, "%d", step);
+
+        strcat(bin_filename, buffername);
+        strcat(bin_filename, "_");
+        strcat(bin_filename, cstep);
+        strcat(bin_filename, ".mesh");
+
+        printf("Reading savefile %s \n", bin_filename);
+
+        read_ptr = fopen(bin_filename, "rb");
+
+        // Start file with time stamp
+        size_t result;
+        result = fread(t_step, sizeof(AcReal), 1, read_ptr);
+        // Read grid data
+        AcReal read_buf;
+        for (size_t i = 0; i < n; ++i) {
+            result = fread(&read_buf, sizeof(AcReal), 1, read_ptr);
+            read_mesh.vertex_buffer[VertexBufferHandle(w)][i] = read_buf;
+            if (int(result) != 1) {
+                fprintf(stderr, "Reading error in %s, element %i\n", vtxbuf_names[w], int(i));
+                fprintf(stderr, "Result = %i,  \n", int(result));
+            }
+        }
+        fclose(read_ptr);
     }
 }
 
@@ -190,19 +240,27 @@ run_simulation(const char* config_path)
     vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
 #endif
 
+    // Read old binary if we want to continue from an existing snapshot 
+    // WARNING: Explicit specification of step needed!
+    const int start_step = mesh_info.int_params[AC_start_step];
+    AcReal t_step = 0.0;
+    if (start_step > 0) { 
+        read_mesh(*mesh, start_step, &t_step);
+    }
+ 
     acInit(mesh_info);
     acLoad(*mesh);
 
     FILE* diag_file;
     diag_file = fopen("timeseries.ts", "a");
-    // TODO Get time from earlier state.
-    AcReal t_step = 0.0;
 
     // Generate the title row.
-    fprintf(diag_file, "step  t_step  dt  uu_total_min  uu_total_rms  uu_total_max  ");
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
-                vtxbuf_names[i]);
+    if (start_step == 0) {
+        fprintf(diag_file, "step  t_step  dt  uu_total_min  uu_total_rms  uu_total_max  ");
+        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+            fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
+                    vtxbuf_names[i]);
+        }
     }
 #if LSINK
     fprintf(diag_file, "sink_mass  accreted_mass  ");
@@ -210,38 +268,36 @@ run_simulation(const char* config_path)
     fprintf(diag_file, "\n");
 
     write_mesh_info(&mesh_info);
+
+    if (start_step == 0) {
 #if LSINK
-    print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0);
+        print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0);
 #else
-    print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0);
+        print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0);
 #endif
+    }
 
     acBoundcondStep();
     acStore(mesh);
-    save_mesh(*mesh, 0, t_step);
+    if (start_step == 0) {
+        save_mesh(*mesh, 0, t_step);
+    }
 
     const int max_steps      = mesh_info.int_params[AC_max_steps];
     const int save_steps     = mesh_info.int_params[AC_save_steps];
-    const int bin_save_steps = mesh_info.int_params[AC_bin_steps]; // TODO Get from mesh_info
+    const int bin_save_steps = mesh_info.int_params[AC_bin_steps]; 
 
-    AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
+    const AcReal max_time   = mesh_info.real_params[AC_max_time]; 
+    const AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
     /* initialize random seed: */
     srand(312256655);
 
-    // TODO_SINK. init_sink_particle()
-    //  Initialize the basic variables of the sink particle to a suitable initial value.
-    //  1. Location of the particle
-    //  2. Mass of the particle
-    //  (3. Velocity of the particle)
-    //  This at the level of Host in this case.
-    //  acUpdate_sink_particle() will do the similar trick to the device.
-
     /* Step the simulation */
     AcReal accreted_mass = 0.0;
     AcReal sink_mass     = 0.0;
-    for (int i = 1; i < max_steps; ++i) {
+    for (int i = start_step + 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
 
@@ -262,18 +318,6 @@ run_simulation(const char* config_path)
             on_off_switch = 1;
         }
         acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
-
-        // MV: Old TODOs to remind of eventual future directions.
-        // TODO_SINK acUpdate_sink_particle()
-        //  3. Velocity of the particle)
-        // TODO_SINK acAdvect_sink_particle()
-        //  1. Calculate the equation of motion for the sink particle.
-        //  NOTE: Might require embedding with acIntegrate(dt).
-        // TODO_SINK acAccrete_sink_particle()
-        //  2. Transfer momentum into sink particle
-        //  (OPTIONAL: Affection the motion of the particle)
-        //  NOTE: Might require embedding with acIntegrate(dt).
-        //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference.
 #else
         accreted_mass = -1.0;
         sink_mass     = -1.0;
@@ -287,6 +331,8 @@ run_simulation(const char* config_path)
         acIntegrate(dt);
 
         t_step += dt;
+
+        
 
         /* Save the simulation state and print diagnostics */
         if ((i % save_steps) == 0) {
@@ -316,15 +362,6 @@ run_simulation(const char* config_path)
                 This loop saves the data into simple C binaries which can be
                 used for analysing the data snapshots closely.
 
-                Saving simulation state should happen in a separate stage. We do
-                not want to save it as often as diagnostics. The file format
-                should IDEALLY be HDF5 which has become a well supported, portable and
-                reliable data format when it comes to HPC applications.
-                However, implementing it will have to for more simpler approach
-                to function. (TODO?)
-            */
-
-            /*
                 The updated mesh will be located on the GPU. Also all calls
                 to the astaroth interface (functions beginning with ac*) are
                 assumed to be asynchronous, so the meshes must be also synchronized
@@ -340,6 +377,16 @@ run_simulation(const char* config_path)
 
             bin_crit_t += bin_save_t;
         }
+
+        // End loop if max time reached. 
+        if (max_time > AcReal(0.0)) {
+            if (t_step >= max_time) {
+                printf("Time limit reached! at t = %e \n", double(t_step));
+                break;
+                
+            }
+        }
+
     }
 
     //////Save the final snapshot
