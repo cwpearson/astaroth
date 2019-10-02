@@ -233,13 +233,19 @@ run_simulation(const char* config_path)
     vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
 #endif
 
+    // Read old binary if we want to continue from an existing snapshot 
+    // WARNING: Explicit specification of step needed!
+    const int start_step = mesh_info.int_params[AC_start_step];
+    AcReal t_step = 0.0;
+    if (start_step > 0) { 
+        read_mesh(*mesh, start_step, &t_step);
+    }
+ 
     acInit(mesh_info);
     acLoad(*mesh);
 
     FILE* diag_file;
     diag_file = fopen("timeseries.ts", "a");
-    // TODO Get time from earlier state.
-    AcReal t_step = 0.0;
 
     // Generate the title row.
     fprintf(diag_file, "step  t_step  dt  uu_total_min  uu_total_rms  uu_total_max  ");
@@ -284,7 +290,7 @@ run_simulation(const char* config_path)
     /* Step the simulation */
     AcReal accreted_mass = 0.0;
     AcReal sink_mass     = 0.0;
-    for (int i = 1; i < max_steps; ++i) {
+    for (int i = start_step + 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
         const AcReal dt   = host_timestep(umax, mesh_info);
 
