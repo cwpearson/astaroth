@@ -18,6 +18,7 @@ uniform int AC_start_step;
 
 // Real params
 uniform Scalar AC_dt;
+uniform Scalar AC_max_time;
 // Spacing
 uniform Scalar AC_dsx;
 uniform Scalar AC_dsy;

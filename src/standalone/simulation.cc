@@ -285,21 +285,14 @@ run_simulation(const char* config_path)
 
     const int max_steps      = mesh_info.int_params[AC_max_steps];
     const int save_steps     = mesh_info.int_params[AC_save_steps];
-    const int bin_save_steps = mesh_info.int_params[AC_bin_steps]; // TODO Get from mesh_info
+    const int bin_save_steps = mesh_info.int_params[AC_bin_steps]; 
 
-    AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
+    const AcReal max_time   = mesh_info.real_params[AC_max_time]; 
+    const AcReal bin_save_t = mesh_info.real_params[AC_bin_save_t];
     AcReal bin_crit_t = bin_save_t;
 
     /* initialize random seed: */
     srand(312256655);
-
-    // TODO_SINK. init_sink_particle()
-    //  Initialize the basic variables of the sink particle to a suitable initial value.
-    //  1. Location of the particle
-    //  2. Mass of the particle
-    //  (3. Velocity of the particle)
-    //  This at the level of Host in this case.
-    //  acUpdate_sink_particle() will do the similar trick to the device.
 
     /* Step the simulation */
     AcReal accreted_mass = 0.0;
@@ -325,18 +318,6 @@ run_simulation(const char* config_path)
             on_off_switch = 1;
         }
         acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
-
-        // MV: Old TODOs to remind of eventual future directions.
-        // TODO_SINK acUpdate_sink_particle()
-        //  3. Velocity of the particle)
-        // TODO_SINK acAdvect_sink_particle()
-        //  1. Calculate the equation of motion for the sink particle.
-        //  NOTE: Might require embedding with acIntegrate(dt).
-        // TODO_SINK acAccrete_sink_particle()
-        //  2. Transfer momentum into sink particle
-        //  (OPTIONAL: Affection the motion of the particle)
-        //  NOTE: Might require embedding with acIntegrate(dt).
-        //  This is the hardest part. Please see Lee et al. ApJ 783 (2014) for reference.
 #else
         accreted_mass = -1.0;
         sink_mass     = -1.0;
@@ -350,6 +331,8 @@ run_simulation(const char* config_path)
         acIntegrate(dt);
 
         t_step += dt;
+
+        
 
         /* Save the simulation state and print diagnostics */
         if ((i % save_steps) == 0) {
@@ -379,15 +362,6 @@ run_simulation(const char* config_path)
                 This loop saves the data into simple C binaries which can be
                 used for analysing the data snapshots closely.
 
-                Saving simulation state should happen in a separate stage. We do
-                not want to save it as often as diagnostics. The file format
-                should IDEALLY be HDF5 which has become a well supported, portable and
-                reliable data format when it comes to HPC applications.
-                However, implementing it will have to for more simpler approach
-                to function. (TODO?)
-            */
-
-            /*
                 The updated mesh will be located on the GPU. Also all calls
                 to the astaroth interface (functions beginning with ac*) are
                 assumed to be asynchronous, so the meshes must be also synchronized
@@ -403,6 +377,16 @@ run_simulation(const char* config_path)
 
             bin_crit_t += bin_save_t;
         }
+
+        // End loop if max time reached. 
+        if (max_time > AcReal(0.0)) {
+            if (t_step >= max_time) {
+                printf("Time limit reached! at t = %e \n", double(t_step));
+                break;
+                
+            }
+        }
+
     }
 
     //////Save the final snapshot
