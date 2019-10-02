@@ -20,7 +20,7 @@ int yyget_lineno();
 %token VOID INT INT3 COMPLEX
 %token IF ELSE FOR WHILE ELIF
 %token LEQU LAND LOR LLEQU
-%token KERNEL PREPROCESSED
+%token KERNEL DEVICE PREPROCESSED
 %token INPLACE_INC INPLACE_DEC
 
 %%
@@ -66,6 +66,7 @@ compound_statement: '{' '}'                                                     
 statement: selection_statement                                                          { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
          | iteration_statement                                                          { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
          | exec_statement ';'                                                           { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); $$->postfix = ';'; }
+         | compound_statement                                                           { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
          ;
 
 selection_statement: IF expression else_selection_statement                             { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = IF; }
@@ -115,8 +116,8 @@ return_statement: /* Empty */                                                   
  * =============================================================================
  */
 
-declaration_list: declaration                                                           { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
-                | declaration_list ',' declaration                                      { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = ','; }
+declaration_list: declaration                                                           { $$ = astnode_create(NODE_DECLARATION_LIST, $1, NULL); }
+                | declaration_list ',' declaration                                      { $$ = astnode_create(NODE_DECLARATION_LIST, $1, $3); $$->infix = ','; }
                 ;
 
 declaration: type_declaration identifier                                                { $$ = astnode_create(NODE_DECLARATION, $1, $2); } // Note: accepts only one type qualifier. Good or not?
@@ -127,8 +128,8 @@ array_declaration: identifier '[' ']'                                           
                  | identifier '[' expression ']'                                        { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = '['; $$->postfix = ']'; }
                  ;
 
-type_declaration: type_specifier                                                        { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
-                | type_qualifier type_specifier                                         { $$ = astnode_create(NODE_UNKNOWN, $1, $2); }
+type_declaration: type_specifier                                                        { $$ = astnode_create(NODE_TYPE_DECLARATION, $1, NULL); }
+                | type_qualifier type_specifier                                         { $$ = astnode_create(NODE_TYPE_DECLARATION, $1, $2); }
                 ;
 
 /*
@@ -196,6 +197,7 @@ unary_operator: '-' /* C-style casts are disallowed, would otherwise be defined 
               ;
 
 type_qualifier: KERNEL                                                                  { $$ = astnode_create(NODE_TYPE_QUALIFIER, NULL, NULL); $$->token = KERNEL; }
+              | DEVICE                                                                  { $$ = astnode_create(NODE_TYPE_QUALIFIER, NULL, NULL); $$->token = DEVICE; }
               | PREPROCESSED                                                            { $$ = astnode_create(NODE_TYPE_QUALIFIER, NULL, NULL); $$->token = PREPROCESSED; }
               | CONSTANT                                                                { $$ = astnode_create(NODE_TYPE_QUALIFIER, NULL, NULL); $$->token = CONSTANT; }
               | IN                                                                      { $$ = astnode_create(NODE_TYPE_QUALIFIER, NULL, NULL); $$->token = IN; }

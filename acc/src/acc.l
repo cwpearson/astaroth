@@ -22,6 +22,7 @@ L [a-zA-Z_]
 "ScalarArray" { return SCALARARRAY; }
 
 "Kernel"       { return KERNEL; } /* Function specifiers */
+"Device"       { return DEVICE; }
 "Preprocessed" { return PREPROCESSED; }
 
 "const"     { return CONSTANT; }

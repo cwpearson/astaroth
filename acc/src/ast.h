@@ -21,6 +21,8 @@
     FUNC(NODE_DEFINITION), \
     FUNC(NODE_GLOBAL_DEFINITION), \
     FUNC(NODE_DECLARATION), \
+    FUNC(NODE_DECLARATION_LIST), \
+    FUNC(NODE_TYPE_DECLARATION), \
     FUNC(NODE_TYPE_QUALIFIER), \
     FUNC(NODE_TYPE_SPECIFIER), \
     FUNC(NODE_IDENTIFIER), \
@@ -32,34 +34,11 @@
     FUNC(NODE_REAL_NUMBER)
 // clang-format on
 
-/*
-// Recreating strdup is not needed when using the GNU compiler.
-// Let's also just say that anything but the GNU
-// compiler is NOT supported, since there are also
-// some gcc-specific calls in the files generated
-// by flex and being completely compiler-independent is
-// not a priority right now
-#ifndef strdup
-static inline char*
-strdup(const char* in)
-{
-    const size_t len = strlen(in) + 1;
-    char* out = malloc(len);
-
-    if (out) {
-        memcpy(out, in, len);
-        return out;
-    } else {
-        return NULL;
-    }
-}
-#endif
-*/
-
 typedef enum { FOR_NODE_TYPES(GEN_ID), NUM_NODE_TYPES } NodeType;
 
 typedef struct astnode_s {
     int id;
+    struct astnode_s* parent;
     struct astnode_s* lhs;
     struct astnode_s* rhs;
     NodeType type; // Type of the AST node
@@ -85,6 +64,12 @@ astnode_create(const NodeType type, ASTNode* lhs, ASTNode* rhs)
 
     node->prefix = node->infix = node->postfix = 0;
 
+    if (lhs)
+        node->lhs->parent = node;
+
+    if (rhs)
+        node->rhs->parent = node;
+
     return node;
 }
 
@@ -106,19 +91,21 @@ astnode_destroy(ASTNode* node)
     free(node);
 }
 
+static inline void
+astnode_print(const ASTNode* node)
+{
+    const char* node_type_names[] = {FOR_NODE_TYPES(GEN_STR)};
+
+    printf("%s (%p)\n", node_type_names[node->type], node);
+    printf("\tid:      %d\n", node->id);
+    printf("\tparent:  %p\n", node->parent);
+    printf("\tlhs:     %p\n", node->lhs);
+    printf("\trhs:     %p\n", node->rhs);
+    printf("\tbuffer:  %s\n", node->buffer);
+    printf("\ttoken:   %d\n", node->token);
+    printf("\tprefix:  %d ('%c')\n", node->prefix, node->prefix);
+    printf("\tinfix:   %d ('%c')\n", node->infix, node->infix);
+    printf("\tpostfix: %d ('%c')\n", node->postfix, node->postfix);
+}
+
 extern ASTNode* root;
-
-/*
-typedef enum {
-    SCOPE_BLOCK
-} ScopeType;
-
-typedef struct symbol_s {
-    int type_specifier;
-    char* identifier;
-    int scope;
-    struct symbol_s* next;
-} Symbol;
-
-extern ASTNode* symbol_table;
-*/
