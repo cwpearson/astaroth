@@ -66,7 +66,7 @@ compound_statement: '{' '}'                                                     
 statement: selection_statement                                                          { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
          | iteration_statement                                                          { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
          | exec_statement ';'                                                           { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); $$->postfix = ';'; }
-         | compound_statement                                                           { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); }
+         //| compound_statement                                                           { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); } // shift-reduce conflict, would be needed only for nested compound statements. TODO remove
          ;
 
 selection_statement: IF expression else_selection_statement                             { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = IF; }
