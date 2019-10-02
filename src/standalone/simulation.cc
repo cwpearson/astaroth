@@ -96,6 +96,7 @@ write_mesh_info(const AcMeshInfo* config)
 }
 
 // This funtion writes a run state into a set of C binaries. 
+static inline void
 save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
 {
     FILE* save_ptr;
@@ -133,10 +134,11 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
     }
 }
 
-// This funtion reads a run state from a set of C binaries. 
+// This funtion reads a run state from a set of C binaries.
+static inline void 
 read_mesh(AcMesh& read_mesh, const int step, AcReal* t_step)
 {
-    FILE* save_ptr;
+    FILE* read_ptr;
 
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
         const size_t n = acVertexBufferSize(read_mesh.info);
@@ -159,12 +161,14 @@ read_mesh(AcMesh& read_mesh, const int step, AcReal* t_step)
         read_ptr = fopen(bin_filename, "rb");
 
         // Start file with time stamp
-        fread(t_step, sizeof(AcReal), 1, read_ptr);
+        size_t result;
+        result = fread(t_step, sizeof(AcReal), 1, read_ptr);
         // Read grid data
         AcReal read_buf;
         for (size_t i = 0; i < n; ++i) {
-            fread(&read_buf, sizeof(AcReal), 1, read_ptr);
+            result = fread(&read_buf, sizeof(AcReal), 1, read_ptr);
             read_mesh.vertex_buffer[VertexBufferHandle(w)][i] = read_buf;
+            if (result != sizeof(AcReal)) {fprintf(stderr, "Reading error in %s, element %i\n", vtxbuf_names[w], int(i));}
         }
         fclose(read_ptr);
     }
