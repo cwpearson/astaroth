@@ -14,7 +14,7 @@ int yyget_lineno();
 %}
 
 %token CONSTANT IN OUT UNIFORM
-%token IDENTIFIER NUMBER
+%token IDENTIFIER NUMBER REAL_NUMBER
 %token RETURN
 %token SCALAR VECTOR MATRIX SCALARFIELD SCALARARRAY
 %token VOID INT INT3 COMPLEX
@@ -217,7 +217,8 @@ type_specifier: VOID                                                            
 identifier: IDENTIFIER                                                                  { $$ = astnode_create(NODE_IDENTIFIER, NULL, NULL); astnode_set_buffer(yytext, $$); }
           ;
 
-number: NUMBER                                                                          { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
+number: REAL_NUMBER                                                                     { $$ = astnode_create(NODE_REAL_NUMBER, NULL, NULL); astnode_set_buffer(yytext, $$); }
+      | NUMBER                                                                          { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
       ;
 
 return: RETURN                                                                          { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
@@ -235,4 +236,5 @@ int
 yyerror(const char* str)
 {
     fprintf(stderr, "%s on line %d when processing char %d: [%s]\n", str, yyget_lineno(), *yytext, yytext);
+    return EXIT_FAILURE;
 }

@@ -1,4 +1,5 @@
 %option yylineno
+%option noyywrap
 
 D [0-9]
 L [a-zA-Z_]
@@ -36,8 +37,9 @@ L [a-zA-Z_]
 
 "return"    { return RETURN; }
 
-{D}+"."?{D}*[flud]? { return NUMBER; } /* Literals */
-"."{D}+[flud]?      { return NUMBER; }
+{D}+"."{D}+         { return REAL_NUMBER; } /* Literals */
+{D}+"."{D}+[fd]+    { return NUMBER; }
+{D}+[lu]*           { return NUMBER; }
 {L}({L}|{D})*       { return IDENTIFIER; }
 \"(.)*\"            { return IDENTIFIER; } /* String */
 
