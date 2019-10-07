@@ -1,4 +1,3 @@
-#pragma once
 #define LDENSITY (1)
 #define LHYDRO (1)
 #define LMAGNETIC (1)
@@ -9,8 +8,6 @@
 #define LSINK (0)
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
-#define H_CONST (0)                             // TODO: make an actual config parameter
-#define C_CONST (0)                             // TODO: make an actual config parameter
 
 // Int params
 uniform int AC_max_steps;
@@ -23,6 +20,9 @@ uniform int AC_start_step;
 uniform Scalar AC_dt;
 uniform Scalar AC_max_time;
 // Spacing
+uniform Scalar AC_dsx;
+uniform Scalar AC_dsy;
+uniform Scalar AC_dsz;
 uniform Scalar AC_dsmin;
 // physical grid
 uniform Scalar AC_xlen;
@@ -96,6 +96,9 @@ uniform Scalar AC_GM_star;
 uniform Scalar AC_unit_mass;
 uniform Scalar AC_sq2GM_star;
 uniform Scalar AC_cs2_sound;
+uniform Scalar AC_inv_dsx;
+uniform Scalar AC_inv_dsy;
+uniform Scalar AC_inv_dsz;
 
 /*
  * =============================================================================
@@ -131,3 +134,4 @@ uniform ScalarField VTXBUF_LNRHO;
 #if LSINK
 uniform ScalarField VTXBUF_ACCRETION;
 #endif
+

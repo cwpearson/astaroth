@@ -1,4 +1,17 @@
-#pragma once
+#include "stencil_definition.sdh"
+
+Preprocessed Scalar
+value(in ScalarField vertex)
+{
+    return vertex[vertexIdx];
+}
+
+Preprocessed Vector
+gradient(in ScalarField vertex)
+{
+    return (Vector){derx(vertexIdx, vertex), dery(vertexIdx, vertex), derz(vertexIdx, vertex)};
+}
+
 #if LUPWD
 
 Preprocessed Scalar
@@ -47,3 +60,16 @@ der6z_upwd(in ScalarField vertex)
 }
 
 #endif
+
+Preprocessed Matrix
+hessian(in ScalarField vertex)
+{
+    Matrix hessian;
+
+    hessian.row[0] = (Vector){derxx(vertexIdx, vertex), derxy(vertexIdx, vertex),
+                              derxz(vertexIdx, vertex)};
+    hessian.row[1] = (Vector){hessian.row[0].y, deryy(vertexIdx, vertex), deryz(vertexIdx, vertex)};
+    hessian.row[2] = (Vector){hessian.row[0].z, hessian.row[1].z, derzz(vertexIdx, vertex)};
+
+    return hessian;
+}
