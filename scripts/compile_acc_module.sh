@@ -10,5 +10,5 @@ echo "-- ACC project dir: ${MODULE_DIR}"
 for source in ${MODULE_DIR}/*.ac
 do
     ${ACC_DIR}/preprocess.sh $source -I ${MODULE_DIR} -I ${ACC_STDLIB_DIR}
-    ${ACC_BINARY_DIR}/acc < stencil_kernel.ac.preprocessed
+    ${ACC_BINARY_DIR}/acc < $(basename -- "$source").preprocessed
 done
