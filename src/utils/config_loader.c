@@ -95,10 +95,14 @@ update_config(AcMeshInfo* config)
     config->int_params[AC_nz_min] = STENCIL_ORDER / 2;
     config->int_params[AC_nz_max] = config->int_params[AC_nz] + STENCIL_ORDER / 2;
 
-    // Spacing
+    /*
+    // DEPRECATED: Spacing
+    // These do not have to be defined by empty projects any more.
+    // These should be set only if stdderiv.h is included
     config->real_params[AC_inv_dsx] = (AcReal)(1.) / config->real_params[AC_dsx];
     config->real_params[AC_inv_dsy] = (AcReal)(1.) / config->real_params[AC_dsy];
     config->real_params[AC_inv_dsz] = (AcReal)(1.) / config->real_params[AC_dsz];
+    */
 
     /* Additional helper params */
     // Int helpers
