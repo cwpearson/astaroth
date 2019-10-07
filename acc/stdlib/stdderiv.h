@@ -228,12 +228,28 @@ value(in VectorField uu)
 Preprocessed Vector
 gradient(in ScalarField vertex)
 {
+    assert(AC_dsx > 0);
+    assert(AC_dsy > 0);
+    assert(AC_dsz > 0);
+
+    assert(AC_inv_dsx > 0);
+    assert(AC_inv_dsy > 0);
+    assert(AC_inv_dsz > 0);
+
     return (Vector){derx(vertexIdx, vertex), dery(vertexIdx, vertex), derz(vertexIdx, vertex)};
 }
 
 Preprocessed Matrix
 hessian(in ScalarField vertex)
 {
+    assert(AC_dsx > 0);
+    assert(AC_dsy > 0);
+    assert(AC_dsz > 0);
+
+    assert(AC_inv_dsx > 0);
+    assert(AC_inv_dsy > 0);
+    assert(AC_inv_dsz > 0);
+
     Matrix mat;
 
     mat.row[0] = (Vector){derxx(vertexIdx, vertex), derxy(vertexIdx, vertex),
