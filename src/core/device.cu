@@ -80,17 +80,13 @@ DCONST(const AcReal3Param param)
 {
     return d_mesh_info.real3_params[param];
 }
-constexpr VertexBufferHandle
+static __device__ constexpr VertexBufferHandle
 DCONST(const VertexBufferHandle handle)
 {
     return handle;
 }
-#define DCONST_INT(x) DCONST(x)
-#define DCONST_INT3(x) DCONST(x)
-#define DCONST_REAL(x) DCONST(x)
-#define DCONST_REAL3(x) DCONST(x)
-#define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
-#define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_nx) + (k)*DCONST_INT(AC_nxy))
+#define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST(AC_mx) + (k)*DCONST(AC_mxy))
+#define DEVICE_1D_COMPDOMAIN_IDX(i, j, k) ((i) + (j)*DCONST(AC_nx) + (k)*DCONST(AC_nxy))
 #define globalGridN (d_mesh_info.int3_params[AC_global_grid_n])
 //#define globalMeshM // Placeholder
 //#define localMeshN // Placeholder

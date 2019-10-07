@@ -38,36 +38,35 @@ kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
     if (i_dst >= end.x || j_dst >= end.y || k_dst >= end.z)
         return;
 
-    // if (i_dst >= DCONST_INT(AC_mx) || j_dst >= DCONST_INT(AC_my) || k_dst >= DCONST_INT(AC_mz))
+    // if (i_dst >= DCONST(AC_mx) || j_dst >= DCONST(AC_my) || k_dst >= DCONST(AC_mz))
     //    return;
 
     // If destination index is inside the computational domain, return since
     // the boundary conditions are only applied to the ghost zones
-    if (i_dst >= DCONST_INT(AC_nx_min) && i_dst < DCONST_INT(AC_nx_max) &&
-        j_dst >= DCONST_INT(AC_ny_min) && j_dst < DCONST_INT(AC_ny_max) &&
-        k_dst >= DCONST_INT(AC_nz_min) && k_dst < DCONST_INT(AC_nz_max))
+    if (i_dst >= DCONST(AC_nx_min) && i_dst < DCONST(AC_nx_max) && j_dst >= DCONST(AC_ny_min) &&
+        j_dst < DCONST(AC_ny_max) && k_dst >= DCONST(AC_nz_min) && k_dst < DCONST(AC_nz_max))
         return;
 
     // Find the source index
     // Map to nx, ny, nz coordinates
-    int i_src = i_dst - DCONST_INT(AC_nx_min);
-    int j_src = j_dst - DCONST_INT(AC_ny_min);
-    int k_src = k_dst - DCONST_INT(AC_nz_min);
+    int i_src = i_dst - DCONST(AC_nx_min);
+    int j_src = j_dst - DCONST(AC_ny_min);
+    int k_src = k_dst - DCONST(AC_nz_min);
 
     // Translate (s.t. the index is always positive)
-    i_src += DCONST_INT(AC_nx);
-    j_src += DCONST_INT(AC_ny);
-    k_src += DCONST_INT(AC_nz);
+    i_src += DCONST(AC_nx);
+    j_src += DCONST(AC_ny);
+    k_src += DCONST(AC_nz);
 
     // Wrap
-    i_src %= DCONST_INT(AC_nx);
-    j_src %= DCONST_INT(AC_ny);
-    k_src %= DCONST_INT(AC_nz);
+    i_src %= DCONST(AC_nx);
+    j_src %= DCONST(AC_ny);
+    k_src %= DCONST(AC_nz);
 
     // Map to mx, my, mz coordinates
-    i_src += DCONST_INT(AC_nx_min);
-    j_src += DCONST_INT(AC_ny_min);
-    k_src += DCONST_INT(AC_nz_min);
+    i_src += DCONST(AC_nx_min);
+    j_src += DCONST(AC_ny_min);
+    k_src += DCONST(AC_nz_min);
 
     const int src_idx = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
