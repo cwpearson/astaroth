@@ -351,9 +351,15 @@ acDeviceAutoOptimize(const Device device)
                 cudaEventCreate(&tstart);
                 cudaEventCreate(&tstop);
 
-                cudaEventRecord(tstart); // ---------------------------------------- Timing start
-
+                // #ifdef AC_dt
                 acDeviceLoadScalarUniform(device, STREAM_DEFAULT, AC_dt, FLT_EPSILON);
+                /*#else
+                                ERROR("FATAL ERROR: acDeviceAutoOptimize() or
+                acDeviceIntegrateSubstep() was " "called, but AC_dt was not defined. Either define
+                it or call the generated " "device function acDeviceKernel_<kernel name> which does
+                not require the " "timestep to be defined.\n"); #endif*/
+
+                cudaEventRecord(tstart); // ---------------------------------------- Timing start
                 for (int i = 0; i < num_iterations; ++i)
                     solve<2><<<bpg, tpb>>>(start, end, device->vba);
 
@@ -666,7 +672,15 @@ acDeviceIntegrateSubstep(const Device device, const Stream stream, const int ste
                    (unsigned int)ceil(n.y / AcReal(tpb.y)), //
                    (unsigned int)ceil(n.z / AcReal(tpb.z)));
 
+    //#ifdef AC_dt
     acDeviceLoadScalarUniform(device, stream, AC_dt, dt);
+    /*#else
+        (void)dt;
+        ERROR("FATAL ERROR: acDeviceAutoOptimize() or acDeviceIntegrateSubstep() was "
+              "called, but AC_dt was not defined. Either define it or call the generated "
+              "device function acDeviceKernel_<kernel name> which does not require the "
+              "timestep to be defined.\n");
+    #endif*/
     if (step_number == 0)
         solve<0><<<bpg, tpb, 0, device->streams[stream]>>>(start, end, device->vba);
     else if (step_number == 1)
