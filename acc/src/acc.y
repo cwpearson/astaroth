@@ -14,7 +14,7 @@ int yyget_lineno();
 %}
 
 %token CONSTANT IN OUT UNIFORM
-%token IDENTIFIER NUMBER REAL_NUMBER
+%token IDENTIFIER NUMBER REAL_NUMBER DOUBLE_NUMBER
 %token RETURN
 %token SCALAR VECTOR MATRIX SCALARFIELD SCALARARRAY
 %token VOID INT INT3 COMPLEX
@@ -222,6 +222,7 @@ identifier: IDENTIFIER                                                          
           ;
 
 number: REAL_NUMBER                                                                     { $$ = astnode_create(NODE_REAL_NUMBER, NULL, NULL); astnode_set_buffer(yytext, $$); }
+      | DOUBLE_NUMBER                                                                   { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); $$->buffer[strlen($$->buffer) - 1] = '\0'; }
       | NUMBER                                                                          { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
       ;
 

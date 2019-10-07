@@ -302,18 +302,18 @@ stress_tensor(in VectorField vec)
 {
     Matrix S;
 
-    S.row[0].x = Scalar(2.0 / 3.0) * gradient(vec.x).x -
-                 Scalar(1.0 / 3.0) * (gradient(vec.y).y + gradient(vec.z).z);
-    S.row[0].y = Scalar(1.0 / 2.0) * (gradient(vec.x).y + gradient(vec.y).x);
-    S.row[0].z = Scalar(1.0 / 2.0) * (gradient(vec.x).z + gradient(vec.z).x);
+    S.row[0].x = (2.0 / 3.0) * gradient(vec.x).x -
+                 (1.0 / 3.0) * (gradient(vec.y).y + gradient(vec.z).z);
+    S.row[0].y = (1.0 / 2.0) * (gradient(vec.x).y + gradient(vec.y).x);
+    S.row[0].z = (1.0 / 2.0) * (gradient(vec.x).z + gradient(vec.z).x);
 
-    S.row[1].y = Scalar(2.0 / 3.0) * gradient(vec.y).y -
-                 Scalar(1.0 / 3.0) * (gradient(vec.x).x + gradient(vec.z).z);
+    S.row[1].y = (2.0 / 3.0) * gradient(vec.y).y -
+                 (1.0 / 3.0) * (gradient(vec.x).x + gradient(vec.z).z);
 
-    S.row[1].z = Scalar(1.0 / 2.0) * (gradient(vec.y).z + gradient(vec.z).y);
+    S.row[1].z = (1.0 / 2.0) * (gradient(vec.y).z + gradient(vec.z).y);
 
-    S.row[2].z = Scalar(2.0 / 3.0) * gradient(vec.z).z -
-                 Scalar(1.0 / 3.0) * (gradient(vec.x).x + gradient(vec.y).y);
+    S.row[2].z = (2.0 / 3.0) * gradient(vec.z).z -
+                 (1.0 / 3.0) * (gradient(vec.x).x + gradient(vec.y).y);
 
     S.row[1].x = S.row[0].y;
     S.row[2].x = S.row[0].z;

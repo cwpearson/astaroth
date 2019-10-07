@@ -39,7 +39,8 @@ L [a-zA-Z_]
 "return"    { return RETURN; }
 
 {D}+"."{D}+         { return REAL_NUMBER; } /* Literals */
-{D}+"."{D}+[fd]+    { return NUMBER; }
+{D}+"."{D}+d+       { return DOUBLE_NUMBER; }
+{D}+"."{D}+f+       { return NUMBER; }
 {D}+[lu]*           { return NUMBER; }
 {L}({L}|{D})*       { return IDENTIFIER; }
 \"(.)*\"            { return IDENTIFIER; } /* String */
