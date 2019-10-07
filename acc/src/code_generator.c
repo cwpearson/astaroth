@@ -74,7 +74,7 @@ static const char* translation_table[TRANSLATION_TABLE_SIZE] = {
     [UNIFORM]      = "uniform",
     // ETC
     [INPLACE_INC] = "++",
-    [INPLACE_DEC] = "--",
+    [INPLACE_DEC] = "--", // TODO remove, astnodesetbuffer
     // Unary
     [','] = ",",
     [';'] = ";\n",
@@ -233,6 +233,7 @@ print_symbol_table(void)
  * =============================================================================
  */
 static bool inside_declaration = false;
+static bool inside_kernel      = false;
 /*
  * =============================================================================
  * AST traversal
@@ -273,6 +274,8 @@ traverse(const ASTNode* node)
     }
     if (node->type == NODE_DECLARATION)
         inside_declaration = true;
+    if (node->token == KERNEL)
+        inside_kernel = true;
 
     if (node->type == NODE_FUNCTION_PARAMETER_DECLARATION) {
         // Boilerplates
@@ -395,17 +398,6 @@ traverse(const ASTNode* node)
                     fprintf(CUDAHEADER, "const __restrict__ %s* %s", //
                             translate(tspecifier), identifier);
                 }
-
-                /*
-            if (parent_function->type_qualifier == 0 ||
-                parent_function->type_qualifier == PREPROCESSED) {
-                fprintf(CUDAHEADER, "const __restrict__ %s* %s", //
-                        translate(tspecifier), identifier);
-            }
-            else {
-                fprintf(CUDAHEADER, "const %sData& %s", //
-                        translate(tspecifier), identifier);
-            }*/
             }
             else {
                 print_symbol2(&symbol_table[num_symbols[current_nest] - 1]);
@@ -439,10 +431,16 @@ traverse(const ASTNode* node)
         if (symbol) {
             // Uniforms
             if (symbol->type_qualifier == UNIFORM) {
-                fprintf(CUDAHEADER, "DCONST(%s) ", symbol->identifier);
+                printf("INSIDE KERNEL %d %s, type spec %d vs %d, %d\n", inside_kernel,
+                       symbol->identifier, symbol->type_specifier, SCALARARRAY,
+                       symbol->type_specifier == SCALARARRAY);
+                if (inside_kernel && symbol->type_specifier == SCALARARRAY)
+                    fprintf(CUDAHEADER, "buffer.profiles[%s] ", symbol->identifier);
+                else
+                    fprintf(CUDAHEADER, "DCONST(%s) ", symbol->identifier);
             }
             else if (node->parent->type != NODE_DECLARATION) {
-                // Regular translation
+                // Regular symbol translation
                 if (translate(node->token))
                     fprintf(CUDAHEADER, "%s ", translate(node->token));
                 if (node->buffer)
@@ -479,6 +477,7 @@ traverse(const ASTNode* node)
         while (symbol_table[num_symbols[current_nest] - 1].type == SYMBOLTYPE_FUNCTION_PARAMETER)
             --num_symbols[current_nest];
 
+        inside_kernel = false;
         // Drop temporaries declared with iteration statements
         // TODO
 
