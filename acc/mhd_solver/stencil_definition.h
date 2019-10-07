@@ -9,8 +9,8 @@
 #define LSINK (0)
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
-#define H_CONST (0) // TODO: make an actual config parameter
-#define C_CONST (0) // TODO: make an actual config parameter
+#define H_CONST (0)                             // TODO: make an actual config parameter
+#define C_CONST (0)                             // TODO: make an actual config parameter
 
 // Int params
 uniform int AC_max_steps;
