@@ -68,7 +68,7 @@ typedef struct {
     AcReal3 row[3];
 } AcMatrix;
 
-#include "stencil_defines.h" // User-defined header
+#include "user_defines.h" // User-defined header
 
 // clang-format off
 #define AC_FOR_BUILTIN_INT_PARAM_TYPES(FUNC)\
