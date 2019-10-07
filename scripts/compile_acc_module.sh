@@ -7,7 +7,8 @@ MODULE_DIR=$(readlink -f $1)
 echo "-- ACC binary dir:  ${ACC_BINARY_DIR}"
 echo "-- ACC stdlib dir:  ${ACC_STDLIB_DIR}"
 echo "-- ACC project dir: ${MODULE_DIR}"
-for source in ${MODULE_DIR}/*.sas ${MODULE_DIR}/*.sps ${MODULE_DIR}/*.sdh
+for source in ${MODULE_DIR}/*.ac
 do
-    ${ACC_DIR}/compile.sh ${ACC_BINARY_DIR}/acc $source -I ${MODULE_DIR} -I ${ACC_STDLIB_DIR}
+    ${ACC_DIR}/preprocess.sh $source -I ${MODULE_DIR} -I ${ACC_STDLIB_DIR}
+    ${ACC_BINARY_DIR}/acc < stencil_kernel.ac.preprocessed
 done
