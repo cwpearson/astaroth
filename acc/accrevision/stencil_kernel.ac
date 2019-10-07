@@ -1,3 +1,5 @@
+#include <stdderiv.h>
+
 #define LDENSITY (1)
 #define LHYDRO (1)
 #define LMAGNETIC (1)
@@ -8,6 +10,8 @@
 #define LSINK (0)
 
 #define AC_THERMAL_CONDUCTIVITY (AcReal(0.001)) // TODO: make an actual config parameter
+#define H_CONST (0) // TODO: make an actual config parameter
+#define C_CONST (0) // TODO: make an actual config parameter
 
 // Int params
 uniform int AC_max_steps;
@@ -20,9 +24,6 @@ uniform int AC_start_step;
 uniform Scalar AC_dt;
 uniform Scalar AC_max_time;
 // Spacing
-uniform Scalar AC_dsx;
-uniform Scalar AC_dsy;
-uniform Scalar AC_dsz;
 uniform Scalar AC_dsmin;
 // physical grid
 uniform Scalar AC_xlen;
@@ -96,9 +97,6 @@ uniform Scalar AC_GM_star;
 uniform Scalar AC_unit_mass;
 uniform Scalar AC_sq2GM_star;
 uniform Scalar AC_cs2_sound;
-uniform Scalar AC_inv_dsx;
-uniform Scalar AC_inv_dsy;
-uniform Scalar AC_inv_dsz;
 
 /*
  * =============================================================================
@@ -134,19 +132,6 @@ uniform ScalarField VTXBUF_LNRHO;
 #if LSINK
 uniform ScalarField VTXBUF_ACCRETION;
 #endif
-
-
-Preprocessed Scalar
-value(in ScalarField vertex)
-{
-    return vertex[vertexIdx];
-}
-
-Preprocessed Vector
-gradient(in ScalarField vertex)
-{
-    return (Vector){derx(vertexIdx, vertex), dery(vertexIdx, vertex), derz(vertexIdx, vertex)};
-}
 
 #if LUPWD
 
@@ -197,24 +182,6 @@ der6z_upwd(in ScalarField vertex)
 
 #endif
 
-Preprocessed Matrix
-hessian(in ScalarField vertex)
-{
-    Matrix hessian;
-
-    hessian.row[0] = (Vector){derxx(vertexIdx, vertex), derxy(vertexIdx, vertex),
-                              derxz(vertexIdx, vertex)};
-    hessian.row[1] = (Vector){hessian.row[0].y, deryy(vertexIdx, vertex), deryz(vertexIdx, vertex)};
-    hessian.row[2] = (Vector){hessian.row[0].z, hessian.row[1].z, derzz(vertexIdx, vertex)};
-
-    return hessian;
-}
-
-Device Vector
-value(in VectorField uu)
-{
-    return (Vector){value(uu.x), value(uu.y), value(uu.z)};
-}
 
 #if LUPWD
 Device Scalar
@@ -492,9 +459,8 @@ induction(in VectorField uu, in VectorField aa)
 Device Scalar
 lnT(in ScalarField ss, in ScalarField lnrho)
 {
-    const Scalar lnT = AC_lnT0 + AC_gamma * value(ss) / AC_cp_sound +
+    return AC_lnT0 + AC_gamma * value(ss) / AC_cp_sound +
                        (AC_gamma - Scalar(1.0)) * (value(lnrho) - AC_lnrho0);
-    return lnT;
 }
 
 // Nabla dot (K nabla T) / (rho T)

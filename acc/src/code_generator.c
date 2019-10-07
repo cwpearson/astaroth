@@ -153,6 +153,13 @@ add_symbol(const SymbolType type, const int tqualifier, const int tspecifier, co
 {
     assert(num_symbols[current_nest] < SYMBOL_TABLE_SIZE);
 
+    if (symboltable_lookup(id) && type != SYMBOLTYPE_FUNCTION) {
+        fprintf(stderr,
+                "Syntax error. Symbol '%s' is ambiguous, declared multiple times in the same scope"
+                " (shadowing).\n",
+                id);
+    }
+
     symbol_table[num_symbols[current_nest]].type           = type;
     symbol_table[num_symbols[current_nest]].type_qualifier = tqualifier;
     symbol_table[num_symbols[current_nest]].type_specifier = tspecifier;
@@ -222,25 +229,88 @@ print_symbol_table(void)
  * Traversal state
  * =============================================================================
  */
+static bool inside_declaration = false;
 /*
  * =============================================================================
  * AST traversal
  * =============================================================================
  */
+/*
+static bool
+introspect(const ASTNode* node, const NodeType type)
+{
+   assert(node);
+
+   ASTNode* parent = node->parent;
+   while (parent) {
+       if (parent->type == type)
+           return true;
+       else
+           parent = parent->parent;
+   }
+   return false;
+}
+*/
 
 static void
 traverse(const ASTNode* node)
 {
     // Prefix translation
-    if (translate(node->prefix))
+    if (!inside_declaration && translate(node->prefix))
         fprintf(CUDAHEADER, "%s", translate(node->prefix));
 
     // Prefix logic
     if (node->type == NODE_COMPOUND_STATEMENT) {
+        // if (node->type == NODE_FUNCTION_PARAMETER_DECLARATION ||
+        //   node->type == NODE_ITERATION_STATEMENT) {
         assert(current_nest < MAX_NESTS);
 
         ++current_nest;
         num_symbols[current_nest] = num_symbols[current_nest - 1];
+    }
+    if (node->type == NODE_DECLARATION)
+        inside_declaration = true;
+
+    if (node->type == NODE_FUNCTION_PARAMETER_DECLARATION) {
+        // Boilerplates
+        const ASTNode* typedecl = node->parent->lhs->lhs;
+        const ASTNode* typequal = typedecl->lhs;
+        printf("typedecl %d\n", typedecl->type);
+        assert(typedecl->type == NODE_TYPE_DECLARATION);
+        if (typequal->type == NODE_TYPE_QUALIFIER) {
+            if (typequal->token == KERNEL) {
+                fprintf(CUDAHEADER, "GEN_KERNEL_PARAM_BOILERPLATE");
+                if (node->lhs != NULL) {
+                    fprintf(
+                        stderr,
+                        "Syntax error: function parameters for Kernel functions not allowed!\n");
+                }
+            }
+            else if (typequal->token == PREPROCESSED) {
+                fprintf(CUDAHEADER, "GEN_PREPROCESSED_PARAM_BOILERPLATE, ");
+            }
+        }
+    }
+
+    if (node->type == NODE_COMPOUND_STATEMENT) {
+        if (node->parent->type == NODE_FUNCTION_DEFINITION) {
+            const Symbol* symbol = symboltable_lookup(node->parent->lhs->lhs->rhs->buffer);
+            if (symbol && symbol->type_qualifier == KERNEL) {
+                fprintf(CUDAHEADER, "GEN_KERNEL_BUILTIN_VARIABLES_BOILERPLATE();");
+                for (int i = 0; i < num_symbols[current_nest]; ++i) {
+                    if (symbol_table[i].type_qualifier == IN) {
+                        fprintf(CUDAHEADER, "const %sData %s = READ(handle_%s);\n",
+                                translate(symbol_table[i].type_specifier),
+                                symbol_table[i].identifier, symbol_table[i].identifier);
+                    }
+                    else if (symbol_table[i].type_qualifier == OUT) {
+                        fprintf(CUDAHEADER, "%s %s = READ_OUT(handle_%s);",
+                                translate(symbol_table[i].type_specifier),
+                                symbol_table[i].identifier, symbol_table[i].identifier);
+                    }
+                }
+            }
+        }
     }
 
     // Traverse LHS
@@ -248,46 +318,17 @@ traverse(const ASTNode* node)
         traverse(node->lhs);
 
     // Infix translation
-    if (translate(node->infix))
+    if (!inside_declaration && translate(node->infix))
         fprintf(CUDAHEADER, "%s", translate(node->infix));
 
     // Infix logic
-    // TODO
+    // If the node is a subscript expression and the expression list inside it is not empty
+    if (node->type == NODE_MULTIDIM_SUBSCRIPT_EXPRESSION && node->rhs)
+        fprintf(CUDAHEADER, "IDX(");
 
     // Traverse RHS
     if (node->rhs)
         traverse(node->rhs);
-
-    // Postfix translation
-    if (translate(node->postfix))
-        fprintf(CUDAHEADER, "%s", translate(node->postfix));
-
-    // Translate existing symbols
-    const Symbol* symbol = symboltable_lookup(node->buffer);
-    if (symbol) {
-        // Uniforms
-        if (symbol->type_qualifier == UNIFORM) {
-            fprintf(CUDAHEADER, "DCONST(%s) ", symbol->identifier);
-        }
-        else {
-            // print_symbol2(symbol);
-        }
-    }
-    else {
-        /*
-        // Translate literals
-        if (translate(node->token))
-            printf("%s ", translate(node->token));
-        if (node->buffer) {
-            if (node->type == NODE_REAL_NUMBER) {
-                printf("%s(%s) ", translate(SCALAR), node->buffer); // Cast to correct precision
-            }
-            else {
-                printf("%s ", node->buffer);
-            }
-        }
-        */
-    }
 
     // Add new symbols to the symbol table
     if (node->type == NODE_DECLARATION) {
@@ -311,6 +352,7 @@ traverse(const ASTNode* node)
         const char* identifier = node->rhs->type == NODE_IDENTIFIER ? node->rhs->buffer
                                                                     : node->rhs->lhs->buffer;
         add_symbol(stype, tqualifier, tspecifier, identifier);
+        printf("Added %s\n", identifier);
 
         // Translate the new symbol
         if (tqualifier == UNIFORM) {
@@ -328,22 +370,41 @@ traverse(const ASTNode* node)
             fprintf(CUDAHEADER, "%s %s\npreprocessed_%s", //
                     translate(tqualifier), translate(tspecifier), identifier);
         }
+        else if (stype == SYMBOLTYPE_FUNCTION) {
+            // Stencil assembly stage device function
+            fprintf(CUDAHEADER, "%s %s\n%s", //
+                    translate(DEVICE), translate(tspecifier), identifier);
+        }
         else if (stype == SYMBOLTYPE_FUNCTION_PARAMETER) {
             tmp = tmp->parent;
             assert(tmp->type = NODE_FUNCTION_DECLARATION);
+
             const Symbol* parent_function = symboltable_lookup(tmp->lhs->rhs->buffer);
             assert(parent_function);
 
             if (tqualifier == IN || tqualifier == OUT) {
-                if (parent_function->type_qualifier == 0 ||
-                    parent_function->type_qualifier == PREPROCESSED) {
-                    fprintf(CUDAHEADER, "const __restrict__ %s* %s", //
-                            translate(tspecifier), identifier);
-                }
-                else {
+                if (tmp->lhs->lhs->lhs->token == DEVICE) {
                     fprintf(CUDAHEADER, "const %sData& %s", //
                             translate(tspecifier), identifier);
                 }
+                else {
+                    fprintf(CUDAHEADER, "const __restrict__ %s* %s", //
+                            translate(tspecifier), identifier);
+                }
+
+                /*
+            if (parent_function->type_qualifier == 0 ||
+                parent_function->type_qualifier == PREPROCESSED) {
+                fprintf(CUDAHEADER, "const __restrict__ %s* %s", //
+                        translate(tspecifier), identifier);
+            }
+            else {
+                fprintf(CUDAHEADER, "const %sData& %s", //
+                        translate(tspecifier), identifier);
+            }*/
+            }
+            else {
+                print_symbol2(&symbol_table[num_symbols[current_nest] - 1]);
             }
         }
         else if (tqualifier == IN || tqualifier == OUT) { // Global in/out declarator
@@ -356,22 +417,183 @@ traverse(const ASTNode* node)
             // Do a regular translation
             print_symbol2(&symbol_table[num_symbols[current_nest] - 1]);
         }
+
+        if (node->rhs->type == NODE_ARRAY_DECLARATION) {
+            // Traverse the expression once again, this time with
+            // "inside_declaration" flag off
+            inside_declaration = false;
+            fprintf(CUDAHEADER, "%s ", translate(node->rhs->infix));
+            if (node->rhs->rhs)
+                traverse(node->rhs->rhs);
+            fprintf(CUDAHEADER, "%s ", translate(node->rhs->postfix));
+        }
+    }
+    else {
+        // Translate existing symbols
+        const Symbol* symbol = symboltable_lookup(node->buffer);
+
+        if (symbol) {
+            // Uniforms
+            if (symbol->type_qualifier == UNIFORM) {
+                fprintf(CUDAHEADER, "DCONST(%s) ", symbol->identifier);
+            }
+            else if (node->parent->type != NODE_DECLARATION) {
+                // Regular translation
+                if (translate(node->token))
+                    fprintf(CUDAHEADER, "%s ", translate(node->token));
+                if (node->buffer)
+                    fprintf(CUDAHEADER, "%s ", node->buffer);
+            }
+        }
+        else if (!inside_declaration) {
+            // Literal translation
+            if (translate(node->token))
+                fprintf(CUDAHEADER, "%s ", translate(node->token));
+            if (node->buffer) {
+                if (node->type == NODE_REAL_NUMBER) {
+                    fprintf(CUDAHEADER, "%s(%s) ", translate(SCALAR),
+                            node->buffer); // Cast to correct precision
+                }
+                else {
+                    fprintf(CUDAHEADER, "%s ", node->buffer);
+                }
+            }
+        }
     }
 
     // Postfix logic
+    // If the node is a subscript expression and the expression list inside it is not empty
+    if (node->type == NODE_MULTIDIM_SUBSCRIPT_EXPRESSION && node->rhs)
+        fprintf(CUDAHEADER, ")"); // Closing bracket of IDX()
+
     if (node->type == NODE_COMPOUND_STATEMENT) {
+        // if (node->type == NODE_FUNCTION_DEFINITION || node->type == NODE_ITERATION_STATEMENT) {
         assert(current_nest > 0);
         --current_nest;
 
+        // Drop function parameters
+        while (symbol_table[num_symbols[current_nest] - 1].type == SYMBOLTYPE_FUNCTION_PARAMETER)
+            --num_symbols[current_nest];
+
+        // Drop temporaries declared with iteration statements
+        // TODO
+
         printf("Dropped rest of the symbol table, from %lu to %lu\n", num_symbols[current_nest + 1],
                num_symbols[current_nest]);
+
+        // Kernel writeback boilerplate
+        if (node->parent->type == NODE_FUNCTION_DEFINITION) {
+            const Symbol* symbol = symboltable_lookup(node->parent->lhs->lhs->rhs->buffer);
+            if (symbol && symbol->type_qualifier == KERNEL) {
+                for (int i = 0; i < num_symbols[current_nest]; ++i) {
+                    if (symbol_table[i].type_qualifier == OUT) {
+                        fprintf(CUDAHEADER, "WRITE_OUT(handle_%s, %s);\n",
+                                symbol_table[i].identifier, symbol_table[i].identifier);
+                    }
+                }
+            }
+        }
     }
+    if (node->type == NODE_DECLARATION)
+        inside_declaration = false;
+
+    // Postfix translation
+    if (!inside_declaration && translate(node->postfix))
+        fprintf(CUDAHEADER, "%s", translate(node->postfix));
+}
+
+static void
+gen_preprocessed_forward_declarations(void)
+{
 }
 
 static void
 generate_preprocessed_structures(void)
 {
-    // TODO
+    // Data structure
+    fprintf(CUDAHEADER, "\n");
+
+    // Read data to the data struct
+    fprintf(CUDAHEADER, "static __device__ __forceinline__ AcRealData\
+            read_data(const int3& vertexIdx,\
+                const int3& globalVertexIdx,\
+            AcReal* __restrict__ buf[], const int handle)\
+            {\n\
+                %sData data;\n",
+            translate(SCALAR));
+
+    for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
+        if (symbol_table[i].type_qualifier == PREPROCESSED)
+            fprintf(CUDAHEADER,
+                    "data.%s = preprocessed_%s(vertexIdx, globalVertexIdx, buf[handle]);\n",
+                    symbol_table[i].identifier, symbol_table[i].identifier);
+    }
+    fprintf(CUDAHEADER, "return data;\n");
+    fprintf(CUDAHEADER, "}\n");
+
+    // Functions for accessing the data struct members
+    for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
+        if (symbol_table[i].type_qualifier == PREPROCESSED)
+            fprintf(CUDAHEADER, "static __device__ __forceinline__ %s\
+                    %s(const AcRealData& data)\
+                    {\n\
+                        return data.%s;\
+                    }\n",
+                    translate(symbol_table[i].type_specifier), symbol_table[i].identifier,
+                    symbol_table[i].identifier);
+    }
+
+    // Syntactic sugar: Vector data struct
+    fprintf(CUDAHEADER, "static __device__ __forceinline__ AcReal3Data\
+        read_data(const int3& vertexIdx,\
+                  const int3& globalVertexIdx,\
+                  AcReal* __restrict__ buf[], const int3& handle)\
+        {\
+            AcReal3Data data;\
+        \
+            data.x = read_data(vertexIdx, globalVertexIdx, buf, handle.x);\
+            data.y = read_data(vertexIdx, globalVertexIdx, buf, handle.y);\
+            data.z = read_data(vertexIdx, globalVertexIdx, buf, handle.z);\
+        \
+            return data;\
+        }\
+    ");
+
+    const size_t max_buflen = 65536;
+    char buffer[max_buflen];
+    rewind(CUDAHEADER);
+    const size_t buflen = fread(buffer, sizeof(char), max_buflen, CUDAHEADER);
+    fclose(CUDAHEADER);
+    CUDAHEADER = fopen("user_kernels.h", "w+");
+
+    fprintf(CUDAHEADER, "#pragma once\n");
+    fprintf(CUDAHEADER, "typedef struct {\n");
+    for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
+        if (symbol_table[i].type_qualifier == PREPROCESSED)
+            fprintf(CUDAHEADER, "%s %s;\n", translate(symbol_table[i].type_specifier),
+                    symbol_table[i].identifier);
+    }
+    fprintf(CUDAHEADER, "} %sData;\n", translate(SCALAR));
+    fprintf(CUDAHEADER, "typedef struct {\
+                            AcRealData x;\
+                            AcRealData y;\
+                            AcRealData z;\
+                        } AcReal3Data;\n");
+    fprintf(CUDAHEADER, "static __device__ AcRealData\
+                         read_data(const int3& vertexIdx,\
+                                   const int3& globalVertexIdx,\
+                                   AcReal* __restrict__ buf[], const int handle);\n");
+    fprintf(CUDAHEADER, "static __device__ AcReal3Data\
+                         read_data(const int3& vertexIdx,\
+                                   const int3& globalVertexIdx,\
+                                   AcReal* __restrict__ buf[], const int3& handle);\n");
+    for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
+        if (symbol_table[i].type_qualifier == PREPROCESSED)
+            fprintf(CUDAHEADER, "static __device__ %s %s(const AcRealData& data);\n",
+                    translate(symbol_table[i].type_specifier), symbol_table[i].identifier);
+    }
+
+    fwrite(buffer, sizeof(char), buflen, CUDAHEADER);
 }
 
 static void
@@ -440,7 +662,7 @@ static void
 generate_library_hooks(void)
 {
     for (int i = 0; i < num_symbols[current_nest]; ++i) {
-        if (symbol_table[i].type_qualifier == KERNEL && symbol_table[i].type_qualifier == UNIFORM) {
+        if (symbol_table[i].type_qualifier == KERNEL) {
             fprintf(CUDAHEADER, "GEN_DEVICE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
         }
     }
@@ -464,6 +686,7 @@ main(int argc, char** argv)
 
     traverse(root);
     generate_header();
+    generate_preprocessed_structures();
     generate_library_hooks();
 
     print_symbol_table();

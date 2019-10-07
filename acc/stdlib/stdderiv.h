@@ -2,6 +2,13 @@
 #define STENCIL_ORDER (6)
 #endif
 
+uniform Scalar AC_dsx;
+uniform Scalar AC_dsy;
+uniform Scalar AC_dsz;
+uniform Scalar AC_inv_dsx;
+uniform Scalar AC_inv_dsy;
+uniform Scalar AC_inv_dsz;
+
 Scalar
 first_derivative(Scalar pencil[], Scalar inv_ds)
 {
@@ -212,6 +219,12 @@ value(in ScalarField vertex)
     return vertex[vertexIdx];
 }
 
+Device Vector
+value(in VectorField uu)
+{
+    return (Vector){value(uu.x), value(uu.y), value(uu.z)};
+}
+
 Preprocessed Vector
 gradient(in ScalarField vertex)
 {
@@ -221,12 +234,106 @@ gradient(in ScalarField vertex)
 Preprocessed Matrix
 hessian(in ScalarField vertex)
 {
-    Matrix hessian;
+    Matrix mat;
 
-    hessian.row[0] = (Vector){derxx(vertexIdx, vertex), derxy(vertexIdx, vertex),
-                              derxz(vertexIdx, vertex)};
-    hessian.row[1] = (Vector){hessian.row[0].y, deryy(vertexIdx, vertex), deryz(vertexIdx, vertex)};
-    hessian.row[2] = (Vector){hessian.row[0].z, hessian.row[1].z, derzz(vertexIdx, vertex)};
+    mat.row[0] = (Vector){derxx(vertexIdx, vertex), derxy(vertexIdx, vertex),
+                          derxz(vertexIdx, vertex)};
+    mat.row[1] = (Vector){mat.row[0].y, deryy(vertexIdx, vertex), deryz(vertexIdx, vertex)};
+    mat.row[2] = (Vector){mat.row[0].z, mat.row[1].z, derzz(vertexIdx, vertex)};
 
-    return hessian;
+    return mat;
+}
+
+/////////////////// NEW
+
+Device Scalar
+laplace(in ScalarField data)
+{
+    return hessian(data).row[0].x + hessian(data).row[1].y + hessian(data).row[2].z;
+}
+
+Device Scalar
+divergence(in VectorField vec)
+{
+    return gradient(vec.x).x + gradient(vec.y).y + gradient(vec.z).z;
+}
+
+Device Vector
+laplace_vec(in VectorField vec)
+{
+    return (Vector){laplace(vec.x), laplace(vec.y), laplace(vec.z)};
+}
+
+Device Vector
+curl(in VectorField vec)
+{
+    return (Vector){gradient(vec.z).y - gradient(vec.y).z, gradient(vec.x).z - gradient(vec.z).x,
+                    gradient(vec.y).x - gradient(vec.x).y};
+}
+
+Device Vector
+gradient_of_divergence(in VectorField vec)
+{
+    return (Vector){hessian(vec.x).row[0].x + hessian(vec.y).row[0].y + hessian(vec.z).row[0].z,
+                    hessian(vec.x).row[1].x + hessian(vec.y).row[1].y + hessian(vec.z).row[1].z,
+                    hessian(vec.x).row[2].x + hessian(vec.y).row[2].y + hessian(vec.z).row[2].z};
+}
+
+// Takes uu gradients and returns S
+Device Matrix
+stress_tensor(in VectorField vec)
+{
+    Matrix S;
+
+    S.row[0].x = Scalar(2.0 / 3.0) * gradient(vec.x).x -
+                 Scalar(1.0 / 3.0) * (gradient(vec.y).y + gradient(vec.z).z);
+    S.row[0].y = Scalar(1.0 / 2.0) * (gradient(vec.x).y + gradient(vec.y).x);
+    S.row[0].z = Scalar(1.0 / 2.0) * (gradient(vec.x).z + gradient(vec.z).x);
+
+    S.row[1].y = Scalar(2.0 / 3.0) * gradient(vec.y).y -
+                 Scalar(1.0 / 3.0) * (gradient(vec.x).x + gradient(vec.z).z);
+
+    S.row[1].z = Scalar(1.0 / 2.0) * (gradient(vec.y).z + gradient(vec.z).y);
+
+    S.row[2].z = Scalar(2.0 / 3.0) * gradient(vec.z).z -
+                 Scalar(1.0 / 3.0) * (gradient(vec.x).x + gradient(vec.y).y);
+
+    S.row[1].x = S.row[0].y;
+    S.row[2].x = S.row[0].z;
+    S.row[2].y = S.row[1].z;
+
+    return S;
+}
+
+Device Scalar
+contract(const Matrix mat)
+{
+    Scalar res = 0;
+
+    for (int i = 0; i < 3; ++i) {
+        res = res + dot(mat.row[i], mat.row[i]);
+    }
+
+    return res;
+}
+
+///////////////////// NEW NEW BLAS
+
+Device Scalar
+length(const Vector vec)
+{
+    return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+}
+
+Device Scalar
+reciprocal_len(const Vector vec)
+{
+    return rsqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+}
+
+Device Vector
+normalized(const Vector vec)
+{
+    const Scalar inv_len = reciprocal_len(vec);
+    return inv_len * vec;
 }

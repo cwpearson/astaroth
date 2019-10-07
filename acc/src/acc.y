@@ -80,8 +80,8 @@ else_selection_statement: compound_statement                                    
 elif_selection_statement: ELIF expression else_selection_statement                      { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = ELIF; }
                         ;
 
-iteration_statement: WHILE expression compound_statement                                { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = WHILE; }
-                   | FOR for_expression compound_statement                              { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = FOR; }
+iteration_statement: WHILE expression compound_statement                                { $$ = astnode_create(NODE_ITERATION_STATEMENT, $2, $3); $$->prefix = WHILE; }
+                   | FOR for_expression compound_statement                              { $$ = astnode_create(NODE_ITERATION_STATEMENT, $2, $3); $$->prefix = FOR; }
                    ;
 
 for_expression: '(' for_init_param for_other_params ')'                                 { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = '('; $$->postfix = ')'; }
@@ -124,8 +124,8 @@ declaration: type_declaration identifier                                        
            | type_declaration array_declaration                                         { $$ = astnode_create(NODE_DECLARATION, $1, $2); }
            ;
 
-array_declaration: identifier '[' ']'                                                   { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); $$->infix = '['; $$->postfix = ']'; }
-                 | identifier '[' expression ']'                                        { $$ = astnode_create(NODE_UNKNOWN, $1, $3); $$->infix = '['; $$->postfix = ']'; }
+array_declaration: identifier '[' ']'                                                   { $$ = astnode_create(NODE_ARRAY_DECLARATION, $1, NULL); $$->infix = '['; $$->postfix = ']'; }
+                 | identifier '[' expression ']'                                        { $$ = astnode_create(NODE_ARRAY_DECLARATION, $1, $3); $$->infix = '['; $$->postfix = ']'; }
                  ;
 
 type_declaration: type_specifier                                                        { $$ = astnode_create(NODE_TYPE_DECLARATION, $1, NULL); }
