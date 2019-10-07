@@ -71,26 +71,9 @@ typedef struct {
 #include "user_defines.h" // User-defined header
 
 // clang-format off
-#define AC_FOR_BUILTIN_INT_PARAM_TYPES(FUNC)\
-        FUNC(AC_nx), \
-        FUNC(AC_ny), \
-        FUNC(AC_nz), \
-        FUNC(AC_mx), \
-        FUNC(AC_my), \
-        FUNC(AC_mz), \
-        FUNC(AC_nx_min), \
-        FUNC(AC_ny_min), \
-        FUNC(AC_nz_min), \
-        FUNC(AC_nx_max), \
-        FUNC(AC_ny_max), \
-        FUNC(AC_nz_max), \
-        FUNC(AC_mxy),\
-        FUNC(AC_nxy),\
-        FUNC(AC_nxyz),\
+#define AC_FOR_BUILTIN_INT_PARAM_TYPES(FUNC)
 
-#define AC_FOR_BUILTIN_INT3_PARAM_TYPES(FUNC)\
-        FUNC(AC_global_grid_n),\
-        FUNC(AC_multigpu_offset),
+#define AC_FOR_BUILTIN_INT3_PARAM_TYPES(FUNC)
 
 #define AC_FOR_BUILTIN_REAL_PARAM_TYPES(FUNC)
 

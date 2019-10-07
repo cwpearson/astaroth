@@ -507,11 +507,6 @@ traverse(const ASTNode* node)
 }
 
 static void
-gen_preprocessed_forward_declarations(void)
-{
-}
-
-static void
 generate_preprocessed_structures(void)
 {
     // Data structure
@@ -688,6 +683,27 @@ main(int argc, char** argv)
     assert(DSLHEADER);
     assert(CUDAHEADER);
 
+    // Add built-in params
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nx");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_ny");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nz");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_mx");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_my");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_mz");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nx_min");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_ny_min");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nz_min");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nx_max");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_ny_max");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nz_max");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_mxy");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nxy");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, "AC_nxyz");
+
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT3, "AC_global_grid_n");
+    add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT3, "AC_multigpu_offset");
+
+    // Generate
     traverse(root);
     generate_header();
     generate_preprocessed_structures();
