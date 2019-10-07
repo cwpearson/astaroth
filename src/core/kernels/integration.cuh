@@ -29,6 +29,9 @@
 
 #include <assert.h>
 
+static_assert(NUM_VTXBUF_HANDLES > 0,
+              "ERROR: NUM_VTXBUF_HANDLES (uniform ScalarFields) must be > 0");
+
 static __device__ constexpr int
 IDX(const int i)
 {

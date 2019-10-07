@@ -417,7 +417,7 @@ acDeviceSwapBuffers(const Device device)
 
 AcResult
 acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcRealParam param,
-                           const AcReal value)
+                          const AcReal value)
 {
     cudaSetDevice(device->id);
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
@@ -428,7 +428,7 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
 
 AcResult
 acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal3Param param,
-                           const AcReal3 value)
+                          const AcReal3 value)
 {
     cudaSetDevice(device->id);
     const size_t offset = (size_t)&d_mesh_info.real3_params[param] - (size_t)&d_mesh_info;
@@ -439,7 +439,7 @@ acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal
 
 AcResult
 acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntParam param,
-                        const int value)
+                       const int value)
 {
     cudaSetDevice(device->id);
     const size_t offset = (size_t)&d_mesh_info.int_params[param] - (size_t)&d_mesh_info;
@@ -450,7 +450,7 @@ acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntPara
 
 AcResult
 acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Param param,
-                         const int3 value)
+                        const int3 value)
 {
     cudaSetDevice(device->id);
     const size_t offset = (size_t)&d_mesh_info.int3_params[param] - (size_t)&d_mesh_info;
@@ -465,9 +465,9 @@ acDeviceLoadScalarArray(const Device device, const Stream stream, const ScalarAr
 {
     cudaSetDevice(device->id);
 
-    ERRCHK(start + num <= max(device->local_config.int_params[AC_mx],
-                              max(device->local_config.int_params[AC_my],
-                                  device->local_config.int_params[AC_mz])));
+    ERRCHK((int)(start + num) <= max(device->local_config.int_params[AC_mx],
+                                     max(device->local_config.int_params[AC_my],
+                                         device->local_config.int_params[AC_mz])));
 
     ERRCHK_CUDA(cudaMemcpyAsync(&device->vba.profiles[handle][start], data, sizeof(data[0]) * num,
                                 cudaMemcpyHostToDevice, device->streams[stream]));
