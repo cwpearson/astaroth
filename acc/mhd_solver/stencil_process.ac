@@ -1,13 +1,10 @@
-#include "stencil_definition.sdh"
+#include <stdderiv.h>
 
-Vector
-value(in VectorField uu)
-{
-    return (Vector){value(uu.x), value(uu.y), value(uu.z)};
-}
+#include "stencil_definition.h"
+#include "stencil_assembly.h"
 
 #if LUPWD
-Scalar
+Device Scalar
 upwd_der6(in VectorField uu, in ScalarField lnrho)
 {
     Scalar uux = fabs(value(uu).x);
@@ -17,14 +14,14 @@ upwd_der6(in VectorField uu, in ScalarField lnrho)
 }
 #endif
 
-Matrix
+Device Matrix
 gradients(in VectorField uu)
 {
     return (Matrix){gradient(uu.x), gradient(uu.y), gradient(uu.z)};
 }
 
 #if LSINK
-Vector
+Device Vector
 sink_gravity(int3 globalVertexIdx){
     int accretion_switch = int(AC_switch_accretion);
     if (accretion_switch == 1){
@@ -55,7 +52,7 @@ sink_gravity(int3 globalVertexIdx){
 
 #if LSINK
 // Give Truelove density
-Scalar
+Device Scalar
 truelove_density(in ScalarField lnrho){
     const Scalar rho = exp(value(lnrho));
     const Scalar Jeans_length_squared = (M_PI * AC_cs2_sound) / (AC_G_const * rho);
@@ -68,7 +65,7 @@ truelove_density(in ScalarField lnrho){
 }
 
 // This controls accretion of density/mass to the sink particle.
-Scalar
+Device Scalar
 sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
     const Vector grid_pos = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
                                      (globalVertexIdx.y - DCONST(AC_ny_min)) * AC_dsy,
@@ -108,7 +105,7 @@ sink_accretion(int3 globalVertexIdx, in ScalarField lnrho, Scalar dt){
 }
 
 // This controls accretion of velocity to the sink particle.
-Vector
+Device Vector
 sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
     const Vector grid_pos = (Vector){(globalVertexIdx.x - DCONST(AC_nx_min)) * AC_dsx,
                                      (globalVertexIdx.y - DCONST(AC_ny_min)) * AC_dsy,
@@ -153,7 +150,7 @@ sink_accretion_velocity(int3 globalVertexIdx, in VectorField uu, Scalar dt) {
 #endif
 
 
-Scalar
+Device Scalar
 continuity(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar dt)
 {
     return -dot(value(uu), gradient(lnrho))
@@ -170,7 +167,7 @@ continuity(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar
 
 
 #if LENTROPY
-Vector
+Device Vector
 momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in ScalarField ss, in VectorField aa, Scalar dt)
 {
     const Matrix S   = stress_tensor(uu);
@@ -204,7 +201,7 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
     return mom;
 }
 #elif LTEMPERATURE
-Vector
+Device Vector
 momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in ScalarField tt)
 {
     Vector mom;
@@ -230,7 +227,7 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, in Scala
     return mom;
 }
 #else
-Vector
+Device Vector
 momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar dt)
 {
     Vector mom;
@@ -261,7 +258,7 @@ momentum(int3 globalVertexIdx, in VectorField uu, in ScalarField lnrho, Scalar d
 }
 #endif
 
-Vector
+Device Vector
 induction(in VectorField uu, in VectorField aa)
 {
     // Note: We do (-nabla^2 A + nabla(nabla dot A)) instead of (nabla x (nabla
@@ -279,7 +276,7 @@ induction(in VectorField uu, in VectorField aa)
 }
 
 #if LENTROPY
-Scalar
+Device Scalar
 lnT(in ScalarField ss, in ScalarField lnrho)
 {
     const Scalar lnT = AC_lnT0 + AC_gamma * value(ss) / AC_cp_sound +
@@ -288,7 +285,7 @@ lnT(in ScalarField ss, in ScalarField lnrho)
 }
 
 // Nabla dot (K nabla T) / (rho T)
-Scalar
+Device Scalar
 heat_conduction(in ScalarField ss, in ScalarField lnrho)
 {
     const Scalar inv_AC_cp_sound = AcReal(1.0) / AC_cp_sound;
@@ -306,13 +303,13 @@ heat_conduction(in ScalarField ss, in ScalarField lnrho)
     return AC_cp_sound * chi * (first_term + dot(second_term, third_term));
 }
 
-Scalar
+Device Scalar
 heating(const int i, const int j, const int k)
 {
     return 1;
 }
 
-Scalar
+Device Scalar
 entropy(in ScalarField ss, in VectorField uu, in ScalarField lnrho, in VectorField aa)
 {
     const Matrix S      = stress_tensor(uu);
@@ -328,7 +325,7 @@ entropy(in ScalarField ss, in VectorField uu, in ScalarField lnrho, in VectorFie
 #endif
 
 #if LTEMPERATURE
-Scalar
+Device Scalar
 heat_transfer(in VectorField uu, in ScalarField lnrho, in ScalarField tt)
 {
     const Matrix S                  = stress_tensor(uu);
@@ -341,7 +338,7 @@ heat_transfer(in VectorField uu, in ScalarField lnrho, in ScalarField tt)
 #endif
 
 #if LFORCING
-Vector
+Device Vector
     simple_vortex_forcing(Vector a, Vector b, Scalar magnitude){
     int accretion_switch = AC_switch_accretion;
 
@@ -351,7 +348,7 @@ Vector
         return (Vector){0,0,0};
     }
 }
-Vector
+Device Vector
     simple_outward_flow_forcing(Vector a, Vector b, Scalar magnitude){
     int accretion_switch = AC_switch_accretion;
     if (accretion_switch == 0){
@@ -363,7 +360,7 @@ Vector
 
 // The Pencil Code forcing_hel_noshear(), manual Eq. 222, inspired forcing function with adjustable
 // helicity
-Vector
+Device Vector
 helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vector ff_im, Scalar phi)
 {
     // JP: This looks wrong:

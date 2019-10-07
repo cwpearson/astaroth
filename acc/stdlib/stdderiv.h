@@ -1,3 +1,4 @@
+#pragma once
 #ifndef STENCIL_ORDER
 #define STENCIL_ORDER (6)
 #endif
