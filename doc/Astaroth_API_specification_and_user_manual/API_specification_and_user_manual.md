@@ -512,6 +512,17 @@ In addition to basic datatypes in C/C++/CUDA, such as int and int3, we provide t
 | ScalarField | An abstraction of a three-dimensional scalar field stored in device memory. Is implemented as a handle to a one-dimensional Scalar array consisting of input and output segments. The data is stored linearly in order i + j * mx + k * mx * my, given some vertex index (i, j, k) and mesh constisting of (mx, my, mz) vertices. | float[2][] or double[2][]                                                                            |
 | VectorField | An abstraction of a three-dimensional vector field stored in device memory. Is implemented as a tuple of three ScalarField handles.                                                                                                                                                                                               | Three distinct float[2][] or double[2][] arrays for each component. Stored as a structure of arrays. |
 
+## Precision
+
+`Scalars` are 32-bit floating-point numbers by default. Double precision can be turned on by setting cmake option `DOUBLE_PRECISION=ON`. 
+All real number literals are converted automatically to the correct precision. In cases where , the precision can be declared explicitly by appending `f` or `d` postfix to the real number. For example,
+```C
+1.0 // The same precision as Scalar/AcReal
+1.0f // Explicit float
+1.0d // Explicit double
+(1.0f * 1.0d) // 1.0f is implicitly cast to double and the multiplication is done in double precision.
+```
+
 ## Control flow
 
 Conditional statements are expressed with the `if-else` construct. Unlike in C and C++, we require
