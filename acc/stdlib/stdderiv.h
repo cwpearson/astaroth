@@ -27,7 +27,7 @@ first_derivative(Scalar pencil[], Scalar inv_ds)
     Scalar res = 0;
 
     for (int i = 1; i <= MID; ++i) {
-        res = res + coefficients[i] * (pencil[MID + i] - pencil[MID - i]);
+        res += coefficients[i] * (pencil[MID + i] - pencil[MID - i]);
     }
 
     return res * inv_ds;
@@ -50,7 +50,7 @@ second_derivative(Scalar pencil[], Scalar inv_ds)
     Scalar res = coefficients[0] * pencil[MID];
 
     for (int i = 1; i <= MID; ++i) {
-        res = res + coefficients[i] * (pencil[MID + i] + pencil[MID - i]);
+        res += coefficients[i] * (pencil[MID + i] + pencil[MID - i]);
     }
 
     return res * inv_ds * inv_ds;
@@ -76,8 +76,8 @@ cross_derivative(Scalar pencil_a[], Scalar pencil_b[], Scalar inv_ds_a, Scalar i
     Scalar res = 0.0;
 
     for (int i = 1; i <= MID; ++i) {
-        res = res + coefficients[i] * (pencil_a[MID + i] + pencil_a[MID - i] - pencil_b[MID + i] -
-                                       pencil_b[MID - i]);
+        res += coefficients[i] *
+               (pencil_a[MID + i] + pencil_a[MID - i] - pencil_b[MID + i] - pencil_b[MID - i]);
     }
     return res * inv_ds_a * inv_ds_b;
 }
@@ -311,7 +311,7 @@ contract(const Matrix mat)
     Scalar res = 0;
 
     for (int i = 0; i < 3; ++i) {
-        res = res + dot(mat.row[i], mat.row[i]);
+        res += dot(mat.row[i], mat.row[i]);
     }
 
     return res;

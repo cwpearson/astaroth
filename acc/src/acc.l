@@ -51,6 +51,8 @@ L [a-zA-Z_]
 
 "++"                { return INPLACE_INC; }
 "--"                { return INPLACE_DEC; }
+"+="                { return INPLACE_ADD; }
+"-="                { return INPLACE_SUB; }
 
 [-+*/;=\[\]{}(),\.<>] { return yytext[0]; } /* Characters */
 

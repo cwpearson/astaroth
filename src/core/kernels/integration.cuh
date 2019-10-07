@@ -29,7 +29,7 @@
 
 #include <assert.h>
 
-static __device__ __forceinline__ int
+static __device__ constexpr int
 IDX(const int i)
 {
     return i;
@@ -95,7 +95,7 @@ write(AcReal* __restrict__ out[], const int handle, const int idx, const AcReal 
     out[handle][idx] = value;
 }
 
-static __device__ void
+static __device__ __forceinline__ void
 write(AcReal* __restrict__ out[], const int3 vec, const int idx, const AcReal3 value)
 {
     write(out, vec.x, idx, value.x);
@@ -103,13 +103,13 @@ write(AcReal* __restrict__ out[], const int3 vec, const int idx, const AcReal3 v
     write(out, vec.z, idx, value.z);
 }
 
-static __device__ AcReal
+static __device__ __forceinline__ AcReal
 read_out(const int idx, AcReal* __restrict__ field[], const int handle)
 {
     return field[handle][idx];
 }
 
-static __device__ AcReal3
+static __device__ __forceinline__ AcReal3
 read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
 {
     return (AcReal3){read_out(idx, field, handle.x), read_out(idx, field, handle.y),

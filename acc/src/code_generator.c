@@ -66,7 +66,7 @@ static const char* translation_table[TRANSLATION_TABLE_SIZE] = {
     [COMPLEX]     = "acComplex",
     // Type qualifiers
     [KERNEL]       = "template <int step_number>  static __global__",
-    [DEVICE]       = "static __device__",
+    [DEVICE]       = "static __device__ __forceinline__",
     [PREPROCESSED] = "static __device__ __forceinline__",
     [CONSTANT]     = "const",
     [IN]           = "in",
@@ -138,6 +138,9 @@ static size_t current_nest           = 0;
 static Symbol*
 symboltable_lookup(const char* identifier)
 {
+    // TODO assert tha symbol not function! cannot be since we allow overloads->conflicts if not
+    // explicit
+
     if (!identifier)
         return NULL;
 
@@ -379,6 +382,7 @@ traverse(const ASTNode* node)
             tmp = tmp->parent;
             assert(tmp->type = NODE_FUNCTION_DECLARATION);
 
+            // TODO FIX not to use symboltable_lookup
             const Symbol* parent_function = symboltable_lookup(tmp->lhs->rhs->buffer);
             assert(parent_function);
 

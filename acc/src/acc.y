@@ -21,7 +21,7 @@ int yyget_lineno();
 %token IF ELSE FOR WHILE ELIF
 %token LEQU LAND LOR LLEQU
 %token KERNEL DEVICE PREPROCESSED
-%token INPLACE_INC INPLACE_DEC
+%token INPLACE_INC INPLACE_DEC INPLACE_ADD INPLACE_SUB
 
 %%
 
@@ -188,6 +188,8 @@ binary_operator: '+'                                                            
                | LAND                                                                   { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                | LOR                                                                    { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                | LLEQU                                                                  { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
+               | INPLACE_ADD                                                            { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
+               | INPLACE_SUB                                                            { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                ;
 
 unary_operator: '-' /* C-style casts are disallowed, would otherwise be defined here */ { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); $$->infix = yytext[0]; }
