@@ -84,7 +84,7 @@ iteration_statement: WHILE expression compound_statement                        
                    | FOR for_expression compound_statement                              { $$ = astnode_create(NODE_ITERATION_STATEMENT, $2, $3); $$->prefix = FOR; }
                    ;
 
-for_expression: '(' for_init_param for_other_params ')'                                 { $$ = astnode_create(NODE_UNKNOWN, $2, $3); $$->prefix = '('; $$->postfix = ')'; }
+for_expression: '(' for_init_param for_other_params ')'                                 { $$ = astnode_create(NODE_FOR_EXPRESSION, $2, $3); $$->prefix = '('; $$->postfix = ')'; }
               ;
 
 for_init_param: expression ';'                                                          { $$ = astnode_create(NODE_UNKNOWN, $1, NULL); $$->postfix = ';'; }
