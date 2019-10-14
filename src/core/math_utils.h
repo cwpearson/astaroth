@@ -170,7 +170,7 @@ cross(const AcReal3& a, const AcReal3& b)
 }
 
 static HOST_DEVICE_INLINE bool
-is_valid(const AcReal a)
+is_valid(const AcReal& a)
 {
     return !isnan(a) && !isinf(a);
 }
