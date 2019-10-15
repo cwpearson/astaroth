@@ -96,6 +96,9 @@ AcResult acIntegrateStepWithOffset(const int isubstep, const AcReal dt, const in
 AcResult acSynchronize(void);
 AcResult acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_vertices);
 
+/** */
+int acGetNumDevicesPerNode(void);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

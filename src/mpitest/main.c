@@ -181,15 +181,15 @@ communicate_halos(AcMesh* submesh)
 int
 main(void)
 {
-    int num_processes, process_id;
+    int num_processes, pid;
     MPI_Init(NULL, NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
 
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int name_len;
     MPI_Get_processor_name(processor_name, &name_len);
-    printf("Processor %s. Process %d of %d.\n", processor_name, process_id, num_processes);
+    printf("Processor %s. Process %d of %d.\n", processor_name, pid, num_processes);
 
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
@@ -197,7 +197,7 @@ main(void)
     AcMesh model, candidate, submesh;
 
     // Master CPU
-    if (process_id == 0) {
+    if (pid == 0) {
         acMeshCreate(info, &model);
         acMeshCreate(info, &candidate);
 
@@ -213,12 +213,47 @@ main(void)
     acMeshCreate(submesh_info, &submesh);
 
     distribute_mesh(model, &submesh);
+
+    // GPU-GPU communication
+    /*
+    const int device_id = pid % acGetNumDevicesPerNode();
+
+    Device device;
+    acDeviceCreate(device_id, submesh_info, &device);
+
+    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+    acDeviceCommunicateHalosMPI(device);
+    acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
+
+    acDeviceDestroy(device);
+    */
+
+    // GPU-CPU-CPU-GPU communication
+    const int device_id = pid % acGetNumDevicesPerNode();
+
+    Device device;
+    acDeviceCreate(device_id, submesh_info, &device);
+
+    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+    acDevicePeriodicBoundconds(device, STREAM_DEFAULT, (int3){0, 0, 0},
+                               (int3){submesh_info.int_params[AC_mx],
+                                      submesh_info.int_params[AC_my],
+                                      submesh_info.int_params[AC_mz]});
+    acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     communicate_halos(&submesh);
+
+    acDeviceDestroy(device);
+    //
+
+    //
+    // CPU-CPU communication
+    // communicate_halos(&submesh);
+    //
     gather_mesh(submesh, &candidate);
 
     acMeshDestroy(&submesh);
     // Master CPU
-    if (process_id == 0) {
+    if (pid == 0) {
         acVerifyMesh(model, candidate);
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
@@ -227,7 +262,7 @@ main(void)
     // GPU
     /*
     Device device;
-    acDeviceCreate(process_id, info, &device);
+    acDeviceCreate(pid, info, &device);
 
     acDeviceLoadMesh(device, STREAM_DEFAULT, model);
 

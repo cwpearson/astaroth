@@ -102,7 +102,7 @@ AcResult acDeviceStoreMeshWithOffset(const Device device, const Stream stream, c
 AcResult acDeviceStoreVertexBuffer(const Device device, const Stream stream,
                                    const VertexBufferHandle vtxbuf_handle, AcMesh* host_mesh);
 
-/** Deprecated */
+/** */
 AcResult acDeviceStoreMesh(const Device device, const Stream stream, AcMesh* host_mesh);
 
 /** */
@@ -120,7 +120,7 @@ AcResult acDeviceTransferMeshWithOffset(const Device src_device, const Stream st
 AcResult acDeviceTransferVertexBuffer(const Device src_device, const Stream stream,
                                       const VertexBufferHandle vtxbuf_handle, Device dst_device);
 
-/** Deprecated */
+/** */
 AcResult acDeviceTransferMesh(const Device src_device, const Stream stream, Device dst_device);
 
 /** */
@@ -143,9 +143,8 @@ AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const 
                            const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
                            const VertexBufferHandle vtxbuf2, AcReal* result);
 
-#if AC_MPI_ENABLED == 1
+/** */
 AcResult acDeviceCommunicateHalosMPI(const Device device);
-#endif
 
 #ifdef __cplusplus
 } // extern "C"

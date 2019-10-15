@@ -762,7 +762,6 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
 
 #if AC_MPI_ENABLED == 1
 #include <mpi.h>
-
 /** NOTE: Assumes 1 process per GPU */
 AcResult
 acDeviceCommunicateHalosMPI(const Device device)
@@ -819,6 +818,14 @@ acDeviceCommunicateHalosMPI(const Device device)
         }
     }
     return AC_SUCCESS;
+}
+#else
+AcResult
+acDeviceCommunicateHalosMPI(const Device device)
+{
+    (void)device;
+    WARNING("MPI was not enabled but acDeviceCommunicateHalosMPI() was called");
+    return AC_FAILURE;
 }
 #endif
 

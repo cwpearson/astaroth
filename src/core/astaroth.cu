@@ -168,3 +168,11 @@ acSynchronizeMesh(void)
 {
     return acNodeSynchronizeMesh(nodes[0], STREAM_DEFAULT);
 }
+
+int
+acGetNumDevicesPerNode(void)
+{
+    int num_devices;
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&num_devices));
+    return num_devices;
+}

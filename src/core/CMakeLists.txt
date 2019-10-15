@@ -27,6 +27,13 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_ARCH_FLAGS} ${CUDA_WARNING_FLAGS})
 set(CUDA_NVCC_FLAGS_RELEASE)
 set(CUDA_NVCC_FLAGS_DEBUG --device-debug --generate-line-info --ptxas-options=-v)
 
+if (MPI_ENABLED)
+    find_package(MPI REQUIRED)
+
+    add_definitions(-DAC_MPI_ENABLED=1)
+    cuda_include_directories(${MPI_C_INCLUDE_PATH})
+endif ()
+
 ## Create and link the library
 cuda_add_library(astaroth_core STATIC astaroth.cu device.cu node.cu)
 target_include_directories(astaroth_core PRIVATE .)
@@ -39,7 +46,5 @@ if (MULTIGPU_ENABLED)
 endif ()
 
 if (MPI_ENABLED)
-    add_definitions(-DAC_MPI_ENABLED=1)
-    find_package(MPI REQUIRED)
-    target_link_libraries(astaroth_core ${MPI_CXX_INCLUDE_PATH})
+    target_link_libraries(astaroth_core ${MPI_C_LIBRARIES})
 endif ()
