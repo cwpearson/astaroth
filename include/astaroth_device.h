@@ -85,7 +85,7 @@ AcResult acDeviceLoadMeshWithOffset(const Device device, const Stream stream,
 AcResult acDeviceLoadVertexBuffer(const Device device, const Stream stream, const AcMesh host_mesh,
                                   const VertexBufferHandle vtxbuf_handle);
 
-/** Deprecated */
+/** */
 AcResult acDeviceLoadMesh(const Device device, const Stream stream, const AcMesh host_mesh);
 
 /** */
