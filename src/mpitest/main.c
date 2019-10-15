@@ -26,158 +26,35 @@
 #include <string.h>
 
 #include "astaroth.h"
-#include "autotest.h"
 
 #include <mpi.h>
 
-// From Astaroth Standalone
-#include "config_loader.h"
-#include "model/host_memory.h"
-
-static void
-distribute_mesh(const AcMesh* src, AcMesh* dst)
-{
-    MPI_Datatype datatype = MPI_FLOAT;
-    if (sizeof(AcReal) == 8)
-        datatype = MPI_DOUBLE;
-
-    int process_id, num_processes;
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-
-    const size_t count = acVertexBufferSize(dst->info);
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-
-        // Communicate to self
-        if (process_id == 0) {
-            assert(src);
-            assert(dst);
-            memcpy(&dst->vertex_buffer[i][0], //
-                   &src->vertex_buffer[i][0], //
-                   count * sizeof(src->vertex_buffer[i][0]));
-        }
-        // Communicate to others
-        for (int j = 1; j < num_processes; ++j) {
-            if (process_id == 0) {
-                assert(src);
-
-                // Send
-                // TODO RECHECK THESE j INDICES
-                const size_t src_idx = j * dst->info.int_params[AC_mx] *
-                                       dst->info.int_params[AC_my] * src->info.int_params[AC_nz] /
-                                       num_processes;
-
-                MPI_Send(&src->vertex_buffer[i][src_idx], count, datatype, j, 0, MPI_COMM_WORLD);
-            }
-            else {
-                assert(dst);
-
-                // Recv
-                const size_t dst_idx = 0;
-                MPI_Status status;
-                MPI_Recv(&dst->vertex_buffer[i][dst_idx], count, datatype, 0, 0, MPI_COMM_WORLD,
-                         &status);
-            }
-        }
-    }
-}
-
-static void
-gather_mesh(const AcMesh* src, AcMesh* dst)
-{
-    MPI_Datatype datatype = MPI_FLOAT;
-    if (sizeof(AcReal) == 8)
-        datatype = MPI_DOUBLE;
-
-    int process_id, num_processes;
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-
-    size_t count = acVertexBufferSize(src->info);
-
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        // Communicate to self
-        if (process_id == 0) {
-            assert(src);
-            assert(dst);
-            memcpy(&dst->vertex_buffer[i][0], //
-                   &src->vertex_buffer[i][0], //
-                   count * sizeof(AcReal));
-        }
-
-        // Communicate to others
-        for (int j = 1; j < num_processes; ++j) {
-            if (process_id == 0) {
-                // Recv
-                // const size_t dst_idx = j * acVertexBufferCompdomainSize(dst->info);
-                const size_t dst_idx = j * dst->info.int_params[AC_mx] *
-                                       dst->info.int_params[AC_my] * dst->info.int_params[AC_nz] /
-                                       num_processes;
-
-                assert(dst_idx + count <= acVertexBufferSize(dst->info));
-                MPI_Status status;
-                MPI_Recv(&dst->vertex_buffer[i][dst_idx], count, datatype, j, 0, MPI_COMM_WORLD,
-                         &status);
-            }
-            else {
-                // Send
-                const size_t src_idx = 0;
-
-                assert(src_idx + count <= acVertexBufferSize(src->info));
-                MPI_Send(&src->vertex_buffer[i][src_idx], count, datatype, 0, 0, MPI_COMM_WORLD);
-            }
-        }
-    }
-}
+// From Astaroth Utils
+#include "src/utils/config_loader.h"
+#include "src/utils/memory.h"
+#include "src/utils/verification.h"
 
 int
 main(void)
 {
     MPI_Init(NULL, NULL);
 
-    int num_processes, process_id;
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_id);
+    AcMeshInfo info;
+    acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
-    char processor_name[MPI_MAX_PROCESSOR_NAME];
-    int name_len;
-    MPI_Get_processor_name(processor_name, &name_len);
-    printf("Processor %s. Process %d of %d.\n", processor_name, process_id, num_processes);
+    AcMesh model;
+    acMeshCreate(info, &model);
 
-    AcMeshInfo mesh_info;
-    load_config(&mesh_info);
-    update_config(&mesh_info);
+    AcMesh candidate;
+    acMeshCreate(info, &candidate);
 
-    AcMesh* main_mesh     = NULL;
-    ModelMesh* model_mesh = NULL;
-    if (process_id == 0) {
-        main_mesh = acmesh_create(mesh_info);
-        acmesh_init_to(INIT_TYPE_RANDOM, main_mesh);
-        model_mesh = modelmesh_create(mesh_info);
-        acmesh_to_modelmesh(*main_mesh, model_mesh);
-    }
+    acMeshSet(1, &model);
+    acMeshSet(1.00000005, &candidate);
 
-    AcMeshInfo submesh_info = mesh_info;
-    submesh_info.int_params[AC_nz] /= num_processes;
-    update_config(&submesh_info);
+    acVerifyMesh(model, candidate);
 
-    AcMesh* submesh = acmesh_create(submesh_info);
-
-    /////////////////////
-    distribute_mesh(main_mesh, submesh);
-    gather_mesh(submesh, main_mesh);
-    /////////////////////////
-    // Autotest
-    bool is_acceptable = verify_meshes(*model_mesh, *main_mesh);
-    /////
-
-    acmesh_destroy(submesh);
-
-    if (process_id == 0) {
-        modelmesh_destroy(model_mesh);
-        acmesh_destroy(main_mesh);
-    }
-
+    acMeshDestroy(&model);
+    acMeshDestroy(&candidate);
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
