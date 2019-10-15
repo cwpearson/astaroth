@@ -128,13 +128,23 @@ print_error_to_file(const char* path, const int n, const Error error)
     fclose(file);
 }
 
+static bool
+is_acceptable(const Error error)
+{
+    // TODO FIXME
+    const AcReal range = error.maximum_magnitude - error.minimum_magnitude;
+    if (error.abs_error < range * AC_REAL_EPSILON)
+        return true;
+    else
+        return false;
+}
+
 static void
 print_error_to_screen(const Error error)
 {
-    const bool is_acceptable = true;
-
+    printf("WARNING: is_acceptable() not yet complete\n");
     printf("\t%-15s... ", vtxbuf_names[error.handle]);
-    if (is_acceptable) {
+    if (is_acceptable(error)) {
         printf(GRN "OK! " RESET);
     }
     else {

@@ -77,8 +77,8 @@ parse_config(const char* path, AcMeshInfo* config)
     fclose(fp);
 }
 
-void
-update_config(AcMeshInfo* config)
+AcResult
+acUpdateConfig(AcMeshInfo* config)
 {
     config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER;
     ///////////// PAD TEST
@@ -109,6 +109,8 @@ update_config(AcMeshInfo* config)
     config->int_params[AC_mxy]  = config->int_params[AC_mx] * config->int_params[AC_my];
     config->int_params[AC_nxy]  = config->int_params[AC_nx] * config->int_params[AC_ny];
     config->int_params[AC_nxyz] = config->int_params[AC_nxy] * config->int_params[AC_nz];
+
+    return AC_SUCCESS;
 }
 
 /**
@@ -126,7 +128,7 @@ acLoadConfig(const char* config_path, AcMeshInfo* config)
     memset(config, (uint8_t)0xFF, sizeof(*config));
 
     parse_config(config_path, config);
-    update_config(config);
+    acUpdateConfig(config);
 #if VERBOSE_PRINTING // Defined in astaroth.h
     printf("###############################################################\n");
     printf("Config dimensions recalculated:\n");

@@ -32,6 +32,9 @@ extern "C" {
 /** Loads data from the config file */
 AcResult acLoadConfig(const char* config_path, AcMeshInfo* config);
 
+/** Updates the built-in parameters based on nx, ny and nz */
+AcResult acUpdateConfig(AcMeshInfo* config);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
