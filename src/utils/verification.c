@@ -142,7 +142,6 @@ is_acceptable(const Error error)
 static void
 print_error_to_screen(const Error error)
 {
-    printf("WARNING: is_acceptable() not yet complete\n");
     printf("\t%-15s... ", vtxbuf_names[error.handle]);
     if (is_acceptable(error)) {
         printf(GRN "OK! " RESET);
@@ -163,5 +162,6 @@ acVerifyMesh(const AcMesh model, const AcMesh candidate)
         Error field_error = get_max_abs_error(i, model, candidate);
         print_error_to_screen(field_error);
     }
+    printf("WARNING: is_acceptable() not yet complete\n");
     return true;
 }
