@@ -35,7 +35,7 @@
 #include "src/utils/verification.h"
 
 static void
-distribute_mesh(const AcMesh* src, AcMesh* dst)
+distribute_mesh(const AcMesh src, AcMesh* dst)
 {
     MPI_Barrier(MPI_COMM_WORLD);
     printf("Distributing mesh...\n");
@@ -53,20 +53,17 @@ distribute_mesh(const AcMesh* src, AcMesh* dst)
 
         if (pid == 0) {
             // Communicate to self
-            assert(src);
             assert(dst);
             memcpy(&dst->vertex_buffer[i][0], //
-                   &src->vertex_buffer[i][0], //
-                   count * sizeof(src->vertex_buffer[i][0]));
+                   &src.vertex_buffer[i][0],  //
+                   count * sizeof(src.vertex_buffer[i][0]));
 
             // Communicate to others
             for (int j = 1; j < num_processes; ++j) {
-                assert(src);
-
                 const size_t src_idx = acVertexBufferIdx(
-                    0, 0, j * src->info.int_params[AC_nz] / num_processes, src->info);
+                    0, 0, j * src.info.int_params[AC_nz] / num_processes, src.info);
 
-                MPI_Send(&src->vertex_buffer[i][src_idx], count, datatype, j, 0, MPI_COMM_WORLD);
+                MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, j, 0, MPI_COMM_WORLD);
             }
         }
         else {
@@ -82,7 +79,7 @@ distribute_mesh(const AcMesh* src, AcMesh* dst)
 }
 
 static void
-gather_mesh(const AcMesh* src, AcMesh* dst)
+gather_mesh(const AcMesh src, AcMesh* dst)
 {
     MPI_Barrier(MPI_COMM_WORLD);
     printf("Gathering mesh...\n");
@@ -94,16 +91,15 @@ gather_mesh(const AcMesh* src, AcMesh* dst)
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
-    size_t count = acVertexBufferSize(src->info);
+    size_t count = acVertexBufferSize(src.info);
 
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         // Communicate to self
         if (pid == 0) {
-            assert(src);
             assert(dst);
             memcpy(&dst->vertex_buffer[i][0], //
-                   &src->vertex_buffer[i][0], //
-                   count * sizeof(src->vertex_buffer[i][0]));
+                   &src.vertex_buffer[i][0],  //
+                   count * sizeof(src.vertex_buffer[i][0]));
 
             for (int j = 1; j < num_processes; ++j) {
                 // Recv
@@ -120,8 +116,8 @@ gather_mesh(const AcMesh* src, AcMesh* dst)
             // Send
             const size_t src_idx = 0;
 
-            assert(src_idx + count <= acVertexBufferSize(src->info));
-            MPI_Send(&src->vertex_buffer[i][src_idx], count, datatype, 0, 0, MPI_COMM_WORLD);
+            assert(src_idx + count <= acVertexBufferSize(src.info));
+            MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, 0, 0, MPI_COMM_WORLD);
         }
     }
 }
@@ -203,8 +199,10 @@ main(void)
     // Master CPU
     if (process_id == 0) {
         acMeshCreate(info, &model);
-        acMeshRandomize(&model);
         acMeshCreate(info, &candidate);
+
+        acMeshRandomize(&model);
+        acMeshApplyPeriodicBounds(&model);
     }
 
     assert(info.int_params[AC_nz] % num_processes == 0);
@@ -214,12 +212,11 @@ main(void)
     acUpdateConfig(&submesh_info);
     acMeshCreate(submesh_info, &submesh);
 
-    distribute_mesh(&model, &submesh);
-    // communicate_halos(&submesh);
-    gather_mesh(&submesh, &candidate);
+    distribute_mesh(model, &submesh);
+    communicate_halos(&submesh);
+    gather_mesh(submesh, &candidate);
 
     acMeshDestroy(&submesh);
-
     // Master CPU
     if (process_id == 0) {
         acVerifyMesh(model, candidate);
