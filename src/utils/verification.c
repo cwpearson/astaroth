@@ -141,8 +141,8 @@ print_error_to_screen(const Error error)
         printf(RED "FAIL! " RESET);
     }
 
-    fprintf(stdout, "| %.2Lg (abs), %.2Lg (ulps), %.2Lg (rel), [%.2g, %.2g] (range)\n", //
-            error.abs_error, error.ulp_error, error.rel_error,                          //
+    fprintf(stdout, "| %.2Lg (abs), %.2Lg (ulps), %.2Lg (rel). Range: [%.2g, %.2g]\n", //
+            error.abs_error, error.ulp_error, error.rel_error,                         //
             (double)error.minimum_magnitude, (double)error.maximum_magnitude);
 }
 
