@@ -47,19 +47,19 @@ AcResult acDeviceSwapBuffers(const Device device);
 
 /** */
 AcResult acDeviceLoadScalarUniform(const Device device, const Stream stream,
-                                    const AcRealParam param, const AcReal value);
+                                   const AcRealParam param, const AcReal value);
 
 /** */
 AcResult acDeviceLoadVectorUniform(const Device device, const Stream stream,
-                                    const AcReal3Param param, const AcReal3 value);
+                                   const AcReal3Param param, const AcReal3 value);
 
 /** */
 AcResult acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntParam param,
-                                 const int value);
+                                const int value);
 
 /** */
 AcResult acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Param param,
-                                  const int3 value);
+                                 const int3 value);
 
 /** */
 AcResult acDeviceLoadScalarArray(const Device device, const Stream stream,
@@ -142,6 +142,10 @@ AcResult acDeviceReduceScal(const Device device, const Stream stream, const Redu
 AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const ReductionType rtype,
                            const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
                            const VertexBufferHandle vtxbuf2, AcReal* result);
+
+#if AC_MPI_ENABLED == 1
+AcResult acDeviceCommunicateHalosMPI(const Device device);
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

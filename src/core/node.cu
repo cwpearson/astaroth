@@ -224,10 +224,10 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
         WARNING("More devices found than MAX_NUM_DEVICES. Using only MAX_NUM_DEVICES");
         node->num_devices = MAX_NUM_DEVICES;
     }
-    if (!AC_MULTIGPU_ENABLED) {
-        WARNING("MULTIGPU_ENABLED was false. Using only one device");
-        node->num_devices = 1; // Use only one device if multi-GPU is not enabled
-    }
+#if AC_MULTIGPU_ENABLED != 1
+    WARNING("MULTIGPU_ENABLED was false. Using only one device");
+    node->num_devices = 1; // Use only one device if multi-GPU is not enabled
+#endif
     // Check that node->num_devices is divisible with AC_nz. This makes decomposing the
     // problem domain to multiple GPUs much easier since we do not have to worry
     // about remainders

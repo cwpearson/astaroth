@@ -760,6 +760,68 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
     return AC_SUCCESS;
 }
 
+#if AC_MPI_ENABLED == 1
+#include <mpi.h>
+
+/** NOTE: Assumes 1 process per GPU */
+AcResult
+acDeviceCommunicateHalosMPI(const Device device)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    const size_t count = device->local_config.int_params[AC_mx] *
+                         device->local_config.int_params[AC_my] * NGHOST;
+
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, device->local_config.int_params[AC_nz],
+                                                     device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
+            const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
+                      &request);
+            fflush(stdout);
+
+            MPI_Status status;
+            MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                     &status);
+
+            MPI_Wait(&request, &status);
+        }
+        { // Back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(
+                0, 0, NGHOST + device->local_config.int_params[AC_nz], device->local_config);
+            const int send_pid = (pid + num_processes - 1) % num_processes;
+            const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD, &request);
+
+            MPI_Status status;
+            MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, NUM_VTXBUF_HANDLES + i,
+                     MPI_COMM_WORLD, &status);
+
+            MPI_Wait(&request, &status);
+        }
+    }
+    return AC_SUCCESS;
+}
+#endif
+
 #if PACKED_DATA_TRANSFERS
 // Functions for calling packed data transfers
 #endif
