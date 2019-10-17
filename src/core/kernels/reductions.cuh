@@ -171,7 +171,7 @@ kernel_reduce_block(const __restrict__ AcReal* scratchpad, const int num_blocks,
     *result = res;
 }
 
-AcReal
+static AcReal
 reduce_scal(const cudaStream_t stream, const ReductionType rtype, const int3& start,
             const int3& end, const AcReal* vtxbuf, AcReal* scratchpad, AcReal* reduce_result)
 {
@@ -225,7 +225,7 @@ reduce_scal(const cudaStream_t stream, const ReductionType rtype, const int3& st
     return result;
 }
 
-AcReal
+static AcReal
 reduce_vec(const cudaStream_t stream, const ReductionType rtype, const int3& start, const int3& end,
            const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2, AcReal* scratchpad,
            AcReal* reduce_result)

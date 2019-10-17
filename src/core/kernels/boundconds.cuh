@@ -73,7 +73,7 @@ kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
     vtxbuf[dst_idx]   = vtxbuf[src_idx];
 }
 
-void
+static void
 periodic_boundconds(const cudaStream_t stream, const int3& start, const int3& end, AcReal* vtxbuf)
 {
     const dim3 tpb(8, 2, 8);
