@@ -873,7 +873,59 @@ acDeviceCommunicateHalosMPI(const Device device)
 
     const size_t count = device->local_config.int_params[AC_mx] *
                          device->local_config.int_params[AC_my] * NGHOST;
+    MPI_Request request_front[NUM_VTXBUF_HANDLES];
+    MPI_Status status_front[NUM_VTXBUF_HANDLES];
+    MPI_Request request_back[NUM_VTXBUF_HANDLES];
+    MPI_Status status_back[NUM_VTXBUF_HANDLES];
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, device->local_config.int_params[AC_nz],
+                                                     device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
 
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
+                      &request_front[i]);
+        }
+
+        { // Back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(
+                0, 0, NGHOST + device->local_config.int_params[AC_nz], device->local_config);
+            const int send_pid = (pid + num_processes - 1) % num_processes;
+
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD, &request_back[i]);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, device->local_config.int_params[AC_nz],
+                                                     device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int recv_pid   = (pid + num_processes - 1) % num_processes;
+            MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                     &status_front[i]);
+        }
+        { // Back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(
+                0, 0, NGHOST + device->local_config.int_params[AC_nz], device->local_config);
+            const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, NUM_VTXBUF_HANDLES + i,
+                     MPI_COMM_WORLD, &status_back[i]);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        MPI_Wait(&request_front[i], &status_front[i]);
+        MPI_Wait(&request_back[i], &status_back[i]);
+    }
+    /*
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         { // Front
             // ...|ooooxxx|... -> xxx|ooooooo|...
@@ -913,6 +965,7 @@ acDeviceCommunicateHalosMPI(const Device device)
             MPI_Wait(&request, &status);
         }
     }
+    */
     return AC_SUCCESS;
 }
 
