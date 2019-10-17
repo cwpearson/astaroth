@@ -151,7 +151,8 @@ AcResult
 acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_handle)
 {
     cudaSetDevice(id);
-    cudaDeviceReset();
+    // cudaDeviceReset(); // Would be good for safety, but messes stuff up if we want to emulate
+    // multiple devices with a single GPU
 
     // Create Device
     struct device_s* device = (struct device_s*)malloc(sizeof(*device));
@@ -179,21 +180,21 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     // VBA in/out
     const size_t vba_size_bytes = acVertexBufferSizeBytes(device_config);
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.in[i], vba_size_bytes));
-        ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.out[i], vba_size_bytes));
+        ERRCHK_CUDA_ALWAYS(cudaMallocManaged(&device->vba.in[i], vba_size_bytes));
+        ERRCHK_CUDA_ALWAYS(cudaMallocManaged(&device->vba.out[i], vba_size_bytes));
     }
     // VBA Profiles
     const size_t profile_size_bytes = sizeof(AcReal) * max(device_config.int_params[AC_mx],
                                                            max(device_config.int_params[AC_my],
                                                                device_config.int_params[AC_mz]));
     for (int i = 0; i < NUM_SCALARARRAY_HANDLES; ++i) {
-        ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->vba.profiles[i], profile_size_bytes));
+        ERRCHK_CUDA_ALWAYS(cudaMallocManaged(&device->vba.profiles[i], profile_size_bytes));
     }
 
     // Reductions
-    ERRCHK_CUDA_ALWAYS(
-        cudaMalloc(&device->reduce_scratchpad, acVertexBufferCompdomainSizeBytes(device_config)));
-    ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->reduce_result, sizeof(AcReal)));
+    ERRCHK_CUDA_ALWAYS(cudaMallocManaged(&device->reduce_scratchpad,
+                                         acVertexBufferCompdomainSizeBytes(device_config)));
+    ERRCHK_CUDA_ALWAYS(cudaMallocManaged(&device->reduce_result, sizeof(AcReal)));
 
 #if PACKED_DATA_TRANSFERS
 // Allocate data required for packed transfers here (cudaMalloc)
@@ -915,11 +916,67 @@ acDeviceCommunicateHalosMPI(const Device device)
     return AC_SUCCESS;
 }
 
+static void
+acHostCommunicateHalosMPI(AcMesh* submesh)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Communicating bounds...\n");
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    const size_t count = submesh->info.int_params[AC_mx] * submesh->info.int_params[AC_my] * NGHOST;
+
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, submesh->info.int_params[AC_nz],
+                                                     submesh->info);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, submesh->info);
+            const int send_pid   = (pid + 1) % num_processes;
+            const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid, i,
+                      MPI_COMM_WORLD, &request);
+            fflush(stdout);
+
+            MPI_Status status;
+            MPI_Recv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid, i,
+                     MPI_COMM_WORLD, &status);
+
+            MPI_Wait(&request, &status);
+        }
+        { // Back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, submesh->info);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, NGHOST + submesh->info.int_params[AC_nz],
+                                                     submesh->info);
+            const int send_pid   = (pid + num_processes - 1) % num_processes;
+            const int recv_pid   = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD, &request);
+
+            MPI_Status status;
+            MPI_Recv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid,
+                     NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD, &status);
+
+            MPI_Wait(&request, &status);
+        }
+    }
+}
+
 // From Astaroth Utils
 #include "src/utils/config_loader.h"
 #include "src/utils/memory.h"
 #include "src/utils/verification.h"
-
+// --smpiargs="-gpu"
 AcResult
 acDeviceRunMPITest(void)
 {
@@ -933,10 +990,34 @@ acDeviceRunMPITest(void)
     MPI_Get_processor_name(processor_name, &name_len);
     printf("Processor %s. Process %d of %d.\n", processor_name, pid, num_processes);
 
+    // Check MPI support
+    //// Borrowing start (from OpenMPI examples)
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+    printf("This MPI library has CUDA-aware support.\n", MPIX_CUDA_AWARE_SUPPORT);
+#elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
+    printf("This MPI library does not have CUDA-aware support.\n");
+#else
+    printf("This MPI library cannot determine if there is CUDA-aware support.\n");
+#endif /* MPIX_CUDA_AWARE_SUPPORT */
+
+    printf("Run time check:\n");
+#if defined(MPIX_CUDA_AWARE_SUPPORT)
+    if (1 == MPIX_Query_cuda_support()) {
+        printf("This MPI library has CUDA-aware support.\n");
+    }
+    else {
+        printf("This MPI library does not have CUDA-aware support.\n");
+    }
+#else  /* !defined(MPIX_CUDA_AWARE_SUPPORT) */
+    printf("This MPI library cannot determine if there is CUDA-aware support.\n");
+#endif /* MPIX_CUDA_AWARE_SUPPORT */
+       //////// Borrowing end
+
+    // Create model and candidate meshes
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
-    AcMesh model, candidate, submesh;
+    AcMesh model, candidate;
 
     // Master CPU
     if (pid == 0) {
@@ -949,12 +1030,57 @@ acDeviceRunMPITest(void)
 
     assert(info.int_params[AC_nz] % num_processes == 0);
 
-    AcMeshInfo submesh_info = info;
-    submesh_info.int_params[AC_nz] /= num_processes;
+    // Create submesh info
+    AcMeshInfo submesh_info                    = info;
+    const int submesh_nz                       = info.int_params[AC_nz] / num_processes;
+    submesh_info.int_params[AC_nz]             = submesh_nz;
+    submesh_info.int3_params[AC_global_grid_n] = (int3){
+        info.int_params[AC_nx],
+        info.int_params[AC_ny],
+        info.int_params[AC_nz],
+    };
+    submesh_info.int3_params[AC_multigpu_offset] = (int3){0, 0, pid * submesh_nz};
     acUpdateConfig(&submesh_info);
+
+    // Helper dims
+    const int3 subgrid_m = (int3){
+        submesh_info.int_params[AC_mx],
+        submesh_info.int_params[AC_my],
+        submesh_info.int_params[AC_mz],
+    };
+
+    // Create submesh
+    AcMesh submesh;
     acMeshCreate(submesh_info, &submesh);
 
     acDeviceDistributeMeshMPI(model, &submesh);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    Device device;
+    acDeviceCreate(0, submesh_info, &device);
+    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+
+    ///// Communication start
+    {
+        const int3 start = (int3){0, 0, NGHOST};
+        const int3 end   = (int3){subgrid_m.x, subgrid_m.y, subgrid_m.z - NGHOST};
+        acDevicePeriodicBoundconds(device, STREAM_DEFAULT, start, end);
+    }
+#if 1 // GPU-GPU if CUDA-aware MPI, otherwise managed CPU-GPU-GPU-CPU
+    acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+    MPI_Barrier(MPI_COMM_WORLD);
+    acDeviceCommunicateHalosMPI(device); // Includes periodic bounds at first and last ghost zone
+    MPI_Barrier(MPI_COMM_WORLD);
+#else // Explicit GPU-CPU-CPU-GPU
+    acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
+    acHostCommunicateHalosMPI(&submesh);
+    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+#endif
+    ///// Communication end
+
+    acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
+    acDeviceDestroy(device);
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     acDeviceGatherMeshMPI(submesh, &candidate);
 
     acMeshDestroy(&submesh);
