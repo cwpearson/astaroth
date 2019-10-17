@@ -19,7 +19,7 @@ int yyget_lineno();
 %token SCALAR VECTOR MATRIX SCALARFIELD SCALARARRAY
 %token VOID INT INT3 COMPLEX
 %token IF ELSE FOR WHILE ELIF
-%token LEQU LAND LOR LLEQU
+%token LEQU LAND LOR LLEQU BINARY_OP
 %token KERNEL DEVICE PREPROCESSED
 %token INPLACE_INC INPLACE_DEC INPLACE_ADD INPLACE_SUB
 
@@ -190,6 +190,7 @@ binary_operator: '+'                                                            
                | LLEQU                                                                  { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                | INPLACE_ADD                                                            { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                | INPLACE_SUB                                                            { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
+               | BINARY_OP                                                              { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); astnode_set_buffer(yytext, $$); }
                ;
 
 unary_operator: '-' /* C-style casts are disallowed, would otherwise be defined here */ { $$ = astnode_create(NODE_UNKNOWN, NULL, NULL); $$->infix = yytext[0]; }

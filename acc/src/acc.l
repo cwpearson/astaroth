@@ -45,17 +45,15 @@ L [a-zA-Z_]
 {L}({L}|{D})*       { return IDENTIFIER; }
 \"(.)*\"            { return IDENTIFIER; } /* String */
 
-"=="                { return LEQU; }/* Logic operations */
-"&&"                { return LAND; }
+"&&"                { return LAND; } /* Logical operations */
 "||"                { return LOR; }
-"<="                { return LLEQU; }
+
+[<>/*+-=]"="        { return BINARY_OP; } /* Generic binary operations */
 
 "++"                { return INPLACE_INC; }
 "--"                { return INPLACE_DEC; }
-"+="                { return INPLACE_ADD; }
-"-="                { return INPLACE_SUB; }
 
-[-+*/;=\[\]{}(),\.<>] { return yytext[0]; } /* Characters */
+[-+*/;=\[\]{}(),\.<>|&] { return yytext[0]; } /* Characters */
 
 
 "//".*              { /* Skip regular comments */ }
