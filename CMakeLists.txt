@@ -107,5 +107,4 @@ endif ()
 
 if (BUILD_UTILS)
     add_subdirectory(src/utils)
-    add_subdirectory(src/exampleproject) # TODO this should not be here
 endif ()
