@@ -975,6 +975,7 @@ acHostCommunicateHalosMPI(AcMesh* submesh)
 // From Astaroth Utils
 #include "src/utils/config_loader.h"
 #include "src/utils/memory.h"
+#include "src/utils/timer_hires.h"
 #include "src/utils/verification.h"
 // --smpiargs="-gpu"
 AcResult
@@ -1016,6 +1017,10 @@ acDeviceRunMPITest(void)
     // Create model and candidate meshes
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
+
+    const int nn           = 256;
+    info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
+    acUpdateConfig(&info);
 
     AcMesh model, candidate;
 
@@ -1060,23 +1065,36 @@ acDeviceRunMPITest(void)
     acDeviceCreate(0, submesh_info, &device);
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
-    ///// Communication start
-    {
-        const int3 start = (int3){0, 0, NGHOST};
-        const int3 end   = (int3){subgrid_m.x, subgrid_m.y, subgrid_m.z - NGHOST};
-        acDevicePeriodicBoundconds(device, STREAM_DEFAULT, start, end);
-    }
+    ////////////////////////////// Timer start
+    const int num_iters = 100;
+    Timer total_time;
+    timer_reset(&total_time);
+    for (int i = 0; i < num_iters; ++i) {
+        ///// Communication start
+        {
+            const int3 start = (int3){0, 0, NGHOST};
+            const int3 end   = (int3){subgrid_m.x, subgrid_m.y, subgrid_m.z - NGHOST};
+            acDevicePeriodicBoundconds(device, STREAM_DEFAULT, start, end);
+        }
 #if 1 // GPU-GPU if CUDA-aware MPI, otherwise managed CPU-GPU-GPU-CPU
-    acDeviceSynchronizeStream(device, STREAM_DEFAULT);
-    MPI_Barrier(MPI_COMM_WORLD);
-    acDeviceCommunicateHalosMPI(device); // Includes periodic bounds at first and last ghost zone
-    MPI_Barrier(MPI_COMM_WORLD);
+        acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+        MPI_Barrier(MPI_COMM_WORLD);
+        acDeviceCommunicateHalosMPI(
+            device); // Includes periodic bounds at first and last ghost zone
+        MPI_Barrier(MPI_COMM_WORLD);
 #else // Explicit GPU-CPU-CPU-GPU
-    acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
-    acHostCommunicateHalosMPI(&submesh);
-    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+        acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
+        acHostCommunicateHalosMPI(&submesh);
+        acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 #endif
-    ///// Communication end
+        ///// Communication end
+    }
+    if (pid == 0) {
+        const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
+        printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
+        printf("Total time: %f ms\n", ms_elapsed);
+    }
+    ////////////////////////////// Timer end
 
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     acDeviceDestroy(device);
