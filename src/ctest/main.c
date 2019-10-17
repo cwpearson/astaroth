@@ -21,16 +21,38 @@
 
 #include "astaroth.h"
 
+// From Astaroth Utils
+#include "src/utils/config_loader.h"
+#include "src/utils/memory.h"
+#include "src/utils/verification.h"
+
 int
 main(void)
 {
-    AcMeshInfo info = {
-        .int_params[AC_nx] = 128,
-        .int_params[AC_ny] = 64,
-        .int_params[AC_nz] = 32,
-    };
+    AcMeshInfo info;
+    acLoadConfig(AC_DEFAULT_CONFIG, &info);
+
+    // Alloc
+    AcMesh model, candidate;
+    acMeshCreate(info, &model);
+    acMeshCreate(info, &candidate);
+
+    // Init
+    acMeshRandomize(&model);
+    acMeshApplyPeriodicBounds(&model);
+
+    // TODO load to candidate
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     acInit(info);
-    acIntegrate(0.1f);
+    acLoad(model);
+    acStore(&candidate);
     acQuit();
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Verify and destroy
+    acVerifyMesh(model, candidate);
+    acMeshDestroy(&model);
+    acMeshDestroy(&candidate);
+
     return EXIT_SUCCESS;
 }
