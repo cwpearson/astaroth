@@ -18,19 +18,24 @@
 */
 #include "astaroth_grid.h"
 
-#include "astaroth_node.h"
-
-const size_t MAX_NUM_NODES = 32;
-size_t num_nodes           = 0;
-static Node nodes[MAX_NUM_NODES];
+#include "astaroth_device.h"
+#include "errchk.h"
 
 /** */
 AcResult
-acGridInit(const AcMeshInfo node_config)
+acGridInit(const AcMeshInfo info)
 {
-    acNodeCreate(0, node_config, &nodes[0]);
-    ++num_nodes;
-    WARNING("Proper multinode not yet implemented");
+    int num_processes, pid;
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
+    printf("Processor %s. Process %d of %d.\n", processor_name, pid, num_processes);
+
+    AcMesh submesh;
     return AC_FAILURE;
 }
 
@@ -38,19 +43,15 @@ acGridInit(const AcMeshInfo node_config)
 AcResult
 acGridQuit(void)
 {
-    acNodeDestroy(nodes[0]);
-    --num_nodes;
     WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
+#if 0
 /** */
 AcResult
 acGridSynchronizeStream(const Stream stream)
 {
-    for (int i = 0; i < num_nodes; ++i) {
-        acNodeSynchronizeStream(nodes[i], stream);
-    }
     WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
@@ -59,9 +60,6 @@ acGridSynchronizeStream(const Stream stream)
 AcResult
 acGridSwapBuffers(void)
 {
-    for (int i = 0; i < num_nodes; ++i) {
-        acNodeSwapBuffers(nodes[i]);
-    }
     WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
@@ -70,9 +68,6 @@ acGridSwapBuffers(void)
 AcResult
 acGridLoadConstant(const Stream stream, const AcRealParam param, const AcReal value)
 {
-    for (int i = 0; i < num_nodes; ++i) {
-        acNodeLoadConstant(node, stream, param, value);
-    }
     WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
@@ -83,9 +78,6 @@ acGridLoadVertexBufferWithOffset(const Stream stream, const AcMesh host_mesh,
                                  const VertexBufferHandle vtxbuf_handle, const int3 src,
                                  const int3 dst, const int num_vertices)
 {
-    for (int i = 0; i < num_nodes; ++i) {
-        acNodeLoadVertexBufferWithOffset(node, stream, host_mesh, vtxbuf_handle)
-    }
     WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
@@ -95,9 +87,6 @@ AcResult
 acGridLoadMeshWithOffset(const Stream stream, const AcMesh host_mesh, const int3 src,
                          const int3 dst, const int num_vertices)
 {
-    for (int i = 0; i < num_nodes; ++i) {
-        acNodeLoadMeshWithOffset(nodes[i], stream, host_mesh, src, dst, num_vertices);
-    }
     WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
@@ -107,20 +96,21 @@ AcResult
 acGridLoadVertexBuffer(const Stream stream, const AcMesh host_mesh,
                        const VertexBufferHandle vtxbuf_handle)
 {
-    for (int i = 0; i < num_nodes; ++i) {
-        acNodeLoadVertexBuffer(node, stream, host_mesh, vtxbuf_handle);
-    }
     WARNING("Proper multinode not yet implemented");
     return AC_FAILURE;
 }
 
+#endif
 /** */
 AcResult
 acGridLoadMesh(const Stream stream, const AcMesh host_mesh)
 {
+    (void)stream;
+    (void)host_mesh;
     WARNING("Not implemented");
     return AC_FAILURE;
 }
+#if 0
 
 /** */
 AcResult
@@ -150,13 +140,17 @@ acGridStoreVertexBuffer(const Stream stream, const VertexBufferHandle vtxbuf_han
     return AC_FAILURE;
 }
 
+#endif
 /** */
 AcResult
 acGridStoreMesh(const Stream stream, AcMesh* host_mesh)
 {
+    (void)stream;
+    (void)host_mesh;
     WARNING("Not implemented");
     return AC_FAILURE;
 }
+#if 0
 
 /** */
 AcResult
@@ -183,26 +177,18 @@ acGridPeriodicBoundcondStep(const Stream stream)
     return AC_FAILURE;
 }
 
-#if 0
-/** */
-AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
-                          const VertexBufferHandle vtxbuf_handle, AcReal* result);
-/** */
-AcResult acGridReduceVec(const Stream stream, const ReductionType rtype,
-                         const VertexBufferHandle vec0, const VertexBufferHandle vec1,
-                         const VertexBufferHandle vec2, AcReal* result);
-#endif
 /** */
 AcResult
 acGridReduceScal(const Stream stream, const ReductionType rtype,
                  const VertexBufferHandle vtxbuf_handle, AcReal* result)
 {
-    return 0;
+    return AC_FAILURE;
 }
 /** */
 AcResult
 acGridReduceVec(const Stream stream, const ReductionType rtype, const VertexBufferHandle vec0,
                 const VertexBufferHandle vec1, const VertexBufferHandle vec2, AcReal* result)
 {
-    return 0;
+    return AC_FAILURE;
 }
+#endif
