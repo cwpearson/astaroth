@@ -144,7 +144,7 @@ AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const 
                            const VertexBufferHandle vtxbuf2, AcReal* result);
 
 /** */
-AcResult acDeviceCommunicateHalosMPI(const Device device);
+AcResult acDeviceRunMPITest(void);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -760,10 +760,105 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
     return AC_SUCCESS;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// MPI tests
+////////////////////////////////////////////////////////////////////////////////////////////////////
 #if AC_MPI_ENABLED == 1
+/**
+    Running: mpirun -np <num processes> <executable>
+*/
 #include <mpi.h>
+
+static void
+acDeviceDistributeMeshMPI(const AcMesh src, AcMesh* dst)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Distributing mesh...\n");
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    const size_t count = acVertexBufferSize(dst->info);
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+
+        if (pid == 0) {
+            // Communicate to self
+            assert(dst);
+            memcpy(&dst->vertex_buffer[i][0], //
+                   &src.vertex_buffer[i][0],  //
+                   count * sizeof(src.vertex_buffer[i][0]));
+
+            // Communicate to others
+            for (int j = 1; j < num_processes; ++j) {
+                const size_t src_idx = acVertexBufferIdx(
+                    0, 0, j * src.info.int_params[AC_nz] / num_processes, src.info);
+
+                MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, j, 0, MPI_COMM_WORLD);
+            }
+        }
+        else {
+            assert(dst);
+
+            // Recv
+            const size_t dst_idx = 0;
+            MPI_Status status;
+            MPI_Recv(&dst->vertex_buffer[i][dst_idx], count, datatype, 0, 0, MPI_COMM_WORLD,
+                     &status);
+        }
+    }
+}
+
+static void
+acDeviceGatherMeshMPI(const AcMesh src, AcMesh* dst)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Gathering mesh...\n");
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    size_t count = acVertexBufferSize(src.info);
+
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Communicate to self
+        if (pid == 0) {
+            assert(dst);
+            memcpy(&dst->vertex_buffer[i][0], //
+                   &src.vertex_buffer[i][0],  //
+                   count * sizeof(src.vertex_buffer[i][0]));
+
+            for (int j = 1; j < num_processes; ++j) {
+                // Recv
+                const size_t dst_idx = acVertexBufferIdx(
+                    0, 0, j * dst->info.int_params[AC_nz] / num_processes, dst->info);
+
+                assert(dst_idx + count <= acVertexBufferSize(dst->info));
+                MPI_Status status;
+                MPI_Recv(&dst->vertex_buffer[i][dst_idx], count, datatype, j, 0, MPI_COMM_WORLD,
+                         &status);
+            }
+        }
+        else {
+            // Send
+            const size_t src_idx = 0;
+
+            assert(src_idx + count <= acVertexBufferSize(src.info));
+            MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, 0, 0, MPI_COMM_WORLD);
+        }
+    }
+}
+
 /** NOTE: Assumes 1 process per GPU */
-AcResult
+static AcResult
 acDeviceCommunicateHalosMPI(const Device device)
 {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -819,12 +914,66 @@ acDeviceCommunicateHalosMPI(const Device device)
     }
     return AC_SUCCESS;
 }
+
+// From Astaroth Utils
+#include "src/utils/config_loader.h"
+#include "src/utils/memory.h"
+#include "src/utils/verification.h"
+
+AcResult
+acDeviceRunMPITest(void)
+{
+    int num_processes, pid;
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
+    printf("Processor %s. Process %d of %d.\n", processor_name, pid, num_processes);
+
+    AcMeshInfo info;
+    acLoadConfig(AC_DEFAULT_CONFIG, &info);
+
+    AcMesh model, candidate, submesh;
+
+    // Master CPU
+    if (pid == 0) {
+        acMeshCreate(info, &model);
+        acMeshCreate(info, &candidate);
+
+        acMeshRandomize(&model);
+        acMeshApplyPeriodicBounds(&model);
+    }
+
+    assert(info.int_params[AC_nz] % num_processes == 0);
+
+    AcMeshInfo submesh_info = info;
+    submesh_info.int_params[AC_nz] /= num_processes;
+    acUpdateConfig(&submesh_info);
+    acMeshCreate(submesh_info, &submesh);
+
+    acDeviceDistributeMeshMPI(model, &submesh);
+    acDeviceGatherMeshMPI(submesh, &candidate);
+
+    acMeshDestroy(&submesh);
+
+    // Master CPU
+    if (pid == 0) {
+        acVerifyMesh(model, candidate);
+        acMeshDestroy(&model);
+        acMeshDestroy(&candidate);
+    }
+
+    MPI_Finalize();
+    return AC_FAILURE;
+}
 #else
 AcResult
-acDeviceCommunicateHalosMPI(const Device device)
+acDeviceRunMPITest(void)
 {
-    (void)device;
-    WARNING("MPI was not enabled but acDeviceCommunicateHalosMPI() was called");
+    WARNING("MPI was not enabled but acDeviceRunMPITest() was called");
     return AC_FAILURE;
 }
 #endif

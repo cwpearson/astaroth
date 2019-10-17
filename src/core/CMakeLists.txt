@@ -20,7 +20,6 @@ set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
                     # -Xptxas -dlcm=ca opt-in to cache all global loads to L1/texture cache
                     # =cg to opt out
 
-
 set(CUDA_WARNING_FLAGS --compiler-options -Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion) # -Wshadow
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_ARCH_FLAGS} ${CUDA_WARNING_FLAGS})
@@ -32,9 +31,12 @@ if (MPI_ENABLED)
 
     add_definitions(-DAC_MPI_ENABLED=1)
     cuda_include_directories(${MPI_C_INCLUDE_PATH})
+
+    add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf") # Hack, cmake doesnt propagate properly from utils. Probably because utils is compiled after core
 endif ()
 
 ## Create and link the library
+set(CMAKE_POSITION_INDEPENDENT_CODE ON) # fpic for shared libraries
 cuda_add_library(astaroth_core STATIC astaroth.cu device.cu node.cu)
 target_include_directories(astaroth_core PRIVATE .)
 target_link_libraries(astaroth_core m)
@@ -46,5 +48,5 @@ if (MULTIGPU_ENABLED)
 endif ()
 
 if (MPI_ENABLED)
-    target_link_libraries(astaroth_core ${MPI_C_LIBRARIES})
+    target_link_libraries(astaroth_core ${MPI_C_LIBRARIES} astaroth_utils)
 endif ()
