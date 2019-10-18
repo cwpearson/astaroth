@@ -880,6 +880,82 @@ acDeviceCommunicateHalosMPI(const Device device)
             const size_t src_idx = acVertexBufferIdx(0, 0, device->local_config.int_params[AC_nz],
                                                      device->local_config);
             const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            //const int send_pid   = (pid + 1) % num_processes;
+            const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                     &recv_requests[i]);
+
+        }
+        { // Back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(
+                0, 0, NGHOST + device->local_config.int_params[AC_nz], device->local_config);
+            //const int send_pid = (pid + num_processes - 1) % num_processes;
+            const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, NUM_VTXBUF_HANDLES + i,
+                     MPI_COMM_WORLD, &recv_requests[NUM_VTXBUF_HANDLES + i]);
+            
+        }
+    }
+    acDeviceSynchronizeStream(device, STREAM_DEFAULT); // Ensure that local bounds are done before sending
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, device->local_config.int_params[AC_nz],
+                                                     device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
+            //const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+	    MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
+                      &request);
+
+        }
+        { // Back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(
+                0, 0, NGHOST + device->local_config.int_params[AC_nz], device->local_config);
+            const int send_pid = (pid + num_processes - 1) % num_processes;
+            //const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD, &request);
+        }
+    }
+    MPI_Status recv_statuses[2*NUM_VTXBUF_HANDLES];
+    MPI_Waitall(2*NUM_VTXBUF_HANDLES, recv_requests, recv_statuses);
+ 
+    return AC_SUCCESS;
+}
+#if 0 // Ok basic working
+/** NOTE: Assumes 1 process per GPU */
+static AcResult
+acDeviceCommunicateHalosMPI(const Device device)
+{
+    //MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    const size_t count = device->local_config.int_params[AC_mx] *
+                         device->local_config.int_params[AC_my] * NGHOST;
+    MPI_Request recv_requests[2*NUM_VTXBUF_HANDLES];
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, device->local_config.int_params[AC_nz],
+                                                     device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
             const int send_pid   = (pid + 1) % num_processes;
             const int recv_pid   = (pid + num_processes - 1) % num_processes;
 
@@ -912,6 +988,7 @@ acDeviceCommunicateHalosMPI(const Device device)
  
     return AC_SUCCESS;
 }
+#endif
 
 #if 0
 /** NOTE: Assumes 1 process per GPU */
@@ -1214,7 +1291,7 @@ acDeviceRunMPITest(void)
             acDevicePeriodicBoundconds(device, STREAM_DEFAULT, start, end);
         }
 #if 1 // GPU-GPU if CUDA-aware MPI, otherwise managed CPU-GPU-GPU-CPU
-        acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+        //acDeviceSynchronizeStream(device, STREAM_DEFAULT);
         //MPI_Barrier(MPI_COMM_WORLD);
         acDeviceCommunicateHalosMPI(
             device); // Includes periodic bounds at first and last ghost zone
