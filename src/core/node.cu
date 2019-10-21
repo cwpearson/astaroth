@@ -309,6 +309,29 @@ acNodeDestroy(Node node)
 {
     acNodeSynchronizeStream(node, STREAM_ALL);
 
+    // Disable peer access
+    for (int i = 0; i < node->num_devices; ++i) {
+        const int front = (i + 1) % node->num_devices;
+        const int back  = (i - 1 + node->num_devices) % node->num_devices;
+
+        int can_access_front, can_access_back;
+        cudaDeviceCanAccessPeer(&can_access_front, i, front);
+        cudaDeviceCanAccessPeer(&can_access_back, i, back);
+#if VERBOSE_PRINTING
+        printf("Trying to disable peer access from %d to %d (can access: %d) and %d (can access: "
+               "%d)\n",
+               i, front, can_access_front, back, can_access_back);
+#endif
+
+        cudaSetDevice(i);
+        if (can_access_front) {
+            ERRCHK_CUDA_ALWAYS(cudaDeviceDisablePeerAccess(front));
+        }
+        if (can_access_back) {
+            ERRCHK_CUDA_ALWAYS(cudaDeviceDisablePeerAccess(back));
+        }
+    }
+
     // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
         acDeviceDestroy(node->devices[i]);
