@@ -1895,9 +1895,9 @@ acDeviceBoundcondStepMPI_bad(const Device device, AcMesh* submesh)
     return AC_SUCCESS;
 }
 
-// BEST USE THIS!
+// BEST USE THIS! (substep version)
 static AcResult
-acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
+acDeviceBoundcondStepMPI_single_step_best(const Device device, AcMesh* submesh)
 {
     acDeviceSynchronizeStream(device, STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1988,6 +1988,151 @@ acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
         MPI_Status status;
         MPI_Wait(&recv_requests[i], &status);
         MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
+    }
+
+    return AC_SUCCESS;
+}
+
+// BEST USE THIS! (full integration step)
+static AcResult
+acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
+{
+    const int mx       = device->local_config.int_params[AC_mx];
+    const int my       = device->local_config.int_params[AC_my];
+    const int mz       = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    for (int isubstep = 0; isubtep < 3; ++isubstep) {
+        // Local boundconds
+        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+            // Front plate local
+            {
+                const int3 start = (int3){0, 0, NGHOST};
+                const int3 end   = (int3){mx, my, 2 * NGHOST};
+                acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+            }
+            // Back plate local
+            {
+                const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+                const int3 end   = (int3){mx, my, mz - NGHOST};
+                acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+            }
+        }
+        // Inner boundconds (while waiting)
+        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+
+            const int3 start = (int3){0, 0, 2 * NGHOST};
+            const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+                                          start, end);
+        }
+        // Inner integration
+        {
+            ERRCHK(NUM_STREAMS - 2 >= 0);
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = node->subgrid.n;
+            acDeviceIntegrateSubstep(devices, (Stream)(NUM_STREAMS - 2), isubstep, m1, m2, dt);
+        }
+
+        // MPI
+        MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
+        MPI_Datatype datatype = MPI_FLOAT;
+        if (sizeof(AcReal) == 8)
+            datatype = MPI_DOUBLE;
+
+        int pid, num_processes;
+        MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+        MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+            { // Recv neighbor's front
+                // ...|ooooxxx|... -> xxx|ooooooo|...
+                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+                const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+                MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                          &recv_requests[i]);
+            }
+            { // Recv neighbor's back
+                // ...|ooooooo|xxx <- ...|xxxoooo|...
+                const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+                const int recv_pid   = (pid + 1) % num_processes;
+
+                MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid,
+                          NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
+                          &recv_requests[i + NUM_VTXBUF_HANDLES]);
+            }
+        }
+
+        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+            acDeviceSynchronizeStream(device, (Stream)i);
+            {
+                // Send front
+                // ...|ooooxxx|... -> xxx|ooooooo|...
+                const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST,
+                                                         device->local_config);
+                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+                const int send_pid   = (pid + 1) % num_processes;
+
+                MPI_Request request;
+                MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
+                          &request);
+            }
+            { // Send back
+                // ...|ooooooo|xxx <- ...|xxxoooo|...
+                const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+                const int send_pid   = (pid + num_processes - 1) % num_processes;
+
+                MPI_Request request;
+                MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                          i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+            }
+        }
+
+        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+            MPI_Status status;
+            MPI_Wait(&recv_requests[i], &status);
+            MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Front
+            const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_0, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Back
+            const int3 m1 = (int3){NGHOST, NGHOST, node->subgrid.n.z};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_1, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Bottom
+            const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_2, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Top
+            const int3 m1 = (int3){NGHOST, node->subgrid.n.y, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_3, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Left
+            const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
+                                        node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_4, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Right
+            const int3 m1 = (int3){node->subgrid.n.x, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
+                                        node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_5, isubstep, m1, m2, dt);
+        }
+        acNodeSwapBuffers(node);
     }
 
     return AC_SUCCESS;
@@ -2155,7 +2300,7 @@ acDeviceRunMPITest(void)
     else
         WARNING("CUDA-aware MPI not supported with this MPI library (MPIX)\n");
 #else
-    printf("MPIX_CUDA_AWARE_SUPPORT was not defined. Do not know wheter CUDA-aware MPI is "
+    printf("MPIX_CUDA_AWARE_SUPPORT was not defined. Do not know whether CUDA-aware MPI is "
            "supported\n");
 #endif
 
