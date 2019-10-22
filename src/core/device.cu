@@ -57,6 +57,9 @@ struct device_s {
     // Declare memory for buffers needed for packed data transfers here
     AcReal* inner[2];
     AcReal* outer[2];
+
+    AcReal* inner_host[2];
+    AcReal* outer_host[2];
 #endif
 };
 
@@ -205,6 +208,9 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     for (int i = 0; i < 2; ++i) {
         ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->inner[i], block_size_bytes));
         ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->outer[i], block_size_bytes));
+
+        ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->inner_host[i], block_size_bytes));
+        ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->outer_host[i], block_size_bytes));
     }
 #endif
 
@@ -245,6 +251,9 @@ acDeviceDestroy(Device device)
     for (int i = 0; i < 2; ++i) {
         cudaFree(device->inner[i]);
         cudaFree(device->outer[i]);
+
+        cudaFreeHost(device->inner_host[i]);
+        cudaFreeHost(device->outer_host[i]);
     }
 #endif
 
@@ -1333,7 +1342,7 @@ acDeviceBoundcondStepMPI_ok_working(const Device device, AcMesh* submesh)
 }
 
 static AcResult
-acDeviceBoundcondStepMPI_best_yet(const Device device, AcMesh* submesh)
+acDeviceBoundcondStepMPI_secondbest(const Device device, AcMesh* submesh)
 {
     const int mx       = device->local_config.int_params[AC_mx];
     const int my       = device->local_config.int_params[AC_my];
@@ -1510,7 +1519,7 @@ acDeviceBoundcondStepMPI_best_yet(const Device device, AcMesh* submesh)
 }
 
 static AcResult
-acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
+acDeviceBoundcondStepMPI_best_yet(const Device device, AcMesh* submesh)
 {
     acDeviceSynchronizeStream(device, STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1639,6 +1648,485 @@ acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
     return AC_SUCCESS;
 }
 
+// This is the modified best_yet, where send/recv becomes after bc.
+// Modified to use RDMA
+static AcResult
+acDeviceBoundcondStepMPI_OH_YES_BEST_FIRST_WORKING_RDMA(const Device device, AcMesh* submesh)
+{
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    const int mx       = device->local_config.int_params[AC_mx];
+    const int my       = device->local_config.int_params[AC_my];
+    const int mz       = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    // MPI Irecv
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    // Local boundconds
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate local
+        {
+            const int3 start = (int3){0, 0, NGHOST};
+            const int3 end   = (int3){mx, my, 2 * NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+        // Back plate local
+        {
+            const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+            const int3 end   = (int3){mx, my, mz - NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Inner (while waiting)
+        const int3 start = (int3){0, 0, 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
+        acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+                                      start, end);
+    }
+
+    // Front plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate GPU->CPU
+        // const int3 start = (int3){0, 0, NGHOST};
+        // const int3 end   = (int3){mx, my, 2 * NGHOST};
+        // MPI Isend
+        acDeviceSynchronizeStream(device, (Stream)i);
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
+            // const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
+                      &request);
+        }
+    }
+    // Back plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Back plate GPU->CPU
+        // const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+        // const int3 end   = (int3){mx, my, mz - NGHOST};
+        acDeviceSynchronizeStream(device, (Stream)i);
+        // MPI Isend
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            const int send_pid   = (pid + num_processes - 1) % num_processes;
+            // const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+        }
+    }
+
+    // Load CPU -> GPU
+    MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            // const int send_pid   = (pid + 1) % num_processes;
+            const int recv_pid = (pid + num_processes - 1) % num_processes;
+
+            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                      &recv_requests[i]);
+        }
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            // const int send_pid = (pid + num_processes - 1) % num_processes;
+            const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
+                      &recv_requests[i + NUM_VTXBUF_HANDLES]);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        MPI_Status status;
+        MPI_Wait(&recv_requests[i], &status);
+        MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
+    }
+
+    return AC_SUCCESS;
+}
+
+// Non-async modification of the OH_YES_BEST_FIRST_WORKING_RDMA
+// Bad performance, probably because stuff not prefetched while waiting for the next iteration
+static AcResult
+acDeviceBoundcondStepMPI_bad(const Device device, AcMesh* submesh)
+{
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    const int mx       = device->local_config.int_params[AC_mx];
+    const int my       = device->local_config.int_params[AC_my];
+    const int mz       = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    // MPI Irecv
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    // Local boundconds
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate local
+        {
+            const int3 start = (int3){0, 0, NGHOST};
+            const int3 end   = (int3){mx, my, 2 * NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+        // Back plate local
+        {
+            const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+            const int3 end   = (int3){mx, my, mz - NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Inner (while waiting)
+        const int3 start = (int3){0, 0, 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
+        acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+                                      start, end);
+    }
+
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acDeviceSynchronizeStream(device, (Stream)i);
+
+        if (pid) {
+            {
+                // Send front
+                // ...|ooooxxx|... -> xxx|ooooooo|...
+                const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST,
+                                                         device->local_config);
+                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+                const int send_pid   = (pid + 1) % num_processes;
+
+                MPI_Send(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD);
+            }
+            { // Recv neighbor's front
+                // ...|ooooxxx|... -> xxx|ooooooo|...
+                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+                const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+                MPI_Status status;
+                MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                         &status);
+            }
+            { // Send back
+                // ...|ooooooo|xxx <- ...|xxxoooo|...
+                const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+                const int send_pid   = (pid + num_processes - 1) % num_processes;
+
+                MPI_Send(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                         i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD);
+            }
+            { // Recv neighbor's back
+                // ...|ooooooo|xxx <- ...|xxxoooo|...
+                const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+                const int recv_pid   = (pid + 1) % num_processes;
+
+                MPI_Status status;
+                MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid,
+                         NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD, &status);
+            }
+        }
+        else {
+            {
+                // Recv neighbor's front
+                // ...|ooooxxx|... -> xxx|ooooooo|...
+                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+                const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+                MPI_Status status;
+                MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                         &status);
+            }
+            { // Send front
+                // ...|ooooxxx|... -> xxx|ooooooo|...
+                const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST,
+                                                         device->local_config);
+                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+                const int send_pid   = (pid + 1) % num_processes;
+
+                MPI_Send(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD);
+            }
+            { // Recv neighbor's back
+                // ...|ooooooo|xxx <- ...|xxxoooo|...
+                const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+                const int recv_pid   = (pid + 1) % num_processes;
+
+                MPI_Status status;
+                MPI_Recv(&device->vba.in[i][dst_idx], count, datatype, recv_pid,
+                         NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD, &status);
+            }
+            { // Send back
+                // ...|ooooooo|xxx <- ...|xxxoooo|...
+                const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+                const int send_pid   = (pid + num_processes - 1) % num_processes;
+
+                MPI_Send(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                         i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD);
+            }
+        }
+    }
+
+    return AC_SUCCESS;
+}
+
+// BEST USE THIS!
+static AcResult
+acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
+{
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    const int mx       = device->local_config.int_params[AC_mx];
+    const int my       = device->local_config.int_params[AC_my];
+    const int mz       = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    // Local boundconds
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate local
+        {
+            const int3 start = (int3){0, 0, NGHOST};
+            const int3 end   = (int3){mx, my, 2 * NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+        // Back plate local
+        {
+            const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+            const int3 end   = (int3){mx, my, mz - NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Inner (while waiting)
+        const int3 start = (int3){0, 0, 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
+        acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+                                      start, end);
+    }
+
+    // MPI
+    MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Recv neighbor's front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
+                      &recv_requests[i]);
+        }
+        { // Recv neighbor's back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            const int recv_pid   = (pid + 1) % num_processes;
+
+            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
+                      &recv_requests[i + NUM_VTXBUF_HANDLES]);
+        }
+    }
+
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acDeviceSynchronizeStream(device, (Stream)i);
+        {
+            // Send front
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
+                      &request);
+        }
+        { // Send back
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const int send_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
+                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+        }
+    }
+
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        MPI_Status status;
+        MPI_Wait(&recv_requests[i], &status);
+        MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
+    }
+
+    return AC_SUCCESS;
+}
+
+#define BUFFER_FRONT (0)
+#define BUFFER_BACK (1)
+
+static AcResult
+acPack(const Device device, const Stream stream_handle)
+{
+    cudaSetDevice(device->id);
+    const cudaStream_t stream = device->streams[stream_handle];
+    const int block_size      = device->local_config.int_params[AC_mx] *
+                           device->local_config.int_params[AC_my] * NGHOST;
+    const dim3 tpb(256, 1, 1);
+    const dim3 bpg((uint)ceil((block_size * NUM_VTXBUF_HANDLES) / (float)tpb.x), 1, 1);
+
+    { // Front
+        const int3 src = (int3){0, 0, NGHOST};
+        pack_data<<<bpg, tpb, 0, stream>>>(device->vba, src, device->inner[BUFFER_FRONT]);
+    }
+    { // Back
+        const int3 src = (int3){0, 0, device->local_config.int_params[AC_mz] - 2 * NGHOST};
+        pack_data<<<bpg, tpb, 0, stream>>>(device->vba, src, device->inner[BUFFER_BACK]);
+    }
+    return AC_SUCCESS;
+}
+
+static AcResult
+acUnpack(const Device device, const Stream stream_handle)
+{
+    cudaSetDevice(device->id);
+    const cudaStream_t stream = device->streams[stream_handle];
+    const int block_size      = device->local_config.int_params[AC_mx] *
+                           device->local_config.int_params[AC_my] * NGHOST;
+    const dim3 tpb(256, 1, 1);
+    const dim3 bpg((uint)ceil((block_size * NUM_VTXBUF_HANDLES) / (float)tpb.x), 1, 1);
+
+    { // Front
+        const int3 dst = (int3){0, 0, 0};
+        unpack_data<<<bpg, tpb, 0, stream>>>(device->outer[BUFFER_FRONT], device->vba, dst);
+    }
+    { // Back
+        const int3 dst = (int3){0, 0, device->local_config.int_params[AC_mz] - NGHOST};
+        unpack_data<<<bpg, tpb, 0, stream>>>(device->outer[BUFFER_BACK], device->vba, dst);
+    }
+    return AC_SUCCESS;
+}
+
+static AcResult
+acDeviceBoundcondStepMPI_PACKED_NOT_WORKING(const Device device, AcMesh* submesh)
+{
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    const int mx       = device->local_config.int_params[AC_mx];
+    const int my       = device->local_config.int_params[AC_my];
+    const int mz       = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    // Local boundconds
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate local
+        {
+            const int3 start = (int3){0, 0, NGHOST};
+            const int3 end   = (int3){mx, my, 2 * NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+        // Back plate local
+        {
+            const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+            const int3 end   = (int3){mx, my, mz - NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+    }
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    acPack(device, STREAM_DEFAULT);
+
+    // Do inner boundconds while waiting
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Inner (while waiting)
+        const int3 start = (int3){0, 0, 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
+        acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+                                      start, end);
+    }
+
+    // Front and back plates GPU -> CPU
+    const size_t packed_block_size  = count * NUM_VTXBUF_HANDLES;
+    const size_t packed_block_bytes = packed_block_size * sizeof(AcReal);
+    cudaMemcpyAsync(device->inner_host[BUFFER_FRONT], device->inner[BUFFER_FRONT],
+                    packed_block_bytes, cudaMemcpyDeviceToHost, device->streams[STREAM_DEFAULT]);
+    cudaMemcpyAsync(device->inner_host[BUFFER_BACK], device->inner[BUFFER_BACK], packed_block_bytes,
+                    cudaMemcpyDeviceToHost, device->streams[STREAM_DEFAULT]);
+    acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+    { // Send plates
+        // ...|ooooxxx|... -> xxx|ooooooo|... Front
+        // ...|ooooooo|xxx <- ...|xxxoooo|... Back
+        const int front_pid = (pid + 1) % num_processes;
+        const int back_pid  = (pid + num_processes - 1) % num_processes;
+        // const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+        MPI_Request request;
+        MPI_Isend(device->inner_host[BUFFER_FRONT], packed_block_size, datatype, front_pid,
+                  BUFFER_FRONT, MPI_COMM_WORLD, &request);
+        MPI_Isend(device->inner_host[BUFFER_BACK], packed_block_size, datatype, back_pid,
+                  BUFFER_BACK, MPI_COMM_WORLD, &request);
+    }
+
+    // Front and back plates CPU -> GPU
+    {
+        // ...|ooooooo|xxx <- ...|xxxoooo|... Front to back
+        // ...|ooooxxx|... -> xxx|ooooooo|... Back to front
+        const int front_pid = (pid + 1) % num_processes;
+        const int back_pid  = (pid + num_processes - 1) % num_processes;
+        MPI_Status status;
+        MPI_Recv(device->outer_host[BUFFER_FRONT], packed_block_size, datatype, front_pid,
+                 BUFFER_BACK, MPI_COMM_WORLD,
+                 &status); // Note: receive from BUFFER_BACK to BUFFER_FRONT
+        MPI_Recv(device->outer_host[BUFFER_BACK], packed_block_size, datatype, back_pid,
+                 BUFFER_FRONT, MPI_COMM_WORLD,
+                 &status); // Note: receive from BUFFER_FRONT to BUFFER_BACK
+    }
+    cudaMemcpyAsync(device->outer[BUFFER_FRONT], device->outer_host[BUFFER_FRONT],
+                    packed_block_bytes, cudaMemcpyHostToDevice, device->streams[STREAM_DEFAULT]);
+    cudaMemcpyAsync(device->outer[BUFFER_BACK], device->outer_host[BUFFER_BACK], packed_block_bytes,
+                    cudaMemcpyHostToDevice, device->streams[STREAM_DEFAULT]);
+    acUnpack(device, STREAM_DEFAULT);
+}
+
 // From Astaroth Utils
 #include "src/utils/config_loader.h"
 #include "src/utils/memory.h"
@@ -1680,9 +2168,8 @@ acDeviceRunMPITest(void)
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
-    const int nn           = 256;
-    info.int_params[AC_nx] = info.int_params[AC_ny] = nn;
-    info.int_params[AC_nz]                          = 4 * 512;
+    const int nn           = 512;
+    info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
     acUpdateConfig(&info);
 
     AcMesh model, candidate;
@@ -1741,14 +2228,6 @@ acDeviceRunMPITest(void)
         printf("Time per step: %f ms\n", ms_elapsed / num_iters);
     }
     ////////////////////////////// Timer end
-    const cudaStream_t default_stream = device->streams[STREAM_DEFAULT];
-    const int block_size = submesh_info.int_params[AC_mx] * submesh_info.int_params[AC_my] * NGHOST;
-    const dim3 tpb(256, 1, 1);
-    const dim3 bpg((uint)ceil((block_size * NUM_VTXBUF_HANDLES) / (float)tpb.x), 1, 1);
-    const int3 src = (int3){0, 0, 0}; // TODO
-    const int3 dst = (int3){0, 0, 0}; // TODO
-    pack_data<<<bpg, tpb, 0, default_stream>>>(device->vba, src, device->inner[0]);
-    unpack_data<<<bpg, tpb, 0, default_stream>>>(device->inner[0], device->vba, dst);
 
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     acDeviceDestroy(device);
