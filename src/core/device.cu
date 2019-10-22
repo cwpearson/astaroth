@@ -53,9 +53,10 @@ struct device_s {
     AcReal* reduce_scratchpad;
     AcReal* reduce_result;
 
-#if PACKED_DATA_TRANSFERS
-// Declare memory for buffers needed for packed data transfers here
-// AcReal* data_packing_buffer;
+#if AC_MPI_ENABLED
+    // Declare memory for buffers needed for packed data transfers here
+    AcReal* inner[2];
+    AcReal* outer[2];
 #endif
 };
 
@@ -173,7 +174,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
 
     // Concurrency
     for (int i = 0; i < NUM_STREAMS; ++i) {
-        cudaStreamCreateWithPriority(&device->streams[i], cudaStreamNonBlocking, 0);
+        cudaStreamCreateWithPriority(&device->streams[i], cudaStreamNonBlocking, i);
     }
 
     // Memory
@@ -196,8 +197,15 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
         cudaMalloc(&device->reduce_scratchpad, acVertexBufferCompdomainSizeBytes(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->reduce_result, sizeof(AcReal)));
 
-#if PACKED_DATA_TRANSFERS
-// Allocate data required for packed transfers here (cudaMalloc)
+#if AC_MPI_ENABLED
+    // Allocate data required for packed transfers here (cudaMalloc)
+    const size_t block_size_bytes = device_config.int_params[AC_mx] *
+                                    device_config.int_params[AC_my] * NGHOST * NUM_VTXBUF_HANDLES *
+                                    sizeof(AcReal);
+    for (int i = 0; i < 2; ++i) {
+        ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->inner[i], block_size_bytes));
+        ERRCHK_CUDA_ALWAYS(cudaMalloc(&device->outer[i], block_size_bytes));
+    }
 #endif
 
     // Device constants
@@ -232,8 +240,12 @@ acDeviceDestroy(Device device)
     cudaFree(device->reduce_scratchpad);
     cudaFree(device->reduce_result);
 
-#if PACKED_DATA_TRANSFERS
-// Free data required for packed tranfers here (cudaFree)
+#if AC_MPI_ENABLED
+    // Free data required for packed tranfers here (cudaFree)
+    for (int i = 0; i < 2; ++i) {
+        cudaFree(device->inner[i]);
+        cudaFree(device->outer[i]);
+    }
 #endif
 
     // Concurrency
@@ -770,6 +782,51 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
 */
 #include <mpi.h>
 
+// Needs mx * my * NGHOST * NUM_VTXBUF_HANDLES threads
+static __global__ void
+pack_data(VertexBufferArray vba, const int3 start, AcReal* buffer)
+{
+    const int3 m = (int3){
+        DCONST(AC_mx),
+        DCONST(AC_my),
+        DCONST(AC_mz),
+    };
+
+    const int block_size = m.x * m.y * NGHOST;
+    const int vertexIdx  = threadIdx.x + blockIdx.x * blockDim.x;
+    if (vertexIdx >= m.x * m.y * NGHOST * NUM_VTXBUF_HANDLES)
+        return;
+
+    const int vba_idx    = DEVICE_VTXBUF_IDX(start) + (vertexIdx % blockSize);
+    const int vba_handle = vertexIdx / block_size;
+
+    const int buf_idx = vertexIdx;
+
+    buffer[buf_idx] = vba.in[vba_handle][vba_idx];
+}
+
+static __global__ void
+unpack_data(VertexBufferArray vba, const int3 start, AcReal* buffer)
+{
+    const int3 m = (int3){
+        DCONST(AC_mx),
+        DCONST(AC_my),
+        DCONST(AC_mz),
+    };
+
+    const int block_size = m.x * m.y * NGHOST;
+    const int vertexIdx  = threadIdx.x + blockIdx.x * blockDim.x;
+    if (vertexIdx >= m.x * m.y * NGHOST * NUM_VTXBUF_HANDLES)
+        return;
+
+    const int vba_idx    = DEVICE_VTXBUF_IDX(start) + (vertexIdx % blockSize);
+    const int vba_handle = vertexIdx / block_size;
+
+    const int buf_idx = vertexIdx;
+
+    vba.in[vba_handle][vba_idx] = buffer[buf_idx];
+}
+
 static void
 acDeviceDistributeMeshMPI(const AcMesh src, AcMesh* dst)
 {
@@ -1166,6 +1223,422 @@ acHostCommunicateHalosMPI(AcMesh* submesh)
     }
 }
 
+static AcResult
+acDeviceBoundcondStepMPI_ok_working(const Device device, AcMesh* submesh)
+{
+    const size_t mx    = device->local_config.int_params[AC_mx];
+    const size_t my    = device->local_config.int_params[AC_my];
+    const size_t mz    = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    // MPI Irecv
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            // const int send_pid   = (pid + 1) % num_processes;
+            const int recv_pid = (pid + num_processes - 1) % num_processes;
+
+            MPI_Irecv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid, i,
+                      MPI_COMM_WORLD, &recv_requests[i]);
+        }
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            // const int send_pid = (pid + num_processes - 1) % num_processes;
+            const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Irecv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
+                      &recv_requests[i + NUM_VTXBUF_HANDLES]);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Local boundconds
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        const int3 start = (int3){0, 0, NGHOST};
+        const int3 end   = (int3){mx, my, mz - NGHOST};
+        acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+    }
+    // Front plate GPU->CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        const int3 start = (int3){0, 0, NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start, start,
+                                            count, submesh);
+    }
+    // Back plate GPU->CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        const int3 start = (int3){0, 0, mz - NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start, start,
+                                            count, submesh);
+    }
+
+    // MPI Isend
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acDeviceSynchronizeStream(device, (Stream)i);
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
+            // const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid, i,
+                      MPI_COMM_WORLD, &request);
+        }
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            const int send_pid   = (pid + num_processes - 1) % num_processes;
+            // const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid,
+                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front plate
+            MPI_Status status;
+            MPI_Wait(&recv_requests[i], &status);
+            const int3 start = (int3){0, 0, 0};
+            acDeviceLoadVertexBufferWithOffset(device, (Stream)i, *submesh, (VertexBufferHandle)i,
+                                               start, start, count);
+        }
+        { // Back plate
+            MPI_Status status;
+            MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
+            const int3 start = (int3){0, 0, mz - NGHOST};
+            acDeviceLoadVertexBufferWithOffset(device, (Stream)i, *submesh, (VertexBufferHandle)i,
+                                               start, start, count);
+        }
+    }
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+
+    return AC_SUCCESS;
+}
+
+static AcResult
+acDeviceBoundcondStepMPI_best_yet(const Device device, AcMesh* submesh)
+{
+    const size_t mx    = device->local_config.int_params[AC_mx];
+    const size_t my    = device->local_config.int_params[AC_my];
+    const size_t mz    = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    // MPI Irecv
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            // const int send_pid   = (pid + 1) % num_processes;
+            const int recv_pid = (pid + num_processes - 1) % num_processes;
+
+            MPI_Irecv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid, i,
+                      MPI_COMM_WORLD, &recv_requests[i]);
+        }
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            // const int send_pid = (pid + num_processes - 1) % num_processes;
+            const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Irecv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
+                      &recv_requests[i + NUM_VTXBUF_HANDLES]);
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Local boundconds
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate local
+        {
+            const int3 start = (int3){0, 0, NGHOST};
+            const int3 end   = (int3){mx, my, 2 * NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+        // Back plate local
+        {
+            const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+            const int3 end   = (int3){mx, my, mz - NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Inner (while waiting)
+
+        const int3 start = (int3){0, 0, 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
+        acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+                                      start, end);
+    }
+
+    // Front plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate GPU->CPU
+        const int3 start = (int3){0, 0, NGHOST};
+        const int3 end   = (int3){mx, my, 2 * NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start, start,
+                                            count, submesh);
+        // MPI Isend
+        acDeviceSynchronizeStream(device, (Stream)i);
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
+            // const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid, i,
+                      MPI_COMM_WORLD, &request);
+        }
+    }
+    // Back plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Back plate GPU->CPU
+
+        const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start, start,
+                                            count, submesh);
+        acDeviceSynchronizeStream(device, (Stream)i);
+        // MPI Isend
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            const int send_pid   = (pid + num_processes - 1) % num_processes;
+            // const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid,
+                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+        }
+    }
+    /*
+    // Front plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate GPU->CPU
+        const int3 start = (int3){0, 0, NGHOST};
+        const int3 end   = (int3){mx, my, 2 * NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start,
+    start, count, submesh);
+    }
+    // Back plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Back plate GPU->CPU
+
+        const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start,
+    start, count, submesh);
+    }
+
+    // MPI Isend
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acDeviceSynchronizeStream(device, (Stream)i);
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST,
+    device->local_config); const size_t dst_idx = acVertexBufferIdx(0, 0, 0,
+    device->local_config); const int send_pid   = (pid + 1) % num_processes;
+            // const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid, i,
+                      MPI_COMM_WORLD, &request);
+        }
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            const int send_pid   = (pid + num_processes - 1) % num_processes;
+            // const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid,
+                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+        }
+    }*/
+
+    // Load CPU -> GPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front plate
+            MPI_Status status;
+            MPI_Wait(&recv_requests[i], &status);
+            const int3 start = (int3){0, 0, 0};
+            acDeviceLoadVertexBufferWithOffset(device, (Stream)i, *submesh, (VertexBufferHandle)i,
+                                               start, start, count);
+        }
+        { // Back plate
+            MPI_Status status;
+            MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
+            const int3 start = (int3){0, 0, mz - NGHOST};
+            acDeviceLoadVertexBufferWithOffset(device, (Stream)i, *submesh, (VertexBufferHandle)i,
+                                               start, start, count);
+        }
+    }
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+
+    return AC_SUCCESS;
+}
+
+static AcResult
+acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
+{
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    const size_t mx    = device->local_config.int_params[AC_mx];
+    const size_t my    = device->local_config.int_params[AC_my];
+    const size_t mz    = device->local_config.int_params[AC_mz];
+    const size_t count = mx * my * NGHOST;
+
+    // MPI Irecv
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    // Local boundconds
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate local
+        {
+            const int3 start = (int3){0, 0, NGHOST};
+            const int3 end   = (int3){mx, my, 2 * NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+        // Back plate local
+        {
+            const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+            const int3 end   = (int3){mx, my, mz - NGHOST};
+            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
+        }
+    }
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Inner (while waiting)
+        const int3 start = (int3){0, 0, 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
+        acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+                                      start, end);
+    }
+
+    // Front plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Front plate GPU->CPU
+        const int3 start = (int3){0, 0, NGHOST};
+        const int3 end   = (int3){mx, my, 2 * NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start, start,
+                                            count, submesh);
+        // MPI Isend
+        acDeviceSynchronizeStream(device, (Stream)i);
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            const int send_pid   = (pid + 1) % num_processes;
+            // const int recv_pid   = (pid + num_processes - 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid, i,
+                      MPI_COMM_WORLD, &request);
+        }
+    }
+    // Back plate GPU -> CPU
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        // Back plate GPU->CPU
+
+        const int3 start = (int3){0, 0, mz - 2 * NGHOST};
+        const int3 end   = (int3){mx, my, mz - NGHOST};
+        acDeviceStoreVertexBufferWithOffset(device, (Stream)i, (VertexBufferHandle)i, start, start,
+                                            count, submesh);
+        acDeviceSynchronizeStream(device, (Stream)i);
+        // MPI Isend
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            const int send_pid   = (pid + num_processes - 1) % num_processes;
+            // const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Request request;
+            MPI_Isend(&submesh->vertex_buffer[i][src_idx], count, datatype, send_pid,
+                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+        }
+    }
+
+    // Load CPU -> GPU
+    MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // Front plate
+            // ...|ooooxxx|... -> xxx|ooooooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
+            // const int send_pid   = (pid + 1) % num_processes;
+            const int recv_pid = (pid + num_processes - 1) % num_processes;
+
+            MPI_Irecv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid, i,
+                      MPI_COMM_WORLD, &recv_requests[i]);
+        }
+        { // Front plate
+            MPI_Status status;
+            MPI_Wait(&recv_requests[i], &status);
+            const int3 start = (int3){0, 0, 0};
+            acDeviceLoadVertexBufferWithOffset(device, (Stream)i, *submesh, (VertexBufferHandle)i,
+                                               start, start, count);
+        }
+        { // Back plate
+            // ...|ooooooo|xxx <- ...|xxxoooo|...
+            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
+            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
+            // const int send_pid = (pid + num_processes - 1) % num_processes;
+            const int recv_pid = (pid + 1) % num_processes;
+
+            MPI_Irecv(&submesh->vertex_buffer[i][dst_idx], count, datatype, recv_pid,
+                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
+                      &recv_requests[i + NUM_VTXBUF_HANDLES]);
+        }
+        { // Back plate
+            MPI_Status status;
+            MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
+            const int3 start = (int3){0, 0, mz - NGHOST};
+            acDeviceLoadVertexBufferWithOffset(device, (Stream)i, *submesh, (VertexBufferHandle)i,
+                                               start, start, count);
+        }
+    }
+
+    return AC_SUCCESS;
+}
+
 // From Astaroth Utils
 #include "src/utils/config_loader.h"
 #include "src/utils/memory.h"
@@ -1209,7 +1682,7 @@ acDeviceRunMPITest(void)
 #else  /* !defined(MPIX_CUDA_AWARE_SUPPORT) */
     printf("This MPI library cannot determine if there is CUDA-aware support.\n");
 #endif /* MPIX_CUDA_AWARE_SUPPORT */
-       //////// Borrowing end
+    //////// Borrowing end
 
     int direct = getenv("MPICH_RDMA_ENABLED_CUDA") == NULL
                      ? 0
@@ -1273,34 +1746,15 @@ acDeviceRunMPITest(void)
     // Warmup
     acDeviceSynchronizeStream(device, STREAM_ALL);
     for (int i = 0; i < 10; ++i) {
-        ///// Communication start
-        {
-            const int3 start = (int3){0, 0, NGHOST};
-            const int3 end   = (int3){subgrid_m.x, subgrid_m.y, subgrid_m.z - NGHOST};
-            acDevicePeriodicBoundconds(device, STREAM_DEFAULT, start, end);
-        }
-        acDeviceSynchronizeStream(device, STREAM_DEFAULT);
-        // Includes periodic bounds at first and last ghost zone
-        acDeviceCommunicateHalosMPI(device, subgrid_m);
+        acDeviceBoundcondStepMPI(device, &submesh);
     }
 
-    ////////////////////////////// Timer start
+    // Benchmark
     const int num_iters = 100;
     Timer total_time;
     timer_reset(&total_time);
     for (int i = 0; i < num_iters; ++i) {
-        ///// Communication start
-#if 1 // GPU-GPU if CUDA-aware MPI, otherwise managed CPU-GPU-GPU-CPU
-      // acDeviceSynchronizeStream(device, STREAM_DEFAULT);
-      // MPI_Barrier(MPI_COMM_WORLD);
-        acDeviceCommunicateHalosMPI(device, subgrid_m);
-        // Includes periodic bounds at first and last ghost zone
-#else // Explicit GPU-CPU-CPU-GPU
-        acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
-        acHostCommunicateHalosMPI(&submesh);
-        acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
-#endif
-        ///// Communication end
+        acDeviceBoundcondStepMPI(device, &submesh);
     }
     if (pid == 0) {
         const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
@@ -1336,6 +1790,6 @@ acDeviceRunMPITest(void)
 }
 #endif
 
-#if PACKED_DATA_TRANSFERS
+#if PACKED_DATA_TRANSFERS // DEPRECATED, see AC_MPI_ENABLED instead
 // Functions for calling packed data transfers
 #endif
