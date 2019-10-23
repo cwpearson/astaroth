@@ -1995,14 +1995,18 @@ acDeviceBoundcondStepMPI_single_step_best(const Device device, AcMesh* submesh)
 
 // BEST USE THIS! (full integration step)
 static AcResult
-acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
+acDeviceIntegrateStepMPI(const Device device, const AcReal dt, AcMesh* submesh)
 {
     const int mx       = device->local_config.int_params[AC_mx];
     const int my       = device->local_config.int_params[AC_my];
     const int mz       = device->local_config.int_params[AC_mz];
+    const int nx       = device->local_config.int_params[AC_nx];
+    const int ny       = device->local_config.int_params[AC_ny];
+    const int nz       = device->local_config.int_params[AC_nz];
     const size_t count = mx * my * NGHOST;
 
-    for (int isubstep = 0; isubtep < 3; ++isubstep) {
+    for (int isubstep = 0; isubstep < 3; ++isubstep) {
+        acDeviceSynchronizeStream(device, STREAM_ALL);
         // Local boundconds
         for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
             // Front plate local
@@ -2018,20 +2022,14 @@ acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
                 acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
             }
         }
+#define INNER_BOUNDCOND_STREAM ((Stream)(NUM_STREAMS - 1))
         // Inner boundconds (while waiting)
         for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
 
             const int3 start = (int3){0, 0, 2 * NGHOST};
             const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
-            acDevicePeriodicBoundcondStep(device, (Stream)(NUM_STREAMS - 1), (VertexBufferHandle)i,
+            acDevicePeriodicBoundcondStep(device, INNER_BOUNDCOND_STREAM, (VertexBufferHandle)i,
                                           start, end);
-        }
-        // Inner integration
-        {
-            ERRCHK(NUM_STREAMS - 2 >= 0);
-            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = node->subgrid.n;
-            acDeviceIntegrateSubstep(devices, (Stream)(NUM_STREAMS - 2), isubstep, m1, m2, dt);
         }
 
         // MPI
@@ -2088,51 +2086,60 @@ acDeviceBoundcondStepMPI(const Device device, AcMesh* submesh)
                           i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
             }
         }
+        // Inner integration
+        {
+            ERRCHK(NUM_STREAMS - 2 >= 0);
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = (int3){mx, my, mz} - m1;
+            acDeviceIntegrateSubstep(device, (Stream)(NUM_STREAMS - 2), isubstep, m1, m2, dt);
+        }
 
         for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
             MPI_Status status;
             MPI_Wait(&recv_requests[i], &status);
             MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
         }
+
+        acDeviceSynchronizeStream(device, INNER_BOUNDCOND_STREAM);
         // #pragma omp parallel for
-        for (int i = 0; i < node->num_devices; ++i) { // Front
+        { // Front
             const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
-            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
-            acDeviceIntegrateSubstep(node->devices[i], STREAM_0, isubstep, m1, m2, dt);
+            const int3 m2 = m1 + (int3){nx, ny, NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
         }
         // #pragma omp parallel for
-        for (int i = 0; i < node->num_devices; ++i) { // Back
-            const int3 m1 = (int3){NGHOST, NGHOST, node->subgrid.n.z};
-            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
-            acDeviceIntegrateSubstep(node->devices[i], STREAM_1, isubstep, m1, m2, dt);
+        { // Back
+            const int3 m1 = (int3){NGHOST, NGHOST, nz};
+            const int3 m2 = m1 + (int3){nx, ny, NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
         }
         // #pragma omp parallel for
-        for (int i = 0; i < node->num_devices; ++i) { // Bottom
+        { // Bottom
             const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(node->devices[i], STREAM_2, isubstep, m1, m2, dt);
+            const int3 m2 = m1 + (int3){nx, NGHOST, nz - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
         }
         // #pragma omp parallel for
-        for (int i = 0; i < node->num_devices; ++i) { // Top
-            const int3 m1 = (int3){NGHOST, node->subgrid.n.y, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(node->devices[i], STREAM_3, isubstep, m1, m2, dt);
+        { // Top
+            const int3 m1 = (int3){NGHOST, ny, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){nx, NGHOST, nz - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
         }
         // #pragma omp parallel for
-        for (int i = 0; i < node->num_devices; ++i) { // Left
+        { // Left
             const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
-                                        node->subgrid.n.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(node->devices[i], STREAM_4, isubstep, m1, m2, dt);
+            const int3 m2 = m1 + (int3){NGHOST, ny - 2 * NGHOST, nz - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
         }
         // #pragma omp parallel for
-        for (int i = 0; i < node->num_devices; ++i) { // Right
-            const int3 m1 = (int3){node->subgrid.n.x, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
-                                        node->subgrid.n.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(node->devices[i], STREAM_5, isubstep, m1, m2, dt);
+        { // Right
+            const int3 m1 = (int3){nx, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, ny - 2 * NGHOST, nz - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
         }
-        acNodeSwapBuffers(node);
+        MPI_Barrier(MPI_COMM_WORLD);
+        acDeviceSwapBuffers(device);
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
     return AC_SUCCESS;
@@ -2313,10 +2320,12 @@ acDeviceRunMPITest(void)
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
+    // Rewind here!
     const int nn           = 512;
     info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
     acUpdateConfig(&info);
 
+    /*
     AcMesh model, candidate;
 
     // Master CPU
@@ -2326,7 +2335,7 @@ acDeviceRunMPITest(void)
 
         acMeshRandomize(&model);
         acMeshApplyPeriodicBounds(&model);
-    }
+    }*/
 
     assert(info.int_params[AC_nz] % num_processes == 0);
 
@@ -2345,8 +2354,9 @@ acDeviceRunMPITest(void)
     // Create submesh
     AcMesh submesh;
     acMeshCreate(submesh_info, &submesh);
+    acMeshRandomize(&submesh);
 
-    acDeviceDistributeMeshMPI(model, &submesh);
+    // acDeviceDistributeMeshMPI(model, &submesh);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     Device device;
@@ -2355,16 +2365,18 @@ acDeviceRunMPITest(void)
 
     // Warmup
     acDeviceSynchronizeStream(device, STREAM_ALL);
-    for (int i = 0; i < 10; ++i) {
-        acDeviceBoundcondStepMPI(device, &submesh);
+    for (int i = 0; i < 2; ++i) {
+        // acDeviceBoundcondStepMPI(device, &submesh);
+        acDeviceIntegrateStepMPI(device, FLT_EPSILON, &submesh);
     }
 
     // Benchmark
-    const int num_iters = 100;
+    const int num_iters = 10;
     Timer total_time;
     timer_reset(&total_time);
     for (int i = 0; i < num_iters; ++i) {
-        acDeviceBoundcondStepMPI(device, &submesh);
+        // acDeviceBoundcondStepMPI(device, &submesh);
+        acDeviceIntegrateStepMPI(device, FLT_EPSILON, &submesh);
     }
     if (pid == 0) {
         const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
@@ -2377,16 +2389,18 @@ acDeviceRunMPITest(void)
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     acDeviceDestroy(device);
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    acDeviceGatherMeshMPI(submesh, &candidate);
+    // acDeviceGatherMeshMPI(submesh, &candidate);
 
     acMeshDestroy(&submesh);
-
-    // Master CPU
-    if (pid == 0) {
+    /*
+        // Master CPU
+        if (pid == 0)
+    {
         acVerifyMesh(model, candidate);
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
     }
+    */
 
     MPI_Finalize();
     return AC_FAILURE;
