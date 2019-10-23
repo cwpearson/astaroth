@@ -233,6 +233,7 @@ acDeviceDestroy(Device device)
 {
     cudaSetDevice(device->id);
     printf("Destroying device %d (%p)\n", device->id, device);
+    acDeviceSynchronizeStream(device, STREAM_ALL);
 
     // Memory
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
@@ -791,6 +792,31 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
 */
 #include <mpi.h>
 
+static int
+mod(const int a, const int b)
+{
+    const int r = a % b;
+    return r < 0 ? r + b : r;
+}
+
+static int
+get_neighbor(const int3 offset)
+{
+    // The number of nodes is n^3 = m = num_processes
+    // Require that the problem size is always equivalent among processes ((floor(cbrt(m))^3 == m)
+    // Require that mesh dimension is (n 2^w), where w is some integer
+
+    int pid, num_processes;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    const int n = floor(cbrt(num_processes));
+    ERRCHK_ALWAYS(ceil(cbrt(num_processes)) == n);
+    ERRCHK_ALWAYS(n * n * n == num_processes);
+
+    return mod(pid + offset.x, n) + offset.y * n + offset.z * n * n;
+}
+
 static void
 acDeviceDistributeMeshMPI(const AcMesh src, AcMesh* dst)
 {
@@ -1176,7 +1202,7 @@ acDeviceRunMPITest(void)
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
     // Large mesh dim
-    const int nn           = 128;
+    const int nn           = 256;
     info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
     acUpdateConfig(&info);
 
@@ -1220,12 +1246,15 @@ acDeviceRunMPITest(void)
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
     // Benchmark
-    const int num_iters = 10;
+    const int num_iters = 100;
     Timer total_time;
     timer_reset(&total_time);
     for (int i = 0; i < num_iters; ++i) {
-        acDeviceBoundStepMPI(device);
+        // acDeviceBoundStepMPI(device);
+        acDeviceIntegrateStepMPI(device, FLT_EPSILON); // TODO recheck
     }
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
     if (pid == 0) {
         const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
         printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
@@ -1233,7 +1262,7 @@ acDeviceRunMPITest(void)
         printf("Time per step: %f ms\n", ms_elapsed / num_iters);
     }
     ////////////////////////////// Timer end
-
+    acDeviceBoundStepMPI(device);
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     acDeviceDestroy(device);
     ////////////////////////////////////////////////////////////////////////////////////////////////
