@@ -1202,7 +1202,7 @@ acDeviceRunMPITest(void)
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
     // Large mesh dim
-    const int nn           = 256;
+    const int nn           = 512;
     info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
     acUpdateConfig(&info);
 
@@ -1245,8 +1245,15 @@ acDeviceRunMPITest(void)
     acDeviceCreate(0, submesh_info, &device);
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
+    // Warmup
+    for (int i = 0; i < 10; ++i) {
+        acDeviceIntegrateStepMPI(device, FLT_EPSILON);
+    }
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
     // Benchmark
-    const int num_iters = 100;
+    const int num_iters = 1000;
     Timer total_time;
     timer_reset(&total_time);
     for (int i = 0; i < num_iters; ++i) {
