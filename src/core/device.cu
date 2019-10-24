@@ -810,8 +810,8 @@ get_neighbor(const int3 offset)
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
-    const int n = floor(cbrt(num_processes));
-    ERRCHK_ALWAYS(ceil(cbrt(num_processes)) == n);
+    const int n = (int)cbrt(num_processes);
+    ERRCHK_ALWAYS((int)ceil(cbrt(num_processes)) == n);
     ERRCHK_ALWAYS(n * n * n == num_processes);
 
     return mod(pid + offset.x, n) + offset.y * n + offset.z * n * n;
@@ -1235,10 +1235,14 @@ acDeviceRunMPITest(void)
     acMeshRandomize(&submesh);
     acDeviceDistributeMeshMPI(model, &submesh);
 
-    // Master CPU
+#define VERIFY (0)
+
+// Master CPU
+#if VERIFY
     if (pid == 0) {
         acMeshApplyPeriodicBounds(&model);
     }
+#endif
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     Device device;
@@ -1246,14 +1250,14 @@ acDeviceRunMPITest(void)
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
     // Warmup
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 5; ++i) {
         acDeviceIntegrateStepMPI(device, FLT_EPSILON);
     }
     acDeviceSynchronizeStream(device, STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Benchmark
-    const int num_iters = 1000;
+    const int num_iters = 100;
     Timer total_time;
     timer_reset(&total_time);
     for (int i = 0; i < num_iters; ++i) {
@@ -1267,6 +1271,13 @@ acDeviceRunMPITest(void)
         printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
         printf("Total time: %f ms\n", ms_elapsed);
         printf("Time per step: %f ms\n", ms_elapsed / num_iters);
+
+        char buf[256];
+        sprintf(buf, "procs_%d.bench", num_processes);
+        FILE* fp = fopen(buf, "w");
+        ERRCHK_ALWAYS(fp);
+        fprintf(fp, "%d, %g", num_processes, ms_elapsed);
+        fclose(fp);
     }
     ////////////////////////////// Timer end
     acDeviceBoundStepMPI(device);
@@ -1279,7 +1290,9 @@ acDeviceRunMPITest(void)
 
     // Master CPU
     if (pid == 0) {
+#if VERIFY
         acVerifyMesh(model, candidate);
+#endif
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
     }
