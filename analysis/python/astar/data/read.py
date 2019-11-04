@@ -21,6 +21,7 @@
 
 import numpy as np
 
+
 def set_dtype(endian, AcRealSize):
     if endian == 0:
         en = '>'
@@ -83,6 +84,43 @@ def read_meshtxt(fdir, fname):
 
     return contents
 
+#Now just 2nd order
+def DERX(array, dx):
+    output = np.zeros_like(array)
+    for i in range(3, array.shape[0]-3): #Keep boundary poits as 0
+        #output[i,:,:] = (- array[i-1,:,:] + array[i+1,:,:])/(2.0*dx)
+        output[i,:,:] =( -45.0*array[i-1,:,:] + 45.0*array[i+1,:,:]
+                         + 9.0*array[i-2,:,:] -  9.0*array[i+2,:,:]
+                         -     array[i-3,:,:] +      array[i+3,:,:] )/(60.0*dx)
+    return output
+
+def DERY(array, dy):
+    output = np.zeros_like(array)
+    for i in range(3,array.shape[1]-3):
+        #output[:,i,:] = (- array[:,i-1,:] + array[:,i+1,:])/(2.0*dy)
+        output[:,i,:] =( -45.0*array[:,i-1,:] + 45.0*array[:,i+1,:]
+                         + 9.0*array[:,i-2,:] -  9.0*array[:,i+2,:]
+                         -     array[:,i-3,:] +      array[:,i+3,:] )/(60.0*dy)
+    return output
+
+def DERZ(array, dz):
+    output = np.zeros_like(array)
+    for i in range(3, array.shape[2]-3):
+        #output[:,:,i] = (- array[:,:,i-1] + array[:,:,i+1])/(2.0*dz)
+        output[:,:,i] =( -45.0*array[:,:,i-1] + 45.0*array[:,:,i+1]
+                         + 9.0*array[:,:,i-2] -  9.0*array[:,:,i+2]
+                         -     array[:,:,i-3] +      array[:,:,i+3] )/(60.0*dz)
+    return output
+
+def curl(aa, minfo):
+    dx = minfo.contents['AC_dsx']
+    dy = minfo.contents['AC_dsy']
+    dz = minfo.contents['AC_dsz']
+    return (DERY(aa[2], dy)-DERZ(aa[1], dz), 
+            DERZ(aa[0], dz)-DERX(aa[2], dx), 
+            DERX(aa[1], dx)-DERY(aa[0], dy))
+
+
 class MeshInfo():
     '''Object that contains all mesh info'''
 
@@ -123,6 +161,14 @@ class Mesh:
             aay = [] 
             aaz = []
 
+             
+            #self.aa[0][:,:,:] = 0.0
+            #self.aa[1][:,:,:] = 0.0 
+            #self.aa[2][:,:,:] = 0.0 
+            #for i in range(0, self.aa[0].shape[0]):
+            #    self.aa[0][:,i,:] = float(i)
+   
+
             self.xx =  np.arange(self.minfo.contents['AC_mx']) * self.minfo.contents['AC_dsx']
             self.yy =  np.arange(self.minfo.contents['AC_my']) * self.minfo.contents['AC_dsy']
             self.zz =  np.arange(self.minfo.contents['AC_mz']) * self.minfo.contents['AC_dsz']
@@ -130,6 +176,9 @@ class Mesh:
             self.xmid = int(self.minfo.contents['AC_mx']/2)
             self.ymid = int(self.minfo.contents['AC_my']/2)
             self.zmid = int(self.minfo.contents['AC_mz']/2)
+    def Bfield(self):
+        self.bb = curl(self.aa, self.minfo) 
+        print(self.bb[2]) 
 
 
 def parse_ts(fdir, fname):

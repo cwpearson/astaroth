@@ -26,21 +26,38 @@ CM_INFERNO = plt.get_cmap('inferno')
 end_rm = -1 #-35#-40
 
 def plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3):
-    plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis1][:end_rm], label=yaxis1)
-    plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis2][:end_rm], label=yaxis2)
-    plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis3][:end_rm], label=yaxis3)
-    plt.xlabel(xaxis)
-    plt.legend()
+    if yaxis1 in ts.var:
+        plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis1][:end_rm], label=yaxis1)
+        plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis2][:end_rm], label=yaxis2)
+        plt.plot(ts.var[xaxis][:end_rm], ts.var[yaxis3][:end_rm], label=yaxis3)
+        plt.xlabel(xaxis)
+        plt.legend()
+    else:
+        print("%s %s and %s not found! Skipping...", yaxis1, yaxis2, yaxis3)
+        plt.close() 
 
-def plot_ts(ts, show_all=False, lnrho=False, uutot=False, uux=False, uuy=False, uuz=False, ss=False, acc=False, sink=False):
+def plot_ts(ts, isotherm=False, show_all=False, lnrho=False, uutot=False, 
+            uux=False, uuy=False, uuz=False, ss=False, acc=False, sink=False):
 
     if show_all:
         lnrho=True
+        rho=True
         uutot=True
         uux=True
         uuy=True
         uuz=True
         ss=True
+        acc=True
+        sink=True
+
+    if isotherm:
+        lnrho=True
+        rho=True
+        uutot=True
+        uux=True
+        uuy=True
+        uuz=True
+        ss=False
         acc=True
         sink=True
 
@@ -50,6 +67,14 @@ def plot_ts(ts, show_all=False, lnrho=False, uutot=False, uux=False, uuy=False, 
         yaxis1 = 'lnrho_rms'
         yaxis2 = 'lnrho_min'
         yaxis3 = 'lnrho_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+    if rho:
+        plt.figure()
+        xaxis  = 't_step'
+        yaxis1 = 'rho_rms'
+        yaxis2 = 'rho_min'
+        yaxis3 = 'rho_max'
         plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
      
     if uutot:   

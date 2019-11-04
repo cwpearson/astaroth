@@ -24,7 +24,9 @@ import matplotlib.colors as colors
 
 CM_INFERNO = plt.get_cmap('inferno')
 
-def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False, slicetype = 'middle', colrange=None, colormap=CM_INFERNO , contourplot=False):
+def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
+	   slicetype = 'middle', colrange=None, colormap=CM_INFERNO ,
+           contourplot=False, points_from_centre = -1, bfieldlines=False, velfieldlines=False):
     fig = plt.figure(figsize=(8, 8))
     grid = gridspec.GridSpec(2, 3, wspace=0.4, hspace=0.4, width_ratios=[1,1, 0.15])
     ax00   = fig.add_subplot( grid[0,0] )
@@ -52,7 +54,17 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False, slicet
             plotnorm = colors.Normalize(vmin=cmin,vmax=cmax) 
         else:
             plotnorm = colors.Normalize(vmin=colrange[0],vmax=colrange[1]) 
-        
+       
+    if points_from_centre > 0:
+        yz_slice = yz_slice[int(yz_slice.shape[0]/2)-points_from_centre : int(yz_slice.shape[0]/2)+points_from_centre,
+                            int(yz_slice.shape[1]/2)-points_from_centre : int(yz_slice.shape[1]/2)+points_from_centre]
+        xz_slice = xz_slice[int(xz_slice.shape[0]/2)-points_from_centre : int(xz_slice.shape[0]/2)+points_from_centre,
+                            int(xz_slice.shape[1]/2)-points_from_centre : int(xz_slice.shape[1]/2)+points_from_centre]
+        xy_slice = xy_slice[int(xy_slice.shape[0]/2)-points_from_centre : int(xy_slice.shape[0]/2)+points_from_centre,
+                            int(xy_slice.shape[1]/2)-points_from_centre : int(xy_slice.shape[1]/2)+points_from_centre]
+        mesh.xx = mesh.xx[int(mesh.xx.shape[0]/2)-points_from_centre : int(mesh.xx.shape[0]/2)+points_from_centre] 
+        mesh.yy = mesh.yy[int(mesh.yy.shape[0]/2)-points_from_centre : int(mesh.yy.shape[0]/2)+points_from_centre]  
+        mesh.zz = mesh.zz[int(mesh.zz.shape[0]/2)-points_from_centre : int(mesh.zz.shape[0]/2)+points_from_centre] 
     
     yy, zz = np.meshgrid(mesh.yy, mesh.zz, indexing='ij')
     if contourplot:
@@ -63,6 +75,8 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False, slicet
     ax00.set_ylabel('z')
     ax00.set_title('%s t = %.4e' % (title, mesh.timestamp) )    
     ax00.set_aspect('equal')
+
+    ax00.contour(yy, zz, np.sqrt((yy-yy.max()/2.0)**2.0 + (zz-zz.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
     
     xx, zz = np.meshgrid(mesh.xx, mesh.zz, indexing='ij')
     if contourplot:
@@ -72,6 +86,8 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False, slicet
     ax10.set_xlabel('x')
     ax10.set_ylabel('z')
     ax10.set_aspect('equal')
+
+    ax10.contour(xx, zz, np.sqrt((xx-xx.max()/2.0)**2.0 + (zz-zz.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
     
     xx, yy = np.meshgrid(mesh.xx, mesh.yy, indexing='ij')
     if contourplot:
@@ -81,6 +97,30 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False, slicet
     ax11.set_xlabel('x')
     ax11.set_ylabel('y')
     ax11.set_aspect('equal')
+
+    ax11.contour(xx, yy, np.sqrt((xx-xx.max()/2.0)**2.0 + (yy-yy.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
+
+    if bfieldlines:
+        ax00.streamplot(mesh.yy, mesh.zz, np.mean(mesh.bb[1], axis=0), np.mean(mesh.bb[2], axis=0))
+        ax10.streamplot(mesh.xx, mesh.zz, np.mean(mesh.bb[0], axis=1), np.mean(mesh.bb[2], axis=1))
+        ax11.streamplot(mesh.xx, mesh.yy, np.mean(mesh.bb[0], axis=2), np.mean(mesh.bb[1], axis=2))
+
+        #ax00.streamplot(mesh.yy, mesh.zz, mesh.bb[1][mesh.xmid, :, :], mesh.bb[2][mesh.xmid, :, :])
+        #ax10.streamplot(mesh.xx, mesh.zz, mesh.bb[0][:, mesh.ymid, :], mesh.bb[2][:, mesh.ymid, :])
+        #ax11.streamplot(mesh.xx, mesh.yy, mesh.bb[0][:, : ,mesh.zmid], mesh.bb[1][:, :, mesh.zmid])
+
+        #ax00.quiver(mesh.bb[2][mesh.xmid, ::10, ::10], mesh.bb[1][mesh.xmid, ::10, ::10], pivot='middle')
+        #ax10.quiver(mesh.bb[2][::10, mesh.ymid, ::10], mesh.bb[0][::10, mesh.ymid, ::10], pivot='middle')
+        #ax11.quiver(mesh.bb[1][::10, ::10, mesh.zmid], mesh.bb[0][::10, ::10, mesh.zmid], pivot='middle')
+
+        #ax00.quiver(mesh.yy, mesh.zz, mesh.bb[2][mesh.xmid, :, :], mesh.bb[1][mesh.xmid, :, :], pivot='middle')
+        #ax10.quiver(mesh.xx, mesh.zz, mesh.bb[2][:, mesh.ymid, :], mesh.bb[0][:, mesh.ymid, :], pivot='middle')
+        #ax11.quiver(mesh.xx, mesh.yy, mesh.bb[1][:, :, mesh.zmid], mesh.bb[0][:, :, mesh.zmid], pivot='middle')
+
+    if velfieldlines:
+        ax00.streamplot(mesh.yy, mesh.zz, mesh.uu[2][mesh.xmid, :, :], mesh.uu[1][mesh.xmid, :, :])
+        ax10.streamplot(mesh.xx, mesh.zz, mesh.uu[2][:, mesh.ymid, :], mesh.uu[0][:, mesh.ymid, :])
+        ax11.streamplot(mesh.xx, mesh.yy, mesh.uu[1][:, :, mesh.zmid], mesh.uu[0][:, : ,mesh.zmid])
     
     cbar = plt.colorbar(map1, cax=axcbar) 
 
