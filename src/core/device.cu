@@ -1242,7 +1242,9 @@ acDeviceRunMPITest(void)
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     Device device;
-    acDeviceCreate(0, submesh_info, &device);
+    int devices_per_node = -1;
+    cudaGetDeviceCount(&devices_per_node);
+    acDeviceCreate(pid % devices_per_node, submesh_info, &device);
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
     // Benchmark
