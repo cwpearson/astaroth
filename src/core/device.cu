@@ -799,7 +799,7 @@ mod(const int a, const int b)
     return r < 0 ? r + b : r;
 }
 
-static int
+static inline int
 get_neighbor(const int3 offset)
 {
     // The number of nodes is n^3 = m = num_processes
@@ -1246,7 +1246,9 @@ acDeviceRunMPITest(void)
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     Device device;
-    acDeviceCreate(0, submesh_info, &device);
+    int devices_per_node = -1;
+    cudaGetDeviceCount(&devices_per_node);
+    acDeviceCreate(pid % devices_per_node, submesh_info, &device);
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
     // Warmup

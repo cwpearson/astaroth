@@ -40,6 +40,12 @@
 #include <math.h>
 #include <vector>
 
+static bool
+smaller_than(const double& a, const double& b)
+{
+    return a < b;
+}
+
 int
 run_benchmark(const char* config_path)
 {
@@ -59,21 +65,37 @@ run_benchmark(const char* config_path)
     acInit(mesh_info);
     acLoad(*mesh);
 
+    std::vector<double> results;
+    results.reserve(num_iters);
+
     // Warmup
     for (int i = 0; i < 10; ++i) {
         acIntegrate(0);
     }
+    acSynchronize();
+    const AcReal dt = FLT_EPSILON;
 
     Timer total_time;
     timer_reset(&total_time);
+
+    Timer step_time;
     for (int i = 0; i < num_iters; ++i) {
-        const AcReal dt = FLT_EPSILON;
+        timer_reset(&step_time);
+
         acIntegrate(dt);
+        acSynchronize();
+
+        results.push_back(timer_diff_nsec(step_time) / 1e6);
     }
-    acSynchronizeStream(STREAM_ALL);
-    const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
+    acSynchronize();
+    const double ms_elapsed     = timer_diff_nsec(total_time) / 1e6;
+    const double nth_percentile = 0.95;
+    std::sort(results.begin(), results.end(), smaller_than);
+
     printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
     printf("Total time: %f ms\n", ms_elapsed);
+    printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile),
+           results[int(nth_percentile * num_iters)]);
 
     acQuit();
     acmesh_destroy(mesh);
