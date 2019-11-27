@@ -30,7 +30,7 @@ if (MPI_ENABLED)
     find_package(MPI REQUIRED)
 
     add_definitions(-DAC_MPI_ENABLED=1)
-    cuda_include_directories(${MPI_C_INCLUDE_PATH})
+    cuda_include_directories(${MPI_CXX_INCLUDE_PATH})
 
     add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf") # Hack, cmake doesnt propagate properly from utils. Probably because utils is compiled after core
 endif ()
@@ -48,5 +48,5 @@ if (MULTIGPU_ENABLED)
 endif ()
 
 if (MPI_ENABLED)
-    target_link_libraries(astaroth_core ${MPI_C_LIBRARIES} astaroth_utils)
+    target_link_libraries(astaroth_core ${MPI_CXX_LIBRARIES} astaroth_utils)
 endif ()
