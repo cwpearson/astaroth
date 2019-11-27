@@ -61,11 +61,11 @@ _sym_indexing_xz(int* edge_idx, int* src_idx,
     int is_ztop = 0, is_zbot = 0;
     int is_xtop = 0, is_xbot = 0;
 
-    if (i_dst  < DCONST_INT(AC_nx_min)){
-        i_edge = DCONST_INT(AC_nx_min);
+    if (i_dst  < DCONST(AC_nx_min)){
+        i_edge = DCONST(AC_nx_min);
         is_xbot = 1;
-    } else if (i_dst >=  DCONST_INT(AC_nx_max)){
-        i_edge = DCONST_INT(AC_nx_max)-1;
+    } else if (i_dst >=  DCONST(AC_nx_max)){
+        i_edge = DCONST(AC_nx_max)-1;
         is_xtop = 1;
     } else {
         i_edge = i_dst;
@@ -73,11 +73,11 @@ _sym_indexing_xz(int* edge_idx, int* src_idx,
 
     j_edge = j_dst;
 
-    if (k_dst < DCONST_INT(AC_nz_min)) {
-        k_edge = DCONST_INT(AC_nz_min);
+    if (k_dst < DCONST(AC_nz_min)) {
+        k_edge = DCONST(AC_nz_min);
         is_zbot = 1;
-    } else if (k_dst >=  DCONST_INT(AC_nz_max)) {
-        k_edge = DCONST_INT(AC_nz_max)-1;
+    } else if (k_dst >=  DCONST(AC_nz_max)) {
+        k_edge = DCONST(AC_nz_max)-1;
         is_ztop = 1;
     } else {
         k_edge = k_dst;
@@ -110,7 +110,7 @@ _sym_indexing_xz(int* edge_idx, int* src_idx,
 __device__ int
 choose_negxbound_point(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst == DCONST_INT(AC_nx_min))
+    if (i_dst == DCONST(AC_nx_min))
         return 0;
 
     return 1;
@@ -120,7 +120,7 @@ choose_negxbound_point(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 choose_posxbound_point(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst == (DCONST_INT(AC_nx_max)-1))
+    if (i_dst == (DCONST(AC_nx_max)-1))
         return 0;
 
     return 1;
@@ -130,7 +130,7 @@ choose_posxbound_point(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 choose_negzbound_point(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (k_dst == DCONST_INT(AC_nz_min))
+    if (k_dst == DCONST(AC_nz_min))
         return 0;
 
     return 1;
@@ -140,7 +140,7 @@ choose_negzbound_point(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 choose_poszbound_point(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (k_dst == (DCONST_INT(AC_nz_max)-1))
+    if (k_dst == (DCONST(AC_nz_max)-1))
         return 0;
 
     return 1;
@@ -166,9 +166,9 @@ filter_outbound(const int3 end, const int i_dst, const int j_dst, const int k_ds
 __device__ int
 filter_inbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst >= DCONST_INT(AC_nx_min) && i_dst < DCONST_INT(AC_nx_max) &&
-        j_dst >= DCONST_INT(AC_ny_min) && j_dst < DCONST_INT(AC_ny_max) &&
-        k_dst >= DCONST_INT(AC_nz_min) && k_dst < DCONST_INT(AC_nz_max))
+    if (i_dst >= DCONST(AC_nx_min) && i_dst < DCONST(AC_nx_max) &&
+        j_dst >= DCONST(AC_ny_min) && j_dst < DCONST(AC_ny_max) &&
+        k_dst >= DCONST(AC_nz_min) && k_dst < DCONST(AC_nz_max))
         return 1;
 
     return 0;
@@ -178,7 +178,7 @@ filter_inbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_xbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst < DCONST_INT(AC_nx_min) || i_dst >= DCONST_INT(AC_nx_max))
+    if (i_dst < DCONST(AC_nx_min) || i_dst >= DCONST(AC_nx_max))
         return 1;
 
     return 0;
@@ -189,7 +189,7 @@ filter_xbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_negxbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst < DCONST_INT(AC_nx_min))
+    if (i_dst < DCONST(AC_nx_min))
         return 1;
 
     return 0;
@@ -199,7 +199,7 @@ filter_negxbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_posxbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst >= DCONST_INT(AC_nx_max))
+    if (i_dst >= DCONST(AC_nx_max))
         return 1;
 
     return 0;
@@ -209,7 +209,7 @@ filter_posxbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_ybound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if ((j_dst <  DCONST_INT(AC_ny_min) || j_dst >= DCONST_INT(AC_ny_max)))
+    if ((j_dst <  DCONST(AC_ny_min) || j_dst >= DCONST(AC_ny_max)))
         return 1;
 
     return 0;
@@ -219,7 +219,7 @@ filter_ybound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_negybound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (j_dst < DCONST_INT(AC_ny_min))
+    if (j_dst < DCONST(AC_ny_min))
         return 1;
 
     return 0;
@@ -229,7 +229,7 @@ filter_negybound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_posybound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (j_dst >= DCONST_INT(AC_ny_max))
+    if (j_dst >= DCONST(AC_ny_max))
         return 1;
 
     return 0;
@@ -239,7 +239,7 @@ filter_posybound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_zbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (k_dst < DCONST_INT(AC_nz_min) || k_dst >= DCONST_INT(AC_nz_max))
+    if (k_dst < DCONST(AC_nz_min) || k_dst >= DCONST(AC_nz_max))
         return 1;
 
     return 0;
@@ -250,7 +250,7 @@ filter_zbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_negzbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (k_dst < DCONST_INT(AC_nz_min))
+    if (k_dst < DCONST(AC_nz_min))
         return 1;
 
     return 0;
@@ -260,7 +260,7 @@ filter_negzbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_poszbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (k_dst >= DCONST_INT(AC_nz_max))
+    if (k_dst >= DCONST(AC_nz_max))
         return 1;
 
     return 0;
@@ -270,7 +270,7 @@ filter_poszbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_allbut_negxbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst >= DCONST_INT(AC_nx_min))
+    if (i_dst >= DCONST(AC_nx_min))
         return 1;
 
     return 0;
@@ -280,7 +280,7 @@ filter_allbut_negxbound(const int i_dst, const int j_dst, const int k_dst)
 __device__ int
 filter_allbut_posxbound(const int i_dst, const int j_dst, const int k_dst)
 {
-    if (i_dst < DCONST_INT(AC_nx_max))
+    if (i_dst < DCONST(AC_nx_max))
         return 1;
 
     return 0;
@@ -327,17 +327,17 @@ _set_density_xin(const int3 start, const int3 end, AcReal* density_buffer)
     //if ( choose_posxbound_point(i_dst, j_dst, k_dst) ) return;
     if ( filter_allbut_posxbound(i_dst, j_dst, k_dst) ) return;
 
-    //if (dst_idx >= DCONST_INT(AC_mx)*DCONST_INT(AC_my)*DCONST_INT(AC_mz)) 
+    //if (dst_idx >= DCONST(AC_mx)*DCONST(AC_my)*DCONST(AC_mz)) 
     //printf(" %i %i %i %i XX %i %i  \n", i_dst, j_dst, k_dst, dst_idx,  
-    //                                    i_dst + j_dst*DCONST_INT(AC_mx) + k_dst*DCONST_INT(AC_mx)*DCONST_INT(AC_my), 
-    //                                    DCONST_INT(AC_mx)*DCONST_INT(AC_my)*DCONST_INT(AC_mz) );
+    //                                    i_dst + j_dst*DCONST(AC_mx) + k_dst*DCONST(AC_mx)*DCONST(AC_my), 
+    //                                    DCONST(AC_mx)*DCONST(AC_my)*DCONST(AC_mz) );
 
     //TODO: add a powerlaw gradient. 
     density_buffer[dst_idx] = DCONST_REAL(AC_lnrho_edge);
 
     //printf(" %i %i %i %i %e %i %i  \n", i_dst, j_dst, k_dst, dst_idx, density_buffer[dst_idx], 
-    //                                    i_dst + j_dst*DCONST_INT(AC_mx) + k_dst*DCONST_INT(AC_mx)*DCONST_INT(AC_my), 
-    //                                    DCONST_INT(AC_mx)*DCONST_INT(AC_my)*DCONST_INT(AC_mz) );
+    //                                    i_dst + j_dst*DCONST(AC_mx) + k_dst*DCONST(AC_mx)*DCONST(AC_my), 
+    //                                    DCONST(AC_mx)*DCONST(AC_my)*DCONST(AC_mz) );
 
 }
 
@@ -354,8 +354,8 @@ _set_density_xout(const int3 start, const int3 end, AcReal* density_buffer)
     //printf(" PIIP ");
     density_buffer[dst_idx] = DCONST_REAL(AC_lnrho_out); 
     //printf(" %i %i %i %i %e %i %i  \n", i_dst, j_dst, k_dst, dst_idx, density_buffer[dst_idx], 
-    //                                    i_dst + j_dst*DCONST_INT(AC_mx) + k_dst*DCONST_INT(AC_mx)*DCONST_INT(AC_my), 
-    //                                    DCONST_INT(AC_mx)*DCONST_INT(AC_my)*DCONST_INT(AC_mz) );
+    //                                    i_dst + j_dst*DCONST(AC_mx) + k_dst*DCONST(AC_mx)*DCONST(AC_my), 
+    //                                    DCONST(AC_mx)*DCONST(AC_my)*DCONST(AC_mz) );
 
 
 }
@@ -559,7 +559,7 @@ _set_uinflow_xin(const int3 start, const int3 end, AcReal* uux_buffer, AcReal* u
 
     int i_edge, edge_idx, src_idx;
     _sym_indexing_xz(&edge_idx, &src_idx, i_dst, j_dst, k_dst);
-    i_edge = DCONST_INT(AC_nx_max)-1;
+    i_edge = DCONST(AC_nx_max)-1;
 
     const AcReal xx      = DCONST_REAL(AC_dsx) * AcReal(i_dst)  - DCONST_REAL(AC_xorig);
     const AcReal zz      = DCONST_REAL(AC_dsz) * AcReal(k_dst)  - DCONST_REAL(AC_zorig);
@@ -619,7 +619,7 @@ _inflow_set_der_xtop(const int3 start, const int3 end, const AcReal der_value, A
     int edge_idx, src_idx;
     _sym_indexing_xz(&edge_idx, &src_idx, i_dst, j_dst, k_dst);
 
-    int i_edge = DCONST_INT(AC_nx_max)-1;
+    int i_edge = DCONST(AC_nx_max)-1;
     int i_diff = i_edge - i_dst;
 
     const AcReal xx = DCONST_REAL(AC_dsx) * AcReal(i_edge + i_diff) - DCONST_REAL(AC_xorig);
@@ -667,8 +667,8 @@ _rel_antisym_xbot(const int3 start, const int3 end, AcReal* vertex_buffer)
     _rel_antisym_general(i_dst, j_dst, k_dst, dst_idx, vertex_buffer);
 
     //printf(" %i %i %i %i %e %i %i  \n", i_dst, j_dst, k_dst, dst_idx, vertex_buffer[dst_idx], 
-    //                                    i_dst + j_dst*DCONST_INT(AC_mx) + k_dst*DCONST_INT(AC_mx)*DCONST_INT(AC_my), 
-    //                                    DCONST_INT(AC_mx)*DCONST_INT(AC_my)*DCONST_INT(AC_mz) );
+    //                                    i_dst + j_dst*DCONST(AC_mx) + k_dst*DCONST(AC_mx)*DCONST(AC_my), 
+    //                                    DCONST(AC_mx)*DCONST(AC_my)*DCONST(AC_mz) );
 
 }
 
@@ -952,24 +952,24 @@ _y_periodic_boundconds(const int3 start, const int3 end, AcReal* vertex_buffer)
 
     // Find the source index
     // Map to nx, ny, nz coordinates  
-    int i_src = i_dst - DCONST_INT(AC_nx_min);
-    int j_src = j_dst - DCONST_INT(AC_ny_min);
-    int k_src = k_dst - DCONST_INT(AC_nz_min);
+    int i_src = i_dst - DCONST(AC_nx_min);
+    int j_src = j_dst - DCONST(AC_ny_min);
+    int k_src = k_dst - DCONST(AC_nz_min);
 
     // Translate (s.t. the index is always positive)
-    i_src += DCONST_INT(AC_nx);
-    j_src += DCONST_INT(AC_ny);
-    k_src += DCONST_INT(AC_nz);
+    i_src += DCONST(AC_nx);
+    j_src += DCONST(AC_ny);
+    k_src += DCONST(AC_nz);
 
     // Wrap
-    i_src %= DCONST_INT(AC_nx);
-    j_src %= DCONST_INT(AC_ny);
-    k_src %= DCONST_INT(AC_nz);
+    i_src %= DCONST(AC_nx);
+    j_src %= DCONST(AC_ny);
+    k_src %= DCONST(AC_nz);
 
     // Map to mx, my, mz coordinates
-    i_src += DCONST_INT(AC_nx_min);
-    j_src += DCONST_INT(AC_ny_min);
-    k_src += DCONST_INT(AC_nz_min);
+    i_src += DCONST(AC_nx_min);
+    j_src += DCONST(AC_ny_min);
+    k_src += DCONST(AC_nz_min);
 
     const int src_idx      = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx      = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
@@ -996,24 +996,24 @@ _yz_periodic_boundconds(const int3 start, const int3 end, AcReal* vertex_buffer)
 
     // Find the source index
     // Map to nx, ny, nz coordinates  
-    int i_src = i_dst - DCONST_INT(AC_nx_min);
-    int j_src = j_dst - DCONST_INT(AC_ny_min);
-    int k_src = k_dst - DCONST_INT(AC_nz_min);
+    int i_src = i_dst - DCONST(AC_nx_min);
+    int j_src = j_dst - DCONST(AC_ny_min);
+    int k_src = k_dst - DCONST(AC_nz_min);
 
     // Translate (s.t. the index is always positive)
-    i_src += DCONST_INT(AC_nx);
-    j_src += DCONST_INT(AC_ny);
-    k_src += DCONST_INT(AC_nz);
+    i_src += DCONST(AC_nx);
+    j_src += DCONST(AC_ny);
+    k_src += DCONST(AC_nz);
 
     // Wrap
-    i_src %= DCONST_INT(AC_nx);
-    j_src %= DCONST_INT(AC_ny);
-    k_src %= DCONST_INT(AC_nz);
+    i_src %= DCONST(AC_nx);
+    j_src %= DCONST(AC_ny);
+    k_src %= DCONST(AC_nz);
 
     // Map to mx, my, mz coordinates
-    i_src += DCONST_INT(AC_nx_min);
-    j_src += DCONST_INT(AC_ny_min);
-    k_src += DCONST_INT(AC_nz_min);
+    i_src += DCONST(AC_nx_min);
+    j_src += DCONST(AC_ny_min);
+    k_src += DCONST(AC_nz_min);
 
     const int src_idx      = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx      = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
@@ -1135,36 +1135,36 @@ _periodic_boundconds(const int3 start, const int3 end, AcReal* vertex_buffer)
     if (i_dst >= end.x || j_dst >= end.y || k_dst >= end.z)
         return;
 
-    //if (i_dst >= DCONST_INT(AC_mx) || j_dst >= DCONST_INT(AC_my) || k_dst >= DCONST_INT(AC_mz))
+    //if (i_dst >= DCONST(AC_mx) || j_dst >= DCONST(AC_my) || k_dst >= DCONST(AC_mz))
     //    return;
 
     // If destination index is inside the computational domain, return since
     // the boundary conditions are only applied to the ghost zones
-    if (i_dst >= DCONST_INT(AC_nx_min) && i_dst < DCONST_INT(AC_nx_max) &&
-        j_dst >= DCONST_INT(AC_ny_min) && j_dst < DCONST_INT(AC_ny_max) &&
-        k_dst >= DCONST_INT(AC_nz_min) && k_dst < DCONST_INT(AC_nz_max))
+    if (i_dst >= DCONST(AC_nx_min) && i_dst < DCONST(AC_nx_max) &&
+        j_dst >= DCONST(AC_ny_min) && j_dst < DCONST(AC_ny_max) &&
+        k_dst >= DCONST(AC_nz_min) && k_dst < DCONST(AC_nz_max))
         return;
 
     // Find the source index
     // Map to nx, ny, nz coordinates
-    int i_src = i_dst - DCONST_INT(AC_nx_min);
-    int j_src = j_dst - DCONST_INT(AC_ny_min);
-    int k_src = k_dst - DCONST_INT(AC_nz_min);
+    int i_src = i_dst - DCONST(AC_nx_min);
+    int j_src = j_dst - DCONST(AC_ny_min);
+    int k_src = k_dst - DCONST(AC_nz_min);
 
     // Translate (s.t. the index is always positive)
-    i_src += DCONST_INT(AC_nx);
-    j_src += DCONST_INT(AC_ny);
-    k_src += DCONST_INT(AC_nz);
+    i_src += DCONST(AC_nx);
+    j_src += DCONST(AC_ny);
+    k_src += DCONST(AC_nz);
 
     // Wrap
-    i_src %= DCONST_INT(AC_nx);
-    j_src %= DCONST_INT(AC_ny);
-    k_src %= DCONST_INT(AC_nz);
+    i_src %= DCONST(AC_nx);
+    j_src %= DCONST(AC_ny);
+    k_src %= DCONST(AC_nz);
 
     // Map to mx, my, mz coordinates
-    i_src += DCONST_INT(AC_nx_min);
-    j_src += DCONST_INT(AC_ny_min);
-    k_src += DCONST_INT(AC_nz_min);
+    i_src += DCONST(AC_nx_min);
+    j_src += DCONST(AC_ny_min);
+    k_src += DCONST(AC_nz_min);
 
     const int src_idx      = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx      = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
@@ -1203,36 +1203,36 @@ _antisymmetric_boundconds(const int3 start, const int3 end, const Axis symmetry_
     if (i_dst >= end.x || j_dst >= end.y || k_dst >= end.z)
         return;
 
-    //if (i_dst >= DCONST_INT(AC_mx) || j_dst >= DCONST_INT(AC_my) || k_dst >= DCONST_INT(AC_mz))
+    //if (i_dst >= DCONST(AC_mx) || j_dst >= DCONST(AC_my) || k_dst >= DCONST(AC_mz))
     //    return;
 
     // If destination index is inside the computational domain, return since
     // the boundary conditions are only applied to the ghost zones
-    if (i_dst >= DCONST_INT(AC_nx_min) && i_dst < DCONST_INT(AC_nx_max) &&
-        j_dst >= DCONST_INT(AC_ny_min) && j_dst < DCONST_INT(AC_ny_max) &&
-        k_dst >= DCONST_INT(AC_nz_min) && k_dst < DCONST_INT(AC_nz_max))
+    if (i_dst >= DCONST(AC_nx_min) && i_dst < DCONST(AC_nx_max) &&
+        j_dst >= DCONST(AC_ny_min) && j_dst < DCONST(AC_ny_max) &&
+        k_dst >= DCONST(AC_nz_min) && k_dst < DCONST(AC_nz_max))
         return;
 
     // Find the source index
     // Map to nx, ny, nz coordinates
-    int i_src = i_dst - DCONST_INT(AC_nx_min);
-    int j_src = j_dst - DCONST_INT(AC_ny_min);
-    int k_src = k_dst - DCONST_INT(AC_nz_min);
+    int i_src = i_dst - DCONST(AC_nx_min);
+    int j_src = j_dst - DCONST(AC_ny_min);
+    int k_src = k_dst - DCONST(AC_nz_min);
 
     // Translate (s.t. the index is always positive)
-    i_src += DCONST_INT(AC_nx);
-    j_src += DCONST_INT(AC_ny);
-    k_src += DCONST_INT(AC_nz);
+    i_src += DCONST(AC_nx);
+    j_src += DCONST(AC_ny);
+    k_src += DCONST(AC_nz);
 
     // Wrap
-    i_src %= DCONST_INT(AC_nx);
-    j_src %= DCONST_INT(AC_ny);
-    k_src %= DCONST_INT(AC_nz);
+    i_src %= DCONST(AC_nx);
+    j_src %= DCONST(AC_ny);
+    k_src %= DCONST(AC_nz);
 
     // Map to mx, my, mz coordinates
-    i_src += DCONST_INT(AC_nx_min);
-    j_src += DCONST_INT(AC_ny_min);
-    k_src += DCONST_INT(AC_nz_min);
+    i_src += DCONST(AC_nx_min);
+    j_src += DCONST(AC_ny_min);
+    k_src += DCONST(AC_nz_min);
 
     const int src_idx      = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx      = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
@@ -1246,7 +1246,7 @@ _antisymmetric_boundconds(const int3 start, const int3 end, const Axis symmetry_
             if (i_dst < STENCIL_ORDER/2)
                 boundary_idx = STENCIL_ORDER/2;
             else
-                boundary_idx = DCONST_INT(AC_nx_max) - 1;
+                boundary_idx = DCONST(AC_nx_max) - 1;
 
             bound_idx = DEVICE_VTXBUF_IDX(boundary_idx, j_src, k_src);
         } else if (symmetry_axis == Y_AXIS) {
@@ -1254,7 +1254,7 @@ _antisymmetric_boundconds(const int3 start, const int3 end, const Axis symmetry_
             if (j_dst < STENCIL_ORDER/2)
                 boundary_idx = STENCIL_ORDER/2;
             else
-                boundary_idx = DCONST_INT(AC_ny_max) - 1;
+                boundary_idx = DCONST(AC_ny_max) - 1;
 
             bound_idx = DEVICE_VTXBUF_IDX(i_src, boundary_idx, k_src);
         } else { // symmetry_axis == Z_AXIS
@@ -1262,7 +1262,7 @@ _antisymmetric_boundconds(const int3 start, const int3 end, const Axis symmetry_
             if (k_dst < STENCIL_ORDER/2)
                 boundary_idx = STENCIL_ORDER/2;
             else
-                boundary_idx = DCONST_INT(AC_nz_max) - 1;
+                boundary_idx = DCONST(AC_nz_max) - 1;
 
             bound_idx = DEVICE_VTXBUF_IDX(i_src, j_src, boundary_idx);
         }

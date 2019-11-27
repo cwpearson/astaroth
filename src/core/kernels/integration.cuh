@@ -136,11 +136,11 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
     if (vertexIdx.x >= end.x || vertexIdx.y >= end.y || vertexIdx.z >= end.z)                      \
         return;                                                                                    \
                                                                                                    \
-    assert(vertexIdx.x < DCONST_INT(AC_nx_max) && vertexIdx.y < DCONST_INT(AC_ny_max) &&           \
-           vertexIdx.z < DCONST_INT(AC_nz_max));                                                   \
+    assert(vertexIdx.x < DCONST(AC_nx_max) && vertexIdx.y < DCONST(AC_ny_max) &&           \
+           vertexIdx.z < DCONST(AC_nz_max));                                                   \
                                                                                                    \
-    assert(vertexIdx.x >= DCONST_INT(AC_nx_min) && vertexIdx.y >= DCONST_INT(AC_ny_min) &&         \
-           vertexIdx.z >= DCONST_INT(AC_nz_min));                                                  \
+    assert(vertexIdx.x >= DCONST(AC_nx_min) && vertexIdx.y >= DCONST(AC_ny_min) &&         \
+           vertexIdx.z >= DCONST(AC_nz_min));                                                  \
                                                                                                    \
     const int idx = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
 

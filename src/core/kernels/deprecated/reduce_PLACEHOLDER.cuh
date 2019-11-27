@@ -130,7 +130,7 @@ __global__ void
 _kernel_reduce(AcReal* src, AcReal* result)
 {
     const int idx = threadIdx.x + blockIdx.x * BLOCK_SIZE * ELEMS_PER_THREAD;
-    const int scratchpad_size = DCONST_INT(AC_nxyz);
+    const int scratchpad_size = DCONST(AC_nxyz);
 
     if (idx >= scratchpad_size)
         return;
@@ -173,7 +173,7 @@ template <ReduceFunc reduce>
 __global__ void
 _kernel_reduce_block(const __restrict__ AcReal* src, AcReal* result)
 {
-    const int scratchpad_size = DCONST_INT(AC_nxyz);
+    const int scratchpad_size = DCONST(AC_nxyz);
     const int idx = threadIdx.x + blockIdx.x * BLOCK_SIZE * ELEMS_PER_THREAD;
     AcReal tmp    = src[idx];
     const int block_offset = BLOCK_SIZE * ELEMS_PER_THREAD;

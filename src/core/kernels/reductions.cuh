@@ -89,8 +89,8 @@ kernel_filter(const __restrict__ AcReal* src, const int3 start, const int3 end, 
                                 threadIdx.y + blockIdx.y * blockDim.y,
                                 threadIdx.z + blockIdx.z * blockDim.z};
 
-    assert(src_idx.x < DCONST_INT(AC_nx_max) && src_idx.y < DCONST_INT(AC_ny_max) &&
-           src_idx.z < DCONST_INT(AC_nz_max));
+    assert(src_idx.x < DCONST(AC_nx_max) && src_idx.y < DCONST(AC_ny_max) &&
+           src_idx.z < DCONST(AC_nz_max));
     assert(dst_idx.x < nx && dst_idx.y < ny && dst_idx.z < nz);
     assert(dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny < nx * ny * nz);
 
@@ -115,8 +115,8 @@ kernel_filter_vec(const __restrict__ AcReal* src0, const __restrict__ AcReal* sr
                                 threadIdx.y + blockIdx.y * blockDim.y,
                                 threadIdx.z + blockIdx.z * blockDim.z};
 
-    assert(src_idx.x < DCONST_INT(AC_nx_max) && src_idx.y < DCONST_INT(AC_ny_max) &&
-           src_idx.z < DCONST_INT(AC_nz_max));
+    assert(src_idx.x < DCONST(AC_nx_max) && src_idx.y < DCONST(AC_ny_max) &&
+           src_idx.z < DCONST(AC_nz_max));
     assert(dst_idx.x < nx && dst_idx.y < ny && dst_idx.z < nz);
     assert(dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny < nx * ny * nz);
 

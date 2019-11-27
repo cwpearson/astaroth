@@ -16,9 +16,9 @@ printf "
 #include \"%s\" // i.e. astaroth.h
 
 __constant__ AcMeshInfo d_mesh_info;
-#define DCONST_INT(X)  (d_mesh_info.int_params[X])
+#define DCONST(X)  (d_mesh_info.int_params[X])
 #define DCONST_REAL(X) (d_mesh_info.real_params[X])
-#define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST_INT(AC_mx) + (k)*DCONST_INT(AC_mxy))
+#define DEVICE_VTXBUF_IDX(i, j, k) ((i) + (j)*DCONST(AC_mx) + (k)*DCONST(AC_mxy))
 
 
 static __device__ __forceinline__ int

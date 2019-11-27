@@ -505,12 +505,12 @@ __constant__ AcReal forcing_phi;
 static __device__ __forceinline__ AcReal3
 forcing(const int i, const int j, const int k)
 {
-    #define DOMAIN_SIZE_X (DCONST_INT(AC_nx) * DCONST_REAL(AC_dsx))
-    #define DOMAIN_SIZE_Y (DCONST_INT(AC_ny) * DCONST_REAL(AC_dsy))
-    #define DOMAIN_SIZE_Z (DCONST_INT(AC_nz) * DCONST_REAL(AC_dsz))
-    const AcReal3 k_vec = (AcReal3){(i - DCONST_INT(AC_nx_min)) * DCONST_REAL(AC_dsx) - AcReal(.5) * DOMAIN_SIZE_X,
-                                    (j - DCONST_INT(AC_ny_min)) * DCONST_REAL(AC_dsy) - AcReal(.5) * DOMAIN_SIZE_Y,
-                                    (k - DCONST_INT(AC_nz_min)) * DCONST_REAL(AC_dsz) - AcReal(.5) * DOMAIN_SIZE_Z};
+    #define DOMAIN_SIZE_X (DCONST(AC_nx) * DCONST_REAL(AC_dsx))
+    #define DOMAIN_SIZE_Y (DCONST(AC_ny) * DCONST_REAL(AC_dsy))
+    #define DOMAIN_SIZE_Z (DCONST(AC_nz) * DCONST_REAL(AC_dsz))
+    const AcReal3 k_vec = (AcReal3){(i - DCONST(AC_nx_min)) * DCONST_REAL(AC_dsx) - AcReal(.5) * DOMAIN_SIZE_X,
+                                    (j - DCONST(AC_ny_min)) * DCONST_REAL(AC_dsy) - AcReal(.5) * DOMAIN_SIZE_Y,
+                                    (k - DCONST(AC_nz_min)) * DCONST_REAL(AC_dsz) - AcReal(.5) * DOMAIN_SIZE_Z};
     AcReal inv_len = reciprocal_len(k_vec);
     if (isnan(inv_len) || isinf(inv_len))
         inv_len = 0;
@@ -678,11 +678,11 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
             return;\
 \
 \
-        assert(vertexIdx.x < DCONST_INT(AC_nx_max) && vertexIdx.y < DCONST_INT(AC_ny_max) &&\
-               vertexIdx.z < DCONST_INT(AC_nz_max));\
+        assert(vertexIdx.x < DCONST(AC_nx_max) && vertexIdx.y < DCONST(AC_ny_max) &&\
+               vertexIdx.z < DCONST(AC_nz_max));\
 \
-        assert(vertexIdx.x >= DCONST_INT(AC_nx_min) && vertexIdx.y >= DCONST_INT(AC_ny_min) &&\
-               vertexIdx.z >= DCONST_INT(AC_nz_min));\
+        assert(vertexIdx.x >= DCONST(AC_nx_min) && vertexIdx.y >= DCONST(AC_ny_min) &&\
+               vertexIdx.z >= DCONST(AC_nz_min));\
 \
         const int idx          = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
 
