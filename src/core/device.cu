@@ -810,8 +810,8 @@ get_neighbor(const int3 offset)
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
-    const int n = (int)cbrt(num_processes);
-    ERRCHK_ALWAYS((int)ceil(cbrt(num_processes)) == n);
+    const int n = (int)cbrt((float)num_processes);
+    ERRCHK_ALWAYS((int)ceil(cbrt((float)num_processes)) == n);
     ERRCHK_ALWAYS(n * n * n == num_processes);
 
     return mod(pid + offset.x, n) + offset.y * n + offset.z * n * n;
@@ -1202,7 +1202,7 @@ acDeviceRunMPITest(void)
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
     // Large mesh dim
-    const int nn           = 512;
+    const int nn           = 256;
     info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
     acUpdateConfig(&info);
 
