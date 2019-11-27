@@ -56,7 +56,7 @@ typedef struct astnode_s {
 static inline ASTNode*
 astnode_create(const NodeType type, ASTNode* lhs, ASTNode* rhs)
 {
-    ASTNode* node = malloc(sizeof(node[0]));
+    ASTNode* node = calloc(1, sizeof(node[0]));
 
     static int id_counter = 0;
     node->id              = id_counter++;
@@ -65,6 +65,7 @@ astnode_create(const NodeType type, ASTNode* lhs, ASTNode* rhs)
     node->rhs             = rhs;
     node->buffer          = NULL;
 
+    node->token  = 0;
     node->prefix = node->infix = node->postfix = 0;
 
     if (lhs)
