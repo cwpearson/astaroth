@@ -275,6 +275,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
         acDevicePrintInfo(node->devices[i]);
     }
 
+    /*
     // Enable peer access
     // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
@@ -292,12 +293,13 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
 
         cudaSetDevice(i);
         if (can_access_front) {
-            ERRCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(front, 0));
+            WARNCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(front, 0));
         }
         if (can_access_back) {
-            ERRCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(back, 0));
+            WARNCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(back, 0));
         }
     }
+    */
     acNodeSynchronizeStream(node, STREAM_ALL);
 
     *node_handle = node;
@@ -308,7 +310,7 @@ AcResult
 acNodeDestroy(Node node)
 {
     acNodeSynchronizeStream(node, STREAM_ALL);
-
+    /*
     // Disable peer access
     for (int i = 0; i < node->num_devices; ++i) {
         const int front = (i + 1) % node->num_devices;
@@ -325,12 +327,13 @@ acNodeDestroy(Node node)
 
         cudaSetDevice(i);
         if (can_access_front) {
-            ERRCHK_CUDA_ALWAYS(cudaDeviceDisablePeerAccess(front));
+            WARNCHK_CUDA_ALWAYS(cudaDeviceDisablePeerAccess(front));
         }
         if (can_access_back) {
-            ERRCHK_CUDA_ALWAYS(cudaDeviceDisablePeerAccess(back));
+            WARNCHK_CUDA_ALWAYS(cudaDeviceDisablePeerAccess(back));
         }
     }
+    */
 
     // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
@@ -542,8 +545,19 @@ acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
     acNodeSynchronizeStream(node, stream);
     // #pragma omp parallel for
     for (int i = 0; i < node->num_devices; ++i) {
-        const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
-        const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
+        // OLD: ambiguous behaviour, transferred also halos between devices and assumed
+        // that halos are in sync
+        //const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
+        //const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
+
+        // New: Transfer ghost zones, but do not transfer overlapping halos.
+        // DECOMPOSITION OFFSET HERE (d0 & d1)
+        int3 d0 = (int3){0, 0, NGHOST + i * node->subgrid.n.z};
+        int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, NGHOST + (i + 1) * node->subgrid.n.z};
+        if (i == 0)
+            d0.z = 0;
+        if (i == node->num_devices - 1)
+            d1.z = NGHOST + (i + 1) * node->subgrid.n.z + NGHOST;
 
         const int3 s0 = src; // TODO fix
         (void)dst;           // TODO fix
