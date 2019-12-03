@@ -127,6 +127,7 @@
 
 #include "astaroth_device.h"
 #include "errchk.h"
+#include "kernels/common.cuh"
 #include "math_utils.h" // sum for reductions
 
 static const int MAX_NUM_DEVICES = 32;

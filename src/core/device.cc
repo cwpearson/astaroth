@@ -791,7 +791,6 @@ acDeviceBoundStepMPI(const Device device)
                 // ...|ooooxxx|... -> xxx|ooooooo|...
                 const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST,
                                                          device->local_config);
-                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
                 const int send_pid   = (pid + 1) % num_processes;
 
                 MPI_Request request;
@@ -897,7 +896,6 @@ acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
                 // ...|ooooxxx|... -> xxx|ooooooo|...
                 const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST,
                                                          device->local_config);
-                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
                 const int send_pid   = (pid + 1) % num_processes;
 
                 MPI_Request request;

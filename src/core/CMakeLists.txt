@@ -5,6 +5,9 @@
 # Require C++11
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion -Wshadow")
+#set(CMAKE_CXX_FLAGS_DEBUG "-g")
+#set(CMAKE_CXX_FLAGS_RELEASE "-O3") # Leads to very bad performance on my local machine for some reason
 
 ## Find packages
 find_package(CUDA REQUIRED)
@@ -25,7 +28,7 @@ set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
                     # -Xptxas -dlcm=ca opt-in to cache all global loads to L1/texture cache
                     # =cg to opt out
 
-set(CUDA_WARNING_FLAGS --compiler-options -Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion) # -Wshadow
+set(CUDA_WARNING_FLAGS --compiler-options -Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_ARCH_FLAGS} ${CUDA_WARNING_FLAGS})
 
