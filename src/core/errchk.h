@@ -65,7 +65,7 @@
  * CUDA-specific error checking
  * =============================================================================
  */
-#ifdef __CUDACC__
+#if defined(AC_USE_CUDA_RUNTIME_API) || defined(__CUDACC__)
 static inline void
 cuda_assert(cudaError_t code, const char* file, int line, bool abort = true)
 {
@@ -98,8 +98,6 @@ cuda_assert(cudaError_t code, const char* file, int line, bool abort = true)
         ERRCHK_CUDA(cudaPeekAtLastError());                                    \
         ERRCHK_CUDA(cudaDeviceSynchronize());                                  \
     }
-    #endif
-
 #endif
 
 #define ERRCHK_CUDA_ALWAYS(params) { cuda_assert((params), __FILE__, __LINE__); }
@@ -112,3 +110,4 @@ cuda_assert(cudaError_t code, const char* file, int line, bool abort = true)
 
 #define WARNCHK_CUDA_ALWAYS(params) { cuda_assert((params), __FILE__, __LINE__, false); }
 // clang-format on
+#endif // AC_USE_CUDA_RUNTIME_API

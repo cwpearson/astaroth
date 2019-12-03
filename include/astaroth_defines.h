@@ -26,7 +26,10 @@ extern "C" {
 #include <stdlib.h> // size_t
 //#include <vector_types.h> // CUDA vector types (float4, etc)
 
-#ifndef __CUDACC__
+//#ifndef __CUDACC__
+#if defined(AC_USE_CUDA_RUNTIME_API) || defined(__CUDACC__)
+#include <cuda_runtime_api.h>
+#else
 typedef struct {
     int x, y, z;
 } int3;
@@ -42,7 +45,8 @@ typedef struct {
 typedef struct {
     double x, y, z;
 } double3;
-#endif // __CUDACC__
+#endif
+//#endif // __CUDACC__
 
 // Library flags
 #define STENCIL_ORDER (6)

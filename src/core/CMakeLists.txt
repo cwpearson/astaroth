@@ -2,8 +2,13 @@
 ##  CMakeLists.txt for Astaroth Core  ##
 ########################################
 
+# Require C++11
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 ## Find packages
 find_package(CUDA REQUIRED)
+set(CUDA_SEPARABLE_COMPILATION ON)
 # find_package(OpenMP REQUIRED)
 
 ## Architecture and optimization flags
@@ -23,8 +28,13 @@ set(CUDA_ARCH_FLAGS -gencode arch=compute_37,code=sm_37
 set(CUDA_WARNING_FLAGS --compiler-options -Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion) # -Wshadow
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_ARCH_FLAGS} ${CUDA_WARNING_FLAGS})
-set(CUDA_NVCC_FLAGS_RELEASE)
-set(CUDA_NVCC_FLAGS_DEBUG --device-debug --generate-line-info --ptxas-options=-v)
+
+# Workaround for CMake bug https://gitlab.kitware.com/cmake/cmake/issues/16411
+if (CMAKE_BUILD_TYPE_UPPER STREQUAL "RELEASE")
+    set(CUDA_NVCC_FLAGS_RELEASE -O3)
+elseif (CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
+    set(CUDA_NVCC_FLAGS_DEBUG --device-debug --generate-line-info --ptxas-options=-v)
+endif()
 
 if (MPI_ENABLED)
     find_package(MPI REQUIRED)
@@ -36,10 +46,11 @@ if (MPI_ENABLED)
 endif ()
 
 ## Create and link the library
-set(CMAKE_POSITION_INDEPENDENT_CODE ON) # fpic for shared libraries
-cuda_add_library(astaroth_core STATIC astaroth.cu device.cu node.cu)
-target_include_directories(astaroth_core PRIVATE .)
-target_link_libraries(astaroth_core m)
+#set(CMAKE_POSITION_INDEPENDENT_CODE ON) # fpic for shared libraries
+cuda_add_library(astaroth_core STATIC astaroth.cc device.cc node.cc kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu)
+target_include_directories(astaroth_core PRIVATE . ${CUDA_INCLUDE_DIRS})
+target_link_libraries(astaroth_core ${CUDA_LIBRARIES} m)
+target_compile_definitions(astaroth_core PRIVATE AC_USE_CUDA_RUNTIME_API)
 add_dependencies(astaroth_core dsl_headers)
 
 ## Definitions
