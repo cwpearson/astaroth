@@ -26,11 +26,9 @@
  */
 #pragma once
 
-AcResult
-acKernelDummy(void);
+AcResult acKernelDummy(void);
 
-AcResult
-acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferArray vba);
+AcResult acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferArray vba);
 
-AcResult
-acKernelIntegrateSubstep(const cudaStream_t stream, const int step_number, const int3 start, const int3 end, VertexBufferArray vba);
+AcResult acKernelIntegrateSubstep(const cudaStream_t stream, const int step_number,
+                                  const int3 start, const int3 end, VertexBufferArray vba);

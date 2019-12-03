@@ -72,9 +72,6 @@ DCONST(const VertexBufferHandle handle)
 #define d_multigpu_offset (d_mesh_info.int3_params[AC_multigpu_offset])
 //#define d_multinode_offset (d_mesh_info.int3_params[AC_multinode_offset]) // Placeholder
 
-
-
-
 static __device__ constexpr int
 IDX(const int i)
 {
@@ -93,18 +90,8 @@ IDX(const int3 idx)
     return DEVICE_VTXBUF_IDX(idx.x, idx.y, idx.z);
 }
 
-
-
-
-
-
-
-
 //#include <thrust/complex.h>
 // using namespace thrust;
-
-
-
 
 #include <cuComplex.h>
 #if AC_DOUBLE_PRECISION == 1

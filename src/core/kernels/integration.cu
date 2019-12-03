@@ -128,11 +128,11 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
     if (vertexIdx.x >= end.x || vertexIdx.y >= end.y || vertexIdx.z >= end.z)                      \
         return;                                                                                    \
                                                                                                    \
-    assert(vertexIdx.x < DCONST(AC_nx_max) && vertexIdx.y < DCONST(AC_ny_max) &&           \
-           vertexIdx.z < DCONST(AC_nz_max));                                                   \
+    assert(vertexIdx.x < DCONST(AC_nx_max) && vertexIdx.y < DCONST(AC_ny_max) &&                   \
+           vertexIdx.z < DCONST(AC_nz_max));                                                       \
                                                                                                    \
-    assert(vertexIdx.x >= DCONST(AC_nx_min) && vertexIdx.y >= DCONST(AC_ny_min) &&         \
-           vertexIdx.z >= DCONST(AC_nz_min));                                                  \
+    assert(vertexIdx.x >= DCONST(AC_nx_min) && vertexIdx.y >= DCONST(AC_ny_min) &&                 \
+           vertexIdx.z >= DCONST(AC_nz_min));                                                      \
                                                                                                    \
     const int idx = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
 
@@ -293,4 +293,3 @@ acKernelDummy(void)
     ERRCHK_CUDA_KERNEL_ALWAYS();
     return AC_SUCCESS;
 }
-

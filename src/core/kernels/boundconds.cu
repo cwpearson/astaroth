@@ -76,7 +76,8 @@ kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
 }
 
 AcResult
-acKernelPeriodicBoundconds(const cudaStream_t stream, const int3& start, const int3& end, AcReal* vtxbuf)
+acKernelPeriodicBoundconds(const cudaStream_t stream, const int3& start, const int3& end,
+                           AcReal* vtxbuf)
 {
     const dim3 tpb(8, 2, 8);
     const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),

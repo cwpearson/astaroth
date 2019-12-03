@@ -174,7 +174,7 @@ kernel_reduce_block(const __restrict__ AcReal* scratchpad, const int num_blocks,
 
 AcReal
 acKernelReduceScal(const cudaStream_t stream, const ReductionType rtype, const int3& start,
-            const int3& end, const AcReal* vtxbuf, AcReal* scratchpad, AcReal* reduce_result)
+                   const int3& end, const AcReal* vtxbuf, AcReal* scratchpad, AcReal* reduce_result)
 {
     const unsigned nx        = end.x - start.x;
     const unsigned ny        = end.y - start.y;
@@ -227,9 +227,9 @@ acKernelReduceScal(const cudaStream_t stream, const ReductionType rtype, const i
 }
 
 AcReal
-acKernelReduceVec(const cudaStream_t stream, const ReductionType rtype, const int3& start, const int3& end,
-           const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2, AcReal* scratchpad,
-           AcReal* reduce_result)
+acKernelReduceVec(const cudaStream_t stream, const ReductionType rtype, const int3& start,
+                  const int3& end, const AcReal* vtxbuf0, const AcReal* vtxbuf1,
+                  const AcReal* vtxbuf2, AcReal* scratchpad, AcReal* reduce_result)
 {
     const unsigned nx        = end.x - start.x;
     const unsigned ny        = end.y - start.y;

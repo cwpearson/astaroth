@@ -28,5 +28,5 @@
 
 #include "astaroth.h"
 
-AcResult
-acKernelPeriodicBoundconds(const cudaStream_t stream, const int3& start, const int3& end, AcReal* vtxbuf);
+AcResult acKernelPeriodicBoundconds(const cudaStream_t stream, const int3& start, const int3& end,
+                                    AcReal* vtxbuf);

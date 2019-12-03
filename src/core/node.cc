@@ -547,13 +547,14 @@ acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
     for (int i = 0; i < node->num_devices; ++i) {
         // OLD: ambiguous behaviour, transferred also halos between devices and assumed
         // that halos are in sync
-        //const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
-        //const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
+        // const int3 d0 = (int3){0, 0, i * node->subgrid.n.z}; // DECOMPOSITION OFFSET HERE
+        // const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.m.z};
 
         // New: Transfer ghost zones, but do not transfer overlapping halos.
         // DECOMPOSITION OFFSET HERE (d0 & d1)
         int3 d0 = (int3){0, 0, NGHOST + i * node->subgrid.n.z};
-        int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, NGHOST + (i + 1) * node->subgrid.n.z};
+        int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y,
+                         NGHOST + (i + 1) * node->subgrid.n.z};
         if (i == 0)
             d0.z = 0;
         if (i == node->num_devices - 1)

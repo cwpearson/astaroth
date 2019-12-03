@@ -27,11 +27,10 @@
 #pragma once
 #include <astaroth.h>
 
-AcReal
-acKernelReduceScal(const cudaStream_t stream, const ReductionType rtype, const int3& start,
-            const int3& end, const AcReal* vtxbuf, AcReal* scratchpad, AcReal* reduce_result);
+AcReal acKernelReduceScal(const cudaStream_t stream, const ReductionType rtype, const int3& start,
+                          const int3& end, const AcReal* vtxbuf, AcReal* scratchpad,
+                          AcReal* reduce_result);
 
-AcReal
-acKernelReduceVec(const cudaStream_t stream, const ReductionType rtype, const int3& start, const int3& end,
-           const AcReal* vtxbuf0, const AcReal* vtxbuf1, const AcReal* vtxbuf2, AcReal* scratchpad,
-           AcReal* reduce_result);
+AcReal acKernelReduceVec(const cudaStream_t stream, const ReductionType rtype, const int3& start,
+                         const int3& end, const AcReal* vtxbuf0, const AcReal* vtxbuf1,
+                         const AcReal* vtxbuf2, AcReal* scratchpad, AcReal* reduce_result);

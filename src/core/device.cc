@@ -26,8 +26,8 @@
  */
 #include "astaroth_device.h"
 
-#include "math_utils.h"
 #include "errchk.h"
+#include "math_utils.h"
 
 #include "kernels/common.cuh"
 
@@ -105,8 +105,8 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     }
 
     // Reductions
-    ERRCHK_CUDA_ALWAYS(
-        cudaMalloc((void**)&device->reduce_scratchpad, acVertexBufferCompdomainSizeBytes(device_config)));
+    ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_scratchpad,
+                                  acVertexBufferCompdomainSizeBytes(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_result, sizeof(AcReal)));
 
 #if AC_MPI_ENABLED
@@ -242,7 +242,7 @@ acDeviceAutoOptimize(const Device device)
 {
     cudaSetDevice(device->id);
     const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end = (int3){device->local_config.int_params[AC_mx], //
+    const int3 end   = (int3){device->local_config.int_params[AC_mx], //
                             device->local_config.int_params[AC_my], //
                             device->local_config.int_params[AC_mz]};
     return acKernelAutoOptimizeIntegration(start, end, device->vba);
@@ -528,7 +528,8 @@ acDevicePeriodicBoundcondStep(const Device device, const Stream stream,
                               const int3 end)
 {
     cudaSetDevice(device->id);
-    return acKernelPeriodicBoundconds(device->streams[stream], start, end, device->vba.in[vtxbuf_handle]);
+    return acKernelPeriodicBoundconds(device->streams[stream], start, end,
+                                      device->vba.in[vtxbuf_handle]);
 }
 
 AcResult
@@ -555,8 +556,9 @@ acDeviceReduceScal(const Device device, const Stream stream, const ReductionType
                             device->local_config.int_params[AC_ny_max],
                             device->local_config.int_params[AC_nz_max]};
 
-    *result = acKernelReduceScal(device->streams[stream], rtype, start, end, device->vba.in[vtxbuf_handle],
-                          device->reduce_scratchpad, device->reduce_result);
+    *result = acKernelReduceScal(device->streams[stream], rtype, start, end,
+                                 device->vba.in[vtxbuf_handle], device->reduce_scratchpad,
+                                 device->reduce_result);
     return AC_SUCCESS;
 }
 
@@ -576,8 +578,8 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
                             device->local_config.int_params[AC_nz_max]};
 
     *result = acKernelReduceVec(device->streams[stream], rtype, start, end, device->vba.in[vtxbuf0],
-                         device->vba.in[vtxbuf1], device->vba.in[vtxbuf2],
-                         device->reduce_scratchpad, device->reduce_result);
+                                device->vba.in[vtxbuf1], device->vba.in[vtxbuf2],
+                                device->reduce_scratchpad, device->reduce_result);
     return AC_SUCCESS;
 }
 
