@@ -85,6 +85,8 @@ else ()
     add_definitions(-DAC_DOUBLE_PRECISION=0)
 endif ()
 
+add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")
+
 ## Include directories
 include_directories(.)
 include_directories(include)
