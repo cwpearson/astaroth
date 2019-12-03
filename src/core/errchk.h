@@ -86,8 +86,8 @@ cuda_assert(cudaError_t code, const char* file, int line, bool abort = true)
     #undef WARNCHK
     #define ERRCHK(params)
     #define WARNCHK(params)
-    #define ERRCHK_CUDA(params) params;
-    #define WARNCHK_CUDA(params) params;
+    #define ERRCHK_CUDA(params) params
+    #define WARNCHK_CUDA(params) params
     #define ERRCHK_CUDA_KERNEL() {}
 #else
     #define ERRCHK_CUDA(params) { cuda_assert((params), __FILE__, __LINE__); }

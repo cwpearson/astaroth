@@ -26,6 +26,8 @@
  */
 #include "astaroth_device.h"
 
+#include <string.h> // memcpy
+
 #include "errchk.h"
 #include "math_utils.h"
 
@@ -289,6 +291,10 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
                           const AcReal value)
 {
     cudaSetDevice(device->id);
+    
+    if (param >= NUM_REAL_PARAMS)
+        return AC_FAILURE;
+
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(&d_mesh_info, &value, sizeof(value), offset,
                                         cudaMemcpyHostToDevice, device->streams[stream]));
@@ -300,6 +306,10 @@ acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal
                           const AcReal3 value)
 {
     cudaSetDevice(device->id);
+
+    if (param >= NUM_REAL3_PARAMS || !NUM_REAL3_PARAMS)
+        return AC_FAILURE;
+
     const size_t offset = (size_t)&d_mesh_info.real3_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(&d_mesh_info, &value, sizeof(value), offset,
                                         cudaMemcpyHostToDevice, device->streams[stream]));
@@ -311,6 +321,10 @@ acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntPara
                        const int value)
 {
     cudaSetDevice(device->id);
+
+    if (param >= NUM_INT_PARAMS)
+        return AC_FAILURE;
+
     const size_t offset = (size_t)&d_mesh_info.int_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(&d_mesh_info, &value, sizeof(value), offset,
                                         cudaMemcpyHostToDevice, device->streams[stream]));
@@ -322,6 +336,10 @@ acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Pa
                         const int3 value)
 {
     cudaSetDevice(device->id);
+
+    if (param >= NUM_INT3_PARAMS)
+        return AC_FAILURE;
+
     const size_t offset = (size_t)&d_mesh_info.int3_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(&d_mesh_info, &value, sizeof(value), offset,
                                         cudaMemcpyHostToDevice, device->streams[stream]));
@@ -334,10 +352,13 @@ acDeviceLoadScalarArray(const Device device, const Stream stream, const ScalarAr
 {
     cudaSetDevice(device->id);
 
+    if (handle >= NUM_SCALARARRAY_HANDLES || !NUM_SCALARARRAY_HANDLES)
+        return AC_FAILURE;
+
     ERRCHK((int)(start + num) <= max(device->local_config.int_params[AC_mx],
                                      max(device->local_config.int_params[AC_my],
                                          device->local_config.int_params[AC_mz])));
-
+    ERRCHK_ALWAYS(handle < NUM_SCALARARRAY_HANDLES);
     ERRCHK_CUDA(cudaMemcpyAsync(&device->vba.profiles[handle][start], data, sizeof(data[0]) * num,
                                 cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
