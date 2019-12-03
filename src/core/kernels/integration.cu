@@ -136,12 +136,10 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
                                                                                                    \
     const int idx = IDX(vertexIdx.x, vertexIdx.y, vertexIdx.z);
 
-// clang-format off
-/*
 #define GEN_DEVICE_FUNC_HOOK(identifier)                                                           \
     template <int step_number>                                                                     \
-    AcResult acDeviceKernel_##identifier(const cudaStream_t stream,                 \
-                                         const int3 start, const int3 end, VertexBufferArray vba)                         \
+    AcResult acDeviceKernel_##identifier(const cudaStream_t stream, const int3 start,              \
+                                         const int3 end, VertexBufferArray vba)                    \
     {                                                                                              \
                                                                                                    \
         const dim3 tpb(32, 1, 4);                                                                  \
@@ -151,14 +149,11 @@ read_out(const int idx, AcReal* __restrict__ field[], const int3 handle)
                        (unsigned int)ceil(n.y / AcReal(tpb.y)),                                    \
                        (unsigned int)ceil(n.z / AcReal(tpb.z)));                                   \
                                                                                                    \
-        identifier<step_number>                                                                    \
-            <<<bpg, tpb, 0, stream>>>(start, end, vba);                   \
+        identifier<step_number><<<bpg, tpb, 0, stream>>>(start, end, vba);                         \
         ERRCHK_CUDA_KERNEL();                                                                      \
                                                                                                    \
         return AC_SUCCESS;                                                                         \
     }
-*/
-#define GEN_DEVICE_FUNC_HOOK(identifier)
 
 #include "user_kernels.h"
 
@@ -204,7 +199,8 @@ acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferAr
                 cudaEventCreate(&tstop);
 
                 // #ifdef AC_dt
-                //acDeviceLoadScalarUniform(device, STREAM_DEFAULT, AC_dt, FLT_EPSILON); // TODO note, temporarily disabled
+                // acDeviceLoadScalarUniform(device, STREAM_DEFAULT, AC_dt, FLT_EPSILON); // TODO
+                // note, temporarily disabled
                 /*#else
                                 ERROR("FATAL ERROR: acDeviceAutoOptimize() or
                 acDeviceIntegrateSubstep() was " "called, but AC_dt was not defined. Either define
@@ -245,7 +241,8 @@ acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferAr
 }
 
 AcResult
-acKernelIntegrateSubstep(const cudaStream_t stream, const int step_number, const int3 start, const int3 end, VertexBufferArray vba)
+acKernelIntegrateSubstep(const cudaStream_t stream, const int step_number, const int3 start,
+                         const int3 end, VertexBufferArray vba)
 {
     const dim3 tpb = rk3_tpb;
 
@@ -255,7 +252,7 @@ acKernelIntegrateSubstep(const cudaStream_t stream, const int step_number, const
                    (unsigned int)ceil(n.z / AcReal(tpb.z)));
 
     //#ifdef AC_dt
-    //acDeviceLoadScalarUniform(device, stream, AC_dt, dt);
+    // acDeviceLoadScalarUniform(device, stream, AC_dt, dt);
     /*#else
         (void)dt;
         ERROR("FATAL ERROR: acDeviceAutoOptimize() or acDeviceIntegrateSubstep() was "
