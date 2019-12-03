@@ -26,9 +26,17 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 AcResult acKernelDummy(void);
 
 AcResult acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferArray vba);
 
 AcResult acKernelIntegrateSubstep(const cudaStream_t stream, const int step_number,
                                   const int3 start, const int3 end, VertexBufferArray vba);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

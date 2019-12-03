@@ -43,14 +43,16 @@ struct device_s {
     AcReal* reduce_scratchpad;
     AcReal* reduce_result;
 
-#if AC_MPI_ENABLED
-    // Declare memory for buffers needed for packed data transfers here
-    AcReal* inner[2];
-    AcReal* outer[2];
+    /*
+    #if AC_MPI_ENABLED
+        // Declare memory for buffers needed for packed data transfers here
+        AcReal* inner[2];
+        AcReal* outer[2];
 
-    AcReal* inner_host[2];
-    AcReal* outer_host[2];
-#endif
+        AcReal* inner_host[2];
+        AcReal* outer_host[2];
+    #endif
+    */
 };
 
 #include "kernels/boundconds.cuh"
@@ -109,19 +111,20 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
                                   acVertexBufferCompdomainSizeBytes(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_result, sizeof(AcReal)));
 
-#if AC_MPI_ENABLED
-    // Allocate data required for packed transfers here (cudaMalloc)
-    const size_t block_size_bytes = device_config.int_params[AC_mx] *
-                                    device_config.int_params[AC_my] * NGHOST * NUM_VTXBUF_HANDLES *
-                                    sizeof(AcReal);
-    for (int i = 0; i < 2; ++i) {
-        ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->inner[i], block_size_bytes));
-        ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->outer[i], block_size_bytes));
+    /*
+    #if AC_MPI_ENABLED
+        // Allocate data required for packed transfers here (cudaMalloc)
+        const size_t block_size_bytes = device_config.int_params[AC_mx] *
+                                        device_config.int_params[AC_my] * NGHOST *
+    NUM_VTXBUF_HANDLES * sizeof(AcReal); for (int i = 0; i < 2; ++i) {
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->inner[i], block_size_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->outer[i], block_size_bytes));
 
-        ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->inner_host[i], block_size_bytes));
-        ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->outer_host[i], block_size_bytes));
-    }
-#endif
+            ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->inner_host[i], block_size_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->outer_host[i], block_size_bytes));
+        }
+    #endif
+    */
 
     // Device constants
     acDeviceLoadMeshInfo(device, STREAM_DEFAULT, device_config);
@@ -156,16 +159,18 @@ acDeviceDestroy(Device device)
     cudaFree(device->reduce_scratchpad);
     cudaFree(device->reduce_result);
 
-#if AC_MPI_ENABLED
-    // Free data required for packed tranfers here (cudaFree)
-    for (int i = 0; i < 2; ++i) {
-        cudaFree(device->inner[i]);
-        cudaFree(device->outer[i]);
+    /*
+    #if AC_MPI_ENABLED
+        // Free data required for packed tranfers here (cudaFree)
+        for (int i = 0; i < 2; ++i) {
+            cudaFree(device->inner[i]);
+            cudaFree(device->outer[i]);
 
-        cudaFreeHost(device->inner_host[i]);
-        cudaFreeHost(device->outer_host[i]);
-    }
-#endif
+            cudaFreeHost(device->inner_host[i]);
+            cudaFreeHost(device->outer_host[i]);
+        }
+    #endif
+    */
 
     // Concurrency
     for (int i = 0; i < NUM_STREAMS; ++i) {
@@ -241,10 +246,16 @@ AcResult
 acDeviceAutoOptimize(const Device device)
 {
     cudaSetDevice(device->id);
-    const int3 start = (int3){NGHOST, NGHOST, NGHOST};
-    const int3 end   = (int3){device->local_config.int_params[AC_mx], //
-                            device->local_config.int_params[AC_my], //
-                            device->local_config.int_params[AC_mz]};
+    const int3 start = (int3){
+        device->local_config.int_params[AC_nx_min],
+        device->local_config.int_params[AC_ny_min],
+        device->local_config.int_params[AC_nz_min],
+    };
+    const int3 end = (int3){
+        device->local_config.int_params[AC_nx_max],
+        device->local_config.int_params[AC_ny_max],
+        device->local_config.int_params[AC_nz_max],
+    };
     return acKernelAutoOptimizeIntegration(start, end, device->vba);
 }
 
@@ -591,6 +602,8 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
     Running: mpirun -np <num processes> <executable>
 */
 #include <mpi.h>
+
+#include <assert.h>
 
 static int
 mod(const int a, const int b)

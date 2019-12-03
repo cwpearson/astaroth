@@ -47,7 +47,7 @@ endif ()
 
 ## Create and link the library
 #set(CMAKE_POSITION_INDEPENDENT_CODE ON) # fpic for shared libraries
-cuda_add_library(astaroth_core STATIC astaroth.cc device.cc node.cc kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu)
+cuda_add_library(astaroth_core STATIC astaroth.cc node.cc device.cc kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu)
 target_include_directories(astaroth_core PRIVATE . ${CUDA_INCLUDE_DIRS})
 target_link_libraries(astaroth_core ${CUDA_LIBRARIES} m)
 target_compile_definitions(astaroth_core PRIVATE AC_USE_CUDA_RUNTIME_API)

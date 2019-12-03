@@ -24,6 +24,7 @@
  * Detailed info.
  *
  */
+#include "boundconds.cuh"
 #include "common.cuh"
 
 #include "src/core/errchk.h"
@@ -76,7 +77,7 @@ kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
 }
 
 AcResult
-acKernelPeriodicBoundconds(const cudaStream_t stream, const int3& start, const int3& end,
+acKernelPeriodicBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
                            AcReal* vtxbuf)
 {
     const dim3 tpb(8, 2, 8);

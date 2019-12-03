@@ -25,6 +25,7 @@
  *
  */
 #include "common.cuh"
+#include "integration.cuh"
 
 #include "src/core/errchk.h"
 #include "src/core/math_utils.h"
@@ -283,7 +284,7 @@ dummy_kernel(void)
     a* a;
 }
 
-AcReal
+AcResult
 acKernelDummy(void)
 {
     dummy_kernel<<<1, 1>>>();
