@@ -43,6 +43,9 @@ static FILE* CUDAHEADER = NULL;
 static const char* dslheader_filename  = "user_defines.h";
 static const char* cudaheader_filename = "user_kernels.h";
 
+// Forward declaration of yyparse
+int yyparse(void);
+
 /*
  * =============================================================================
  * Translation
