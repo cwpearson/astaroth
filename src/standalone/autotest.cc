@@ -422,7 +422,7 @@ check_rk3(const AcMeshInfo& mesh_info)
         acBoundcondStep();
         boundconds(model_mesh->info, model_mesh);
 
-        for (int i = 0; i < num_iterations; ++i) {
+        for (int j = 0; j < num_iterations; ++j) {
             // const AcReal umax = AcReal(acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY,
             // VTXBUF_UUZ));
             // const AcReal dt   = host_timestep(umax, mesh_info);

@@ -127,8 +127,8 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
         // Grid data
         for (size_t i = 0; i < n; ++i) {
             const AcReal point_val     = save_mesh.vertex_buffer[VertexBufferHandle(w)][i];
-            AcReal write_long_buf = (AcReal)point_val;
-            fwrite(&write_long_buf, sizeof(AcReal), 1, save_ptr);
+            AcReal write_long_buf2 = (AcReal)point_val;
+            fwrite(&write_long_buf2, sizeof(AcReal), 1, save_ptr);
         }
         fclose(save_ptr);
     }
