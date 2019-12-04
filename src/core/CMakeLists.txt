@@ -39,10 +39,6 @@ elseif (CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
     set(CUDA_NVCC_FLAGS_DEBUG --device-debug --generate-line-info --ptxas-options=-v)
 endif()
 
-if (MPI_ENABLED)
-    add_definitions(-DAC_MPI_ENABLED=1)
-endif ()
-
 ## Create and link the library
 #set(CMAKE_POSITION_INDEPENDENT_CODE ON) # fpic for shared libraries
 cuda_add_library(astaroth_core STATIC astaroth.cc node.cc device.cc kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu)
@@ -57,5 +53,7 @@ if (MULTIGPU_ENABLED)
 endif ()
 
 if (MPI_ENABLED)
-    target_link_libraries(astaroth_core astaroth_utils)
+    find_package(MPI REQUIRED)
+    target_link_libraries(astaroth_core astaroth_utils MPI::MPI_CXX)
+    target_compile_definitions(astaroth_core PRIVATE AC_MPI_ENABLED=1)
 endif ()
