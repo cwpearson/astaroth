@@ -291,7 +291,7 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
                           const AcReal value)
 {
     cudaSetDevice(device->id);
-    
+
     if (param >= NUM_REAL_PARAMS)
         return AC_FAILURE;
 
@@ -1046,8 +1046,9 @@ acDeviceRunMPITest(void)
         acMeshCreate(info, &candidate);
 
         acMeshRandomize(&model);
+        acMeshRandomize(&candidate);
     }
-    assert(info.int_params[AC_nz] % num_processes == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_nz] % num_processes == 0);
 
     /// DECOMPOSITION
     AcMeshInfo submesh_info                    = info;
@@ -1067,22 +1068,15 @@ acDeviceRunMPITest(void)
     acMeshRandomize(&submesh);
     acDeviceDistributeMeshMPI(model, &submesh);
 
-#define VERIFY (0)
-
-// Master CPU
-#if VERIFY
-    if (pid == 0) {
-        acMeshApplyPeriodicBounds(&model);
-    }
-#endif
-
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    Device device;
     int devices_per_node = -1;
     cudaGetDeviceCount(&devices_per_node);
+
+    Device device;
     acDeviceCreate(pid % devices_per_node, submesh_info, &device);
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
+    /*
     // Warmup
     for (int i = 0; i < 5; ++i) {
         acDeviceIntegrateStepMPI(device, FLT_EPSILON);
@@ -1114,6 +1108,7 @@ acDeviceRunMPITest(void)
         fclose(fp);
     }
     ////////////////////////////// Timer end
+    */
     acDeviceBoundStepMPI(device);
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     acDeviceDestroy(device);
@@ -1122,9 +1117,11 @@ acDeviceRunMPITest(void)
     acDeviceGatherMeshMPI(submesh, &candidate);
     acMeshDestroy(&submesh);
 
+#define VERIFY (1)
     // Master CPU
     if (pid == 0) {
 #if VERIFY
+        acMeshApplyPeriodicBounds(&model);
         acVerifyMesh(model, candidate);
 #endif
         acMeshDestroy(&model);
