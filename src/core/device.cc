@@ -871,6 +871,7 @@ acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
         }
 
         // MPI
+        MPI_Request send_requests[2 * NUM_VTXBUF_HANDLES];
         MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
         MPI_Datatype datatype = MPI_FLOAT;
         if (sizeof(AcReal) == 8)
@@ -909,18 +910,17 @@ acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
                                                          device->local_config);
                 const int send_pid   = (pid + 1) % num_processes;
 
-                MPI_Request request;
                 MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
-                          &request);
+                          &send_requests[i]);
             }
             { // Send back
                 // ...|ooooooo|xxx <- ...|xxxoooo|...
                 const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
                 const int send_pid   = (pid + num_processes - 1) % num_processes;
 
-                MPI_Request request;
                 MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
-                          i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+                          i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD,
+                          &send_requests[i + NUM_VTXBUF_HANDLES]);
             }
         }
         // Inner integration
@@ -931,44 +931,35 @@ acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
             acDeviceIntegrateSubstep(device, (Stream)(NUM_STREAMS - 2), isubstep, m1, m2, dt);
         }
 
-        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-            MPI_Status status;
-            MPI_Wait(&recv_requests[i], &status);
-            MPI_Wait(&recv_requests[i + NUM_VTXBUF_HANDLES], &status);
-        }
+        MPI_Waitall(2 * NUM_VTXBUF_HANDLES, recv_requests, MPI_STATUSES_IGNORE);
+        MPI_Waitall(2 * NUM_VTXBUF_HANDLES, send_requests, MPI_STATUSES_IGNORE);
 
         acDeviceSynchronizeStream(device, INNER_BOUNDCOND_STREAM);
-        // #pragma omp parallel for
         { // Front
             const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
             const int3 m2 = m1 + (int3){nx, ny, NGHOST};
             acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
         }
-        // #pragma omp parallel for
         { // Back
             const int3 m1 = (int3){NGHOST, NGHOST, nz};
             const int3 m2 = m1 + (int3){nx, ny, NGHOST};
             acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
         }
-        // #pragma omp parallel for
         { // Bottom
             const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){nx, NGHOST, nz - 2 * NGHOST};
             acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
         }
-        // #pragma omp parallel for
         { // Top
             const int3 m1 = (int3){NGHOST, ny, 2 * NGHOST};
             const int3 m2 = m1 + (int3){nx, NGHOST, nz - 2 * NGHOST};
             acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
         }
-        // #pragma omp parallel for
         { // Left
             const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, ny - 2 * NGHOST, nz - 2 * NGHOST};
             acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
         }
-        // #pragma omp parallel for
         { // Right
             const int3 m1 = (int3){nx, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, ny - 2 * NGHOST, nz - 2 * NGHOST};
@@ -1066,7 +1057,6 @@ acDeviceRunMPITest(void)
     acDeviceCreate(pid % devices_per_node, submesh_info, &device);
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
-    /*
     // Warmup
     for (int i = 0; i < 5; ++i) {
         acDeviceIntegrateStepMPI(device, FLT_EPSILON);
@@ -1098,7 +1088,6 @@ acDeviceRunMPITest(void)
         fclose(fp);
     }
     ////////////////////////////// Timer end
-    */
     acDeviceBoundStepMPI(device);
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     acDeviceDestroy(device);
