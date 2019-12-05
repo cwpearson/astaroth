@@ -1015,7 +1015,7 @@ acDeviceRunMPITest(void)
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
     // Large mesh dim
-    const int nn           = 256;
+    const int nn           = 512;
     info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
     acUpdateConfig(&info);
 
@@ -1084,7 +1084,7 @@ acDeviceRunMPITest(void)
         sprintf(buf, "procs_%d.bench", num_processes);
         FILE* fp = fopen(buf, "w");
         ERRCHK_ALWAYS(fp);
-        fprintf(fp, "%d, %g", num_processes, ms_elapsed);
+        fprintf(fp, "%d, %g", num_processes, ms_elapsed / num_iters);
         fclose(fp);
     }
     ////////////////////////////// Timer end
