@@ -11,12 +11,12 @@
 #
 
 ## CMake settings
-cmake_minimum_required (VERSION 3.5.1) # Need >= 3.8 for first-class CUDA support
+cmake_minimum_required (VERSION 3.9) # Need >= 3.8 for first-class CUDA support and >= 3.9 for MPI
 find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
 find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
 
 ## Project settings
-project(astaroth C CXX)
+project(astaroth C CXX CUDA)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
