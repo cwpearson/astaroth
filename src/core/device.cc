@@ -775,6 +775,7 @@ acDeviceBoundStepMPI(const Device device)
     }
 
     // MPI
+    MPI_Request send_requests[2 * NUM_VTXBUF_HANDLES];
     MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
     MPI_Datatype datatype = MPI_FLOAT;
     if (sizeof(AcReal) == 8)
@@ -812,21 +813,21 @@ acDeviceBoundStepMPI(const Device device)
             const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
             const int send_pid   = (pid + 1) % num_processes;
 
-            MPI_Request request;
             MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
-                      &request);
+                      &send_requests[i]);
         }
         { // Send back
             // ...|ooooooo|xxx <- ...|xxxoooo|...
             const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
             const int send_pid   = (pid + num_processes - 1) % num_processes;
 
-            MPI_Request request;
             MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
-                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD, &request);
+                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD,
+                      &send_requests[i + NUM_VTXBUF_HANDLES]);
         }
     }
-    MPI_Waitall(NUM_VTXBUF_HANDLES, recv_requests, MPI_STATUSES_IGNORE);
+    MPI_Waitall(2 * NUM_VTXBUF_HANDLES, recv_requests, MPI_STATUSES_IGNORE);
+    MPI_Waitall(2 * NUM_VTXBUF_HANDLES, send_requests, MPI_STATUSES_IGNORE);
     return AC_SUCCESS;
 }
 
