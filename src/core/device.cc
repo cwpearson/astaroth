@@ -978,7 +978,13 @@ acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
 #include "src/utils/memory.h"
 #include "src/utils/timer_hires.h"
 #include "src/utils/verification.h"
+
+#include <vector>
+#include <algorithm>
 // --smpiargs="-gpu"
+
+
+
 AcResult
 acDeviceRunMPITest(void)
 {
@@ -1015,10 +1021,15 @@ acDeviceRunMPITest(void)
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
     // Large mesh dim
-    const int nn           = 512;
+    const int nn           = 128;
+    const int num_iters    = 10;
     info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
     acUpdateConfig(&info);
 
+    
+    #define VERIFY (0)
+
+#if VERIFY
     AcMesh model, candidate;
 
     // Master CPU
@@ -1029,6 +1040,7 @@ acDeviceRunMPITest(void)
         acMeshRandomize(&model);
         acMeshRandomize(&candidate);
     }
+#endif
     ERRCHK_ALWAYS(info.int_params[AC_nz] % num_processes == 0);
 
     /// DECOMPOSITION
@@ -1047,7 +1059,9 @@ acDeviceRunMPITest(void)
     AcMesh submesh;
     acMeshCreate(submesh_info, &submesh);
     acMeshRandomize(&submesh);
+#if VERIFY
     acDeviceDistributeMeshMPI(model, &submesh);
+#endif
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     int devices_per_node = -1;
@@ -1058,54 +1072,70 @@ acDeviceRunMPITest(void)
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
     // Warmup
-    for (int i = 0; i < 5; ++i) {
-        acDeviceIntegrateStepMPI(device, FLT_EPSILON);
+    for (int i = 0; i < 10; ++i) {
+        acDeviceIntegrateStepMPI(device, 0);
     }
     acDeviceSynchronizeStream(device, STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Benchmark
-    const int num_iters = 100;
+    std::vector<double> results;
+    results.reserve(num_iters);
+
     Timer total_time;
     timer_reset(&total_time);
+
+    Timer step_time;
     for (int i = 0; i < num_iters; ++i) {
-        // acDeviceBoundStepMPI(device);
-        acDeviceIntegrateStepMPI(device, FLT_EPSILON); // TODO recheck
+        const AcReal dt = FLT_EPSILON;
+
+        timer_reset(&step_time);
+        acDeviceIntegrateStepMPI(device, dt);
+        acDeviceSynchronizeStream(device, STREAM_ALL);
+        MPI_Barrier(MPI_COMM_WORLD);
+        results.push_back(timer_diff_nsec(step_time) / 1e6);
     }
-    acDeviceSynchronizeStream(device, STREAM_ALL);
-    MPI_Barrier(MPI_COMM_WORLD);
+    
+    const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
+    const double nth_percentile = 0.95;
+    std::sort(results.begin(), results.end(), [](const double& a, const double& b){ return a < b; });
+    
     if (pid == 0) {
-        const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
         printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
         printf("Total time: %f ms\n", ms_elapsed);
         printf("Time per step: %f ms\n", ms_elapsed / num_iters);
 
+        const size_t nth_index = int(nth_percentile * num_iters);
+        printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile), results[nth_index]);
+
         char buf[256];
-        sprintf(buf, "procs_%d.bench", num_processes);
+        sprintf(buf, "procs_%d_%dth_perc.bench", num_processes, int(100 * nth_percentile));
         FILE* fp = fopen(buf, "w");
         ERRCHK_ALWAYS(fp);
-        fprintf(fp, "%d, %g", num_processes, ms_elapsed / num_iters);
+        fprintf(fp, "%d, %g", num_processes, results[nth_index]);
         fclose(fp);
     }
+
     ////////////////////////////// Timer end
     acDeviceBoundStepMPI(device);
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
     acDeviceDestroy(device);
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if VERIFY
     acDeviceGatherMeshMPI(submesh, &candidate);
+#endif
     acMeshDestroy(&submesh);
 
-#define VERIFY (1)
+#if VERIFY
     // Master CPU
     if (pid == 0) {
-#if VERIFY
         acMeshApplyPeriodicBounds(&model);
         acVerifyMesh(model, candidate);
-#endif
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
     }
+#endif
 
     MPI_Finalize();
     return AC_FAILURE;
