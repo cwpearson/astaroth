@@ -10,6 +10,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Require CUDA
+find_package(CUDA REQUIRED)
 set(CMAKE_CUDA_FLAGS "-gencode arch=compute_70,code=sm_70 -ftz=true --restrict")
 
 # Compile kernels
