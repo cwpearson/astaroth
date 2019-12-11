@@ -23,7 +23,7 @@ add_dependencies(astaroth_kernels dsl_headers)
 # Compile core
 add_library(astaroth_core STATIC astaroth.cc node.cc device.cc)
 target_include_directories(astaroth_core PRIVATE . "${CUDA_INCLUDE_DIRS}")
-target_link_libraries(astaroth_core m astaroth_kernels "${CUDA_LIBRARIES}")
+target_link_libraries(astaroth_core m astaroth_kernels cudart)
 target_compile_definitions(astaroth_core PRIVATE AC_USE_CUDA_RUNTIME_API)
 set_target_properties(astaroth_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 add_dependencies(astaroth_kernels dsl_headers)
