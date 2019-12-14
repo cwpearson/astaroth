@@ -131,7 +131,7 @@ acLoadConfig(const char* config_path, AcMeshInfo* config)
     acUpdateConfig(config);
 #if VERBOSE_PRINTING // Defined in astaroth.h
     printf("###############################################################\n");
-    printf("Config dimensions recalculated:\n");
+    printf("Config dimensions loaded:\n");
     acPrintMeshInfo(*config);
     printf("###############################################################\n");
 #endif
