@@ -11,7 +11,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Require CUDA
 find_package(CUDA REQUIRED)
-set(CMAKE_CUDA_FLAGS "-gencode arch=compute_70,code=sm_70 -ftz=true --restrict")
+set(CMAKE_CUDA_FLAGS "-gencode arch=compute_70,code=sm_70 --restrict")
 
 # Compile kernels
 add_library(astaroth_kernels STATIC kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu)
