@@ -976,14 +976,13 @@ acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
 // From Astaroth Utils
 #include "src/utils/config_loader.h"
 #include "src/utils/memory.h"
+#include "src/utils/modelsolver.h"
 #include "src/utils/timer_hires.h"
 #include "src/utils/verification.h"
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 // --smpiargs="-gpu"
-
-
 
 AcResult
 acDeviceRunMPITest(void)
@@ -1022,12 +1021,18 @@ acDeviceRunMPITest(void)
 
     // Large mesh dim
     const int nn           = 128;
-    const int num_iters    = 10;
+    const int num_iters    = 1;
     info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
+    info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
+    info.real_params[AC_inv_dsy]   = AcReal(1.0) / info.real_params[AC_dsy];
+    info.real_params[AC_inv_dsz]   = AcReal(1.0) / info.real_params[AC_dsz];
+    info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
     acUpdateConfig(&info);
+    ERRCHK_ALWAYS(is_valid(info.real_params[AC_inv_dsx]));
+    ERRCHK_ALWAYS(is_valid(info.real_params[AC_cs2_sound]));
+    acPrintMeshInfo(info);
 
-    
-    #define VERIFY (0)
+#define VERIFY (1)
 
 #if VERIFY
     AcMesh model, candidate;
@@ -1054,6 +1059,8 @@ acDeviceRunMPITest(void)
     };
     submesh_info.int3_params[AC_multigpu_offset] = (int3){0, 0, pid * submesh_nz};
     acUpdateConfig(&submesh_info);
+    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_inv_dsx]));
+    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_cs2_sound]));
     //
 
     AcMesh submesh;
@@ -1072,7 +1079,7 @@ acDeviceRunMPITest(void)
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
     // Warmup
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 0; ++i) {
         acDeviceIntegrateStepMPI(device, 0);
     }
     acDeviceSynchronizeStream(device, STREAM_ALL);
@@ -1087,19 +1094,18 @@ acDeviceRunMPITest(void)
 
     Timer step_time;
     for (int i = 0; i < num_iters; ++i) {
-        const AcReal dt = FLT_EPSILON;
-
         timer_reset(&step_time);
-        acDeviceIntegrateStepMPI(device, dt);
+        acDeviceIntegrateStepMPI(device, FLT_EPSILON);
         acDeviceSynchronizeStream(device, STREAM_ALL);
         MPI_Barrier(MPI_COMM_WORLD);
         results.push_back(timer_diff_nsec(step_time) / 1e6);
     }
-    
-    const double ms_elapsed = timer_diff_nsec(total_time) / 1e6;
+
+    const double ms_elapsed     = timer_diff_nsec(total_time) / 1e6;
     const double nth_percentile = 0.95;
-    std::sort(results.begin(), results.end(), [](const double& a, const double& b){ return a < b; });
-    
+    std::sort(results.begin(), results.end(),
+              [](const double& a, const double& b) { return a < b; });
+
     if (pid == 0) {
         printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
         printf("Total time: %f ms\n", ms_elapsed);
@@ -1130,7 +1136,11 @@ acDeviceRunMPITest(void)
 #if VERIFY
     // Master CPU
     if (pid == 0) {
+        for (int i = 0; i < num_iters; ++i) {
+            acModelIntegrateStep(model, FLT_EPSILON);
+        }
         acMeshApplyPeriodicBounds(&model);
+
         acVerifyMesh(model, candidate);
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
