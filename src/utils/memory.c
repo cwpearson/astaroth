@@ -96,6 +96,7 @@ acMeshApplyPeriodicBounds(AcMesh* mesh)
         const int ny_max = info.int_params[AC_ny_max];
         const int nz_max = info.int_params[AC_nz_max];
 
+#pragma omp parallel for
         for (int k_dst = start.z; k_dst < end.z; ++k_dst) {
             for (int j_dst = start.y; j_dst < end.y; ++j_dst) {
                 for (int i_dst = start.x; i_dst < end.x; ++i_dst) {

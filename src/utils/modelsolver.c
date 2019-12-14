@@ -924,8 +924,8 @@ acModelIntegrateStep(AcMesh mesh, const AcReal dt)
         // Boundconds
         acMeshApplyPeriodicBounds(&mesh);
 
-        // Alpha step
-        //#pragma omp parallel for
+// Alpha step
+#pragma omp parallel for
         for (int k = nz_min; k < nz_max; ++k) {
             for (int j = ny_min; j < ny_max; ++j) {
                 for (int i = nx_min; i < nx_max; ++i) {
@@ -934,8 +934,8 @@ acModelIntegrateStep(AcMesh mesh, const AcReal dt)
             }
         }
 
-        // Beta step
-        //#pragma omp parallel for
+// Beta step
+#pragma omp parallel for
         for (int k = nz_min; k < nz_max; ++k) {
             for (int j = ny_min; j < ny_max; ++j) {
                 for (int i = nx_min; i < nx_max; ++i) {

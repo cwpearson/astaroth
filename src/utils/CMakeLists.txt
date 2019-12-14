@@ -7,5 +7,6 @@ add_compile_options(-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion 
 add_compile_options(-mavx)
 
 ## Compile
+find_package(OpenMP)
 add_library(astaroth_utils STATIC config_loader.c memory.c verification.c modelsolver.c)
-target_link_libraries(astaroth_utils PRIVATE astaroth_core m)
+target_link_libraries(astaroth_utils PRIVATE astaroth_core m OpenMP::OpenMP_C)
