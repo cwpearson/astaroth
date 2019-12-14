@@ -1114,11 +1114,13 @@ acDeviceRunMPITest(void)
         const size_t nth_index = int(nth_percentile * num_iters);
         printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile), results[nth_index]);
 
+        // Write out
         char buf[256];
-        sprintf(buf, "procs_%d_%dth_perc.bench", num_processes, int(100 * nth_percentile));
+        sprintf(buf, "nprocs_%d_result.bench", num_processes);
         FILE* fp = fopen(buf, "w");
         ERRCHK_ALWAYS(fp);
-        fprintf(fp, "%d, %g", num_processes, results[nth_index]);
+        fprintf(fp, "num_processes, percentile (%dth)\n", int(100 * nth_percentile));
+        fprintf(fp, "%d, %g\n", num_processes, results[nth_index]);
         fclose(fp);
     }
 
