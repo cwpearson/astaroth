@@ -94,6 +94,11 @@ get_minimum_magnitude(const AcReal* field, const AcMeshInfo info)
     return minimum;
 }
 
+// Get the maximum absolute error. Works well if all the values in the mesh are approximately
+// in the same range.
+// Finding the maximum ulp error is not useful, as it picks up on the noise beyond the
+// floating-point precision range and gives huge errors with values that should be considered
+// zero (f.ex. 1e-19 and 1e-22 give error of around 1e4 ulps)
 static Error
 get_max_abs_error(const VertexBufferHandle vtxbuf_handle, const AcMesh model_mesh,
                   const AcMesh candidate_mesh)
@@ -131,37 +136,54 @@ print_error_to_file(const char* path, const int n, const Error error)
 static bool
 is_acceptable(const Error error)
 {
-    // TODO FIXME
-    const AcReal range = error.maximum_magnitude - error.minimum_magnitude;
-    if (error.abs_error < range * AC_REAL_EPSILON)
+    // Accept the error if the relative error is < max_ulp_error ulps.
+    // Also consider the error zero if it is less than the minimum value in the mesh scaled to
+    // machine epsilon
+    const long double max_ulp_error = 5;
+
+    if (error.ulp_error < max_ulp_error)
+        return true;
+    else if (error.abs_error < error.minimum_magnitude * AC_REAL_EPSILON)
         return true;
     else
         return false;
 }
 
-static void
+static bool
 print_error_to_screen(const Error error)
 {
+    bool errors_found = false;
+
     printf("\t%-15s... ", vtxbuf_names[error.handle]);
     if (is_acceptable(error)) {
         printf(GRN "OK! " RESET);
     }
     else {
         printf(RED "FAIL! " RESET);
+        errors_found = true;
     }
 
-    fprintf(stdout, "| %.2Lg (abs), %.2Lg (ulps), %.2Lg (rel). Range: [%.2g, %.2g]\n", //
+    fprintf(stdout, "| %.3Lg (abs), %.3Lg (ulps), %.3Lg (rel). Range: [%.3g, %.3g]\n", //
             error.abs_error, error.ulp_error, error.rel_error,                         //
             (double)error.minimum_magnitude, (double)error.maximum_magnitude);
+
+    return errors_found;
 }
 
+/** Returns true when successful, false if errors were found. */
 bool
 acVerifyMesh(const AcMesh model, const AcMesh candidate)
 {
+    printf("Errors at the point of the maximum absolute error:\n");
+
+    bool errors_found = false;
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         Error field_error = get_max_abs_error(i, model, candidate);
-        print_error_to_screen(field_error);
+        errors_found |= print_error_to_screen(field_error);
     }
-    printf("WARNING: is_acceptable() not yet complete\n");
-    return true;
+
+    printf("%s\n", errors_found ? "Failure. Found errors in one or more vertex buffers"
+                                : "Success. No errors found.");
+
+    return !errors_found;
 }
