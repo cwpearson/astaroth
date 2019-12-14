@@ -987,6 +987,168 @@ acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
 AcResult
 acDeviceRunMPITest(void)
 {
+    // If 1, runs the strong scaling tests and verification.
+    // Verification is disabled when benchmarking weak scaling because the
+    // whole grid is too large to fit into memory.
+#define BENCH_STRONG_SCALING (0)
+
+    MPI_Init(NULL, NULL);
+
+    int num_processes, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
+    printf("Processor %s. Process %d of %d.\n", processor_name, pid, num_processes);
+
+    // Create model and candidate meshes
+    AcMeshInfo info;
+    acLoadConfig(AC_DEFAULT_CONFIG, &info);
+
+    // Large mesh dim
+    const int nn           = 128;
+    const int num_iters    = 10;
+    info.int_params[AC_nx] = info.int_params[AC_ny] = nn;
+    info.int_params[AC_nz]         = BENCH_STRONG_SCALING ? nn : nn * num_processes;
+    info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
+    info.real_params[AC_inv_dsy]   = AcReal(1.0) / info.real_params[AC_dsy];
+    info.real_params[AC_inv_dsz]   = AcReal(1.0) / info.real_params[AC_dsz];
+    info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
+    acUpdateConfig(&info);
+    acPrintMeshInfo(info);
+    ERRCHK_ALWAYS(info.int_params[AC_nz] % num_processes == 0);
+
+#if BENCH_STRONG_SCALING
+    AcMesh model, candidate;
+
+    // Master CPU
+    if (pid == 0) {
+        acMeshCreate(info, &model);
+        acMeshCreate(info, &candidate);
+
+        acMeshRandomize(&model);
+        acMeshRandomize(&candidate);
+    }
+#endif
+
+    /// DECOMPOSITION
+    AcMeshInfo submesh_info                    = info;
+    const int submesh_nz                       = info.int_params[AC_nz] / num_processes;
+    submesh_info.int_params[AC_nz]             = submesh_nz;
+    submesh_info.int3_params[AC_global_grid_n] = (int3){
+        info.int_params[AC_nx],
+        info.int_params[AC_ny],
+        info.int_params[AC_nz],
+    };
+    submesh_info.int3_params[AC_multigpu_offset] = (int3){0, 0, pid * submesh_nz};
+    acUpdateConfig(&submesh_info);
+    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_inv_dsx]));
+    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_cs2_sound]));
+    //
+
+    AcMesh submesh;
+    acMeshCreate(submesh_info, &submesh);
+    acMeshRandomize(&submesh);
+
+#if BENCH_STRONG_SCALING
+    acDeviceDistributeMeshMPI(model, &submesh);
+#endif
+
+    // Init the GPU
+    int devices_per_node = -1;
+    cudaGetDeviceCount(&devices_per_node);
+
+    Device device;
+    acDeviceCreate(pid % devices_per_node, submesh_info, &device);
+    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+
+// Verification start ///////////////////////////////////////////////////////////////////////
+#if BENCH_STRONG_SCALING
+    {
+        const float dt = FLT_EPSILON;
+        acDeviceIntegrateStepMPI(device, dt);
+        acDeviceBoundStepMPI(device);
+        acDeviceSynchronizeStream(device, STREAM_ALL);
+
+        acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
+        acDeviceGatherMeshMPI(submesh, &candidate);
+        if (pid == 0) {
+            acModelIntegrateStep(model, FLT_EPSILON);
+            acMeshApplyPeriodicBounds(&model);
+
+            const bool valid = acVerifyMesh(model, candidate);
+            acMeshDestroy(&model);
+            acMeshDestroy(&candidate);
+
+            // Write out
+            char buf[256];
+            sprintf(buf, "nprocs_%d_result_%s", num_processes,
+                    valid ? "valid" : "INVALID_CHECK_OUTPUT");
+            FILE* fp = fopen(buf, "w");
+            ERRCHK_ALWAYS(fp);
+            fclose(fp);
+        }
+    }
+#endif
+    // Verification end ///////////////////////////////////////////////////////////////////////
+
+    // Benchmark start ///////////////////////////////////////////////////////////////////////
+    std::vector<double> results;
+    results.reserve(num_iters);
+
+    Timer total_time;
+    timer_reset(&total_time);
+
+    Timer step_time;
+    for (int i = 0; i < num_iters; ++i) {
+        timer_reset(&step_time);
+
+        const AcReal dt = FLT_EPSILON;
+        acDeviceIntegrateStepMPI(device, dt);
+        acDeviceSynchronizeStream(device, STREAM_ALL);
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        results.push_back(timer_diff_nsec(step_time) / 1e6);
+    }
+
+    const double ms_elapsed     = timer_diff_nsec(total_time) / 1e6;
+    const double nth_percentile = 0.95;
+    std::sort(results.begin(), results.end(),
+              [](const double& a, const double& b) { return a < b; });
+
+    if (pid == 0) {
+        printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
+        printf("Total time: %f ms\n", ms_elapsed);
+        printf("Time per step: %f ms\n", ms_elapsed / num_iters);
+
+        const size_t nth_index = int(nth_percentile * num_iters);
+        printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile), results[nth_index]);
+
+        // Write out
+        char buf[256];
+        sprintf(buf, "nprocs_%d_result_%s.bench", num_processes,
+                BENCH_STRONG_SCALING ? "strong" : "weak");
+        FILE* fp = fopen(buf, "w");
+        ERRCHK_ALWAYS(fp);
+        fprintf(fp, "num_processes, percentile (%dth)\n", int(100 * nth_percentile));
+        fprintf(fp, "%d, %g\n", num_processes, results[nth_index]);
+        fclose(fp);
+    }
+    // Benchmark end ///////////////////////////////////////////////////////////////////////
+
+    // Finalize
+    acDeviceDestroy(device);
+    acMeshDestroy(&submesh);
+    MPI_Finalize();
+    return AC_SUCCESS;
+}
+
+/*
+AcResult
+acDeviceRunMPITest(void)
+{
     int num_processes, pid;
     MPI_Init(NULL, NULL);
     // int provided;
@@ -1152,6 +1314,7 @@ acDeviceRunMPITest(void)
     MPI_Finalize();
     return AC_FAILURE;
 }
+*/
 #else
 AcResult
 acDeviceRunMPITest(void)
