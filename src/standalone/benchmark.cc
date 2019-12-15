@@ -49,14 +49,15 @@ smaller_than(const double& a, const double& b)
 int
 run_benchmark(const char* config_path)
 {
-    const int nn        = 256;
+    const int nn        = 512;
     const int num_iters = 100;
+#define BENCH_STRONG_SCALING (1)
+    const int num_processes = acGetNumDevicesPerNode();
 
     AcMeshInfo mesh_info;
     load_config(config_path, &mesh_info);
-    mesh_info.int_params[AC_nx] = nn;
-    mesh_info.int_params[AC_ny] = mesh_info.int_params[AC_nx];
-    mesh_info.int_params[AC_nz] = mesh_info.int_params[AC_nx];
+    mesh_info.int_params[AC_nx] = mesh_info.int_params[AC_ny] = nn;
+    mesh_info.int_params[AC_nz] = BENCH_STRONG_SCALING ? nn : nn * num_processes;
     update_config(&mesh_info);
 
     AcMesh* mesh = acmesh_create(mesh_info);
@@ -74,6 +75,7 @@ run_benchmark(const char* config_path)
     }
     acSynchronize();
     const AcReal dt = FLT_EPSILON;
+    printf("Using dt = %g\n", dt);
 
     Timer total_time;
     timer_reset(&total_time);
@@ -89,13 +91,25 @@ run_benchmark(const char* config_path)
     }
     acSynchronize();
     const double ms_elapsed     = timer_diff_nsec(total_time) / 1e6;
-    const double nth_percentile = 0.95;
+    const double nth_percentile = 0.90;
     std::sort(results.begin(), results.end(), smaller_than);
 
     printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
     printf("Total time: %f ms\n", ms_elapsed);
-    printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile),
-           results[int(nth_percentile * num_iters)]);
+    printf("Time per step: %f ms\n", ms_elapsed / num_iters);
+
+    const size_t nth_index = int(nth_percentile * num_iters);
+    printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile), results[nth_index]);
+
+    // Write out
+    char buf[256];
+    sprintf(buf, "nprocs_%d_result_%s.bench", num_processes,
+            BENCH_STRONG_SCALING ? "strong" : "weak");
+    FILE* fp = fopen(buf, "w");
+    ERRCHK_ALWAYS(fp);
+    fprintf(fp, "num_processes, percentile (%dth)\n", int(100 * nth_percentile));
+    fprintf(fp, "%d, %g\n", num_processes, results[nth_index]);
+    fclose(fp);
 
     acQuit();
     acmesh_destroy(mesh);

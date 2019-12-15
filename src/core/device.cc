@@ -1008,8 +1008,8 @@ acDeviceRunMPITest(void)
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
     // Large mesh dim
-    const int nn           = 128;
-    const int num_iters    = 10;
+    const int nn           = 512;
+    const int num_iters    = 100;
     info.int_params[AC_nx] = info.int_params[AC_ny] = nn;
     info.int_params[AC_nz]         = BENCH_STRONG_SCALING ? nn : nn * num_processes;
     info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
@@ -1064,6 +1064,14 @@ acDeviceRunMPITest(void)
     acDeviceCreate(pid % devices_per_node, submesh_info, &device);
     acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
 
+    // Enable peer access
+    MPI_Barrier(MPI_COMM_WORLD);
+    const int front = (device->id + 1) % devices_per_node;
+    const int back  = (device->id + devices_per_node - 1) % devices_per_node;
+    cudaSetDevice(device->id);
+    WARNCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(front, 0));
+    WARNCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(back, 0));
+
 // Verification start ///////////////////////////////////////////////////////////////////////
 #if BENCH_STRONG_SCALING
     {
@@ -1094,6 +1102,13 @@ acDeviceRunMPITest(void)
 #endif
     // Verification end ///////////////////////////////////////////////////////////////////////
 
+    // Warmup
+    for (int i = 0; i < 10; ++i)
+        acDeviceIntegrateStepMPI(device, 0);
+
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
     // Benchmark start ///////////////////////////////////////////////////////////////////////
     std::vector<double> results;
     results.reserve(num_iters);
@@ -1114,7 +1129,7 @@ acDeviceRunMPITest(void)
     }
 
     const double ms_elapsed     = timer_diff_nsec(total_time) / 1e6;
-    const double nth_percentile = 0.95;
+    const double nth_percentile = 0.90;
     std::sort(results.begin(), results.end(),
               [](const double& a, const double& b) { return a < b; });
 
