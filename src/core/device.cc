@@ -45,16 +45,47 @@ struct device_s {
     AcReal* reduce_scratchpad;
     AcReal* reduce_result;
 
-    /*
-    #if AC_MPI_ENABLED
-        // Declare memory for buffers needed for packed data transfers here
-        AcReal* inner[2];
-        AcReal* outer[2];
+#if AC_MPI_ENABLED
+    // Declare memory for buffers needed for packed data transfers here
+    int3 corner_dims;
+    AcReal* packed_corners[NUM_VTXBUF_HANDLES][8];
 
-        AcReal* inner_host[2];
-        AcReal* outer_host[2];
-    #endif
-    */
+#define EDGE_X (0) // left to right
+#define EDGE_Y (1) // bottom to top
+#define EDGE_Z (2) // front to aft
+
+#define EDGE_000R (0) // Origin + direction, R(ight), U(p), A(ft)
+#define EDGE_010R (1)
+#define EDGE_001R (2)
+#define EDGE_011R (3)
+
+#define EDGE_000U (4)
+#define EDGE_100U (5)
+#define EDGE_001U (6)
+#define EDGE_101U (7)
+
+#define EDGE_000A (8)
+#define EDGE_100A (9)
+#define EDGE_010A (10)
+#define EDGE_110A (11)
+    int3 edge_dims[3];
+    AcReal* packed_edges[NUM_VTXBUF_HANDLES][12];
+
+#define SIDE_XY (0) // Front/back
+#define SIDE_XZ (1) // Top/bottom
+#define SIDE_YZ (2) // Left/right
+
+#define SIDE_FRONT (0)
+#define SIDE_BACK (1)
+
+#define SIDE_BOTTOM (2)
+#define SIDE_TOP (3)
+
+#define SIDE_LEFT (4)
+#define SIDE_RIGHT (5)
+    int3 side_dims[3];
+    AcReal* packed_sides[NUM_VTXBUF_HANDLES][6];
+#endif
 };
 
 #include "kernels/boundconds.cuh"
@@ -113,20 +144,76 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
                                   acVertexBufferCompdomainSizeBytes(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_result, sizeof(AcReal)));
 
-    /*
-    #if AC_MPI_ENABLED
-        // Allocate data required for packed transfers here (cudaMalloc)
-        const size_t block_size_bytes = device_config.int_params[AC_mx] *
-                                        device_config.int_params[AC_my] * NGHOST *
-    NUM_VTXBUF_HANDLES * sizeof(AcReal); for (int i = 0; i < 2; ++i) {
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->inner[i], block_size_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->outer[i], block_size_bytes));
-
-            ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->inner_host[i], block_size_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->outer_host[i], block_size_bytes));
+#if AC_MPI_ENABLED
+    // Corners
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        device->corner_dims       = (int3){NGHOST, NGHOST, NGHOST};
+        const size_t corner_bytes = device->corner_dims.x * device->corner_dims.y *
+                                    device->corner_dims.z * sizeof(AcReal);
+        ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_corners, corner_bytes));
+    }
+    // Edges
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // left-right
+            device->edge_dims[EDGE_X] = (int3){device_config.int_params[AC_nx], NGHOST, NGHOST};
+            const size_t edge_bytes   = device->edge_dims[EDGE_X].x * device->edge_dims[EDGE_X].y *
+                                      device->edge_dims[EDGE_X].z * sizeof(AcReal);
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_000R], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_010R], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_001R], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_011R], edge_bytes));
         }
-    #endif
-    */
+        { // bottom-top
+            device->edge_dims[EDGE_Y] = (int3){NGHOST, device_config.int_params[AC_ny], NGHOST};
+            const size_t edge_bytes   = device->edge_dims[EDGE_Y].x * device->edge_dims[EDGE_Y].y *
+                                      device->edge_dims[EDGE_Y].z * sizeof(AcReal);
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][4], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][5], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][6], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][7], edge_bytes));
+        }
+        { // front-back
+            device->edge_dims[EDGE_Z] = (int3){NGHOST, NGHOST, device_config.int_params[AC_nz]};
+            const size_t edge_bytes   = device->edge_dims[EDGE_Z].x * device->edge_dims[EDGE_Z].y *
+                                      device->edge_dims[EDGE_Z].z * sizeof(AcReal);
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][8], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][9], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][10], edge_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][11], edge_bytes));
+        }
+    }
+
+    // Sides
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        { // front-back
+            device->side_dims[SIDE_XY] = (int3){device_config.int_params[AC_nx],
+                                                device_config.int_params[AC_ny], NGHOST};
+            const size_t side_bytes = device->side_dims[SIDE_XY].x * device->side_dims[SIDE_XY].y *
+                                      device->side_dims[SIDE_XY].z * sizeof(AcReal);
+            ERRCHK_CUDA_ALWAYS(
+                cudaMalloc((void**)&device->packed_sides[i][SIDE_FRONT], side_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_sides[i][SIDE_BACK], side_bytes));
+        }
+        { // bottom-top
+            device->side_dims[SIDE_XZ] = (int3){device_config.int_params[AC_nx], NGHOST,
+                                                device_config.int_params[AC_nz]};
+            const size_t side_bytes = device->side_dims[SIDE_XZ].x * device->side_dims[SIDE_XZ].y *
+                                      device->side_dims[SIDE_XZ].z * sizeof(AcReal);
+            ERRCHK_CUDA_ALWAYS(
+                cudaMalloc((void**)&device->packed_sides[i][SIDE_BOTTOM], side_bytes));
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_sides[i][SIDE_TOP], side_bytes));
+        }
+        { // left-right
+            device->side_dims[SIDE_YZ] = (int3){NGHOST, device_config.int_params[AC_ny],
+                                                device_config.int_params[AC_nz]};
+            const size_t side_bytes = device->side_dims[SIDE_YZ].x * device->side_dims[SIDE_YZ].y *
+                                      device->side_dims[SIDE_YZ].z * sizeof(AcReal);
+            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_sides[i][SIDE_LEFT], side_bytes));
+            ERRCHK_CUDA_ALWAYS(
+                cudaMalloc((void**)&device->packed_sides[i][SIDE_RIGHT], side_bytes));
+        }
+    }
+#endif
 
     // Device constants
     acDeviceLoadMeshInfo(device, STREAM_DEFAULT, device_config);
@@ -161,18 +248,19 @@ acDeviceDestroy(Device device)
     cudaFree(device->reduce_scratchpad);
     cudaFree(device->reduce_result);
 
-    /*
-    #if AC_MPI_ENABLED
-        // Free data required for packed tranfers here (cudaFree)
-        for (int i = 0; i < 2; ++i) {
-            cudaFree(device->inner[i]);
-            cudaFree(device->outer[i]);
+#if AC_MPI_ENABLED
+    // Free data required for packed tranfers here (cudaFree)
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        for (int j = 0; j < 8; ++j)
+            cudaFree(device->packed_corners[i][j]);
 
-            cudaFreeHost(device->inner_host[i]);
-            cudaFreeHost(device->outer_host[i]);
-        }
-    #endif
-    */
+        for (int j = 0; j < 12; ++j)
+            cudaFree(device->packed_edges[i][j]);
+
+        for (int j = 0; j < 6; ++j)
+            cudaFree(device->packed_sides[i][j]);
+    }
+#endif
 
     // Concurrency
     for (int i = 0; i < NUM_STREAMS; ++i) {
@@ -1126,12 +1214,15 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
     }
 }
 
-static void
-acDeviceCommunicateHalos(void)
+static AcResult
+acDeviceCommunicateHalos(const Device device)
 {
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+
     // TODO
     WARNING("acDeviceCommunicateHalos not yet implemented. Tests will fail (bounds must be "
             "up-to-date before calling acDeviceGatherMeshMPI)");
+    return AC_SUCCESS;
 }
 
 // From Astaroth Utils
@@ -1269,7 +1360,7 @@ acDeviceRunMPITest(void)
         // const float dt = FLT_EPSILON; // TODO
         // acDeviceIntegrateStepMPI(device, dt); // TODO
         // acDeviceBoundStepMPI(device); TODO
-        acDeviceCommunicateHalos();
+        acDeviceCommunicateHalos(device);
         acDeviceSynchronizeStream(device, STREAM_ALL);
 
         acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
