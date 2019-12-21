@@ -75,7 +75,7 @@ run_benchmark(const char* config_path)
     }
     acSynchronize();
     const AcReal dt = FLT_EPSILON;
-    printf("Using dt = %g\n", dt);
+    printf("Using dt = %g\n", (double)dt);
 
     Timer total_time;
     timer_reset(&total_time);
