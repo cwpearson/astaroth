@@ -14,7 +14,7 @@ find_package(CUDA REQUIRED)
 set(CMAKE_CUDA_FLAGS "-gencode arch=compute_70,code=sm_70 --restrict")
 
 # Compile kernels
-add_library(astaroth_kernels STATIC kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu)
+add_library(astaroth_kernels STATIC kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu kernels/packing.cu)
 target_include_directories(astaroth_kernels PRIVATE .)
 target_compile_features(astaroth_kernels PRIVATE cxx_std_11)
 set_target_properties(astaroth_kernels PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
