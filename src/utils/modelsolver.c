@@ -49,6 +49,10 @@ typedef AcReal Scalar;
 typedef double Vector __attribute__((vector_size(4 * sizeof(double))));
 #else
 typedef float Vector __attribute__((vector_size(4 * sizeof(float))));
+
+#define fabs fabsf
+#define exp expf
+#define sqrt sqrtf
 #endif
 
 typedef struct {
@@ -94,13 +98,15 @@ static inline Scalar
 first_derivative(const Scalar* pencil, const Scalar inv_ds)
 {
 #if STENCIL_ORDER == 2
-    const Scalar coefficients[] = {0, 1. / 2.};
+    const Scalar coefficients[] = {0, (Scalar)(1. / 2.)};
 #elif STENCIL_ORDER == 4
-    const Scalar coefficients[] = {0, 2.0 / 3.0, -1.0 / 12.0};
+    const Scalar coefficients[] = {0, (Scalar)(2.0 / 3.0), (Scalar)(-1.0 / 12.0)};
 #elif STENCIL_ORDER == 6
-    const Scalar coefficients[] = {0, 3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0};
+    const Scalar coefficients[] = {0, (Scalar)(3.0 / 4.0), (Scalar)(-3.0 / 20.0),
+                                   (Scalar)(1.0 / 60.0)};
 #elif STENCIL_ORDER == 8
-    const Scalar coefficients[] = {0, 4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0};
+    const Scalar coefficients[] = {0, (Scalar)(4.0 / 5.0), (Scalar)(-1.0 / 5.0),
+                                   (Scalar)(4.0 / 105.0), (Scalar)(-1.0 / 280.0)};
 #endif
 
 #define MID (STENCIL_ORDER / 2)
@@ -117,13 +123,17 @@ static inline Scalar
 second_derivative(const Scalar* pencil, const Scalar inv_ds)
 {
 #if STENCIL_ORDER == 2
-    const Scalar coefficients[] = {-2., 1.};
+    const Scalar coefficients[] = {-2, 1};
 #elif STENCIL_ORDER == 4
-    const Scalar coefficients[] = {-5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0};
+    const Scalar coefficients[] = {(Scalar)(-5.0 / 2.0), (Scalar)(4.0 / 3.0),
+                                   (Scalar)(-1.0 / 12.0)};
 #elif STENCIL_ORDER == 6
-    const Scalar coefficients[] = {-49.0 / 18.0, 3.0 / 2.0, -3.0 / 20.0, 1.0 / 90.0};
+    const Scalar coefficients[] = {(Scalar)(-49.0 / 18.0), (Scalar)(3.0 / 2.0),
+                                   (Scalar)(-3.0 / 20.0), (Scalar)(1.0 / 90.0)};
 #elif STENCIL_ORDER == 8
-    const Scalar coefficients[] = {-205.0 / 72.0, 8.0 / 5.0, -1.0 / 5.0, 8.0 / 315.0, -1.0 / 560.0};
+    const Scalar coefficients[] = {(Scalar)(-205.0 / 72.0), (Scalar)(8.0 / 5.0),
+                                   (Scalar)(-1.0 / 5.0), (Scalar)(8.0 / 315.0),
+                                   (Scalar)(-1.0 / 560.0)};
 #endif
 
 #define MID (STENCIL_ORDER / 2)
@@ -142,16 +152,19 @@ cross_derivative(const Scalar* pencil_a, const Scalar* pencil_b, const Scalar in
                  const Scalar inv_ds_b)
 {
 #if STENCIL_ORDER == 2
-    const Scalar coefficients[] = {0, 1.0 / 4.0};
+    const Scalar coefficients[] = {0, (Scalar)(1.0 / 4.0)};
 #elif STENCIL_ORDER == 4
     const Scalar coefficients[] = {
-        0, 1.0 / 32.0, 1.0 / 64.0}; // TODO correct coefficients, these are just placeholders
+        0, (Scalar)(1.0 / 32.0),
+        (Scalar)(1.0 / 64.0)}; // TODO correct coefficients, these are just placeholders
 #elif STENCIL_ORDER == 6
-    const Scalar fac            = (1. / 720.);
-    const Scalar coefficients[] = {0.0 * fac, 270.0 * fac, -27.0 * fac, 2.0 * fac};
+    const Scalar fac            = ((Scalar)(1. / 720.));
+    const Scalar coefficients[] = {0 * fac, (Scalar)(270.0) * fac, (Scalar)(-27.0) * fac,
+                                   (Scalar)(2.0) * fac};
 #elif STENCIL_ORDER == 8
-    const Scalar fac            = (1. / 20160.);
-    const Scalar coefficients[] = {0.0 * fac, 8064. * fac, -1008. * fac, 128. * fac, -9. * fac};
+    const Scalar fac            = ((Scalar)(1. / 20160.));
+    const Scalar coefficients[] = {0 * fac, (Scalar)(8064.) * fac, (Scalar)(-1008.) * fac,
+                                   (Scalar)(128.) * fac, (Scalar)(-9.) * fac};
 #endif
 
 #define MID (STENCIL_ORDER / 2)
