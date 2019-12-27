@@ -27,6 +27,7 @@
 #include "packing.cuh"
 
 #include "common.cuh"
+#include "src/core/errchk.h"
 
 __global__ void
 kernel_pack_data(const AcReal* unpacked, const int3 unpacked_start, const int3 packed_dimensions,
@@ -49,7 +50,8 @@ kernel_pack_data(const AcReal* unpacked, const int3 unpacked_start, const int3 p
     const int k_unpacked = k_packed + unpacked_start.z;
 
     const int unpacked_idx = DEVICE_VTXBUF_IDX(i_unpacked, j_unpacked, k_unpacked);
-    const int packed_idx   = i_packed + j_packed * packed_dimensions.x +
+    const int packed_idx   = i_packed +                     //
+                           j_packed * packed_dimensions.x + //
                            k_packed * packed_dimensions.x * packed_dimensions.y;
 
     packed[packed_idx] = unpacked[unpacked_idx];
@@ -76,13 +78,14 @@ kernel_unpack_data(const AcReal* packed, const int3 packed_dimensions, const int
     const int k_unpacked = k_packed + unpacked_start.z;
 
     const int unpacked_idx = DEVICE_VTXBUF_IDX(i_unpacked, j_unpacked, k_unpacked);
-    const int packed_idx   = i_packed + j_packed * packed_dimensions.x +
+    const int packed_idx   = i_packed +                     //
+                           j_packed * packed_dimensions.x + //
                            k_packed * packed_dimensions.x * packed_dimensions.y;
 
     unpacked[unpacked_idx] = packed[packed_idx];
 }
 
-static AcResult
+AcResult
 acKernelPackData(const cudaStream_t stream, const AcReal* unpacked, const int3 unpacked_start,
                  const int3 packed_dimensions, AcReal* packed)
 {
@@ -92,11 +95,12 @@ acKernelPackData(const cudaStream_t stream, const AcReal* unpacked, const int3 u
                    (unsigned int)ceil(packed_dimensions.z / (float)tpb.z));
 
     kernel_pack_data<<<bpg, tpb, 0, stream>>>(unpacked, unpacked_start, packed_dimensions, packed);
+    ERRCHK_CUDA_KERNEL_ALWAYS(); // TODO SET W/ DEBUG ONLY
 
     return AC_SUCCESS;
 }
 
-static AcResult
+AcResult
 acKernelUnpackData(const cudaStream_t stream, const AcReal* packed, const int3 packed_dimensions,
                    const int3 unpacked_start, AcReal* unpacked)
 {
@@ -107,7 +111,7 @@ acKernelUnpackData(const cudaStream_t stream, const AcReal* packed, const int3 p
 
     kernel_unpack_data<<<bpg, tpb, 0, stream>>>(packed, packed_dimensions, unpacked_start,
                                                 unpacked);
-
+    ERRCHK_CUDA_KERNEL_ALWAYS(); // TODO SET W/ DEBUG ONLY
     return AC_SUCCESS;
 }
 
