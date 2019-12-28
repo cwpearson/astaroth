@@ -46,56 +46,7 @@ struct device_s {
     AcReal* reduce_result;
 
 #if AC_MPI_ENABLED
-    // Declare memory for buffers needed for packed data transfers here
-#define CORNER_000 (0)
-#define CORNER_100 (1)
-#define CORNER_010 (2)
-#define CORNER_110 (3)
-#define CORNER_001 (4)
-#define CORNER_101 (5)
-#define CORNER_011 (6)
-#define CORNER_111 (7)
-#define NUM_CORNERS (8)
-    int3 corner_dims;
-    AcReal* packed_corners[NUM_VTXBUF_HANDLES][NUM_CORNERS];
-
-#define EDGE_X (0) // left to right
-#define EDGE_Y (1) // bottom to top
-#define EDGE_Z (2) // front to aft
-
-#define EDGE_000R (0) // Origin + direction, R(ight), U(p), A(ft)
-#define EDGE_010R (1)
-#define EDGE_001R (2)
-#define EDGE_011R (3)
-
-#define EDGE_000U (4)
-#define EDGE_100U (5)
-#define EDGE_001U (6)
-#define EDGE_101U (7)
-
-#define EDGE_000A (8)
-#define EDGE_100A (9)
-#define EDGE_010A (10)
-#define EDGE_110A (11)
-#define NUM_EDGES (12)
-    int3 edge_dims[3];
-    AcReal* packed_edges[NUM_VTXBUF_HANDLES][NUM_EDGES];
-
-#define SIDE_XY (0) // Front/back
-#define SIDE_XZ (1) // Top/bottom
-#define SIDE_YZ (2) // Left/right
-
-#define SIDE_FRONT (0)
-#define SIDE_BACK (1)
-
-#define SIDE_BOTTOM (2)
-#define SIDE_TOP (3)
-
-#define SIDE_LEFT (4)
-#define SIDE_RIGHT (5)
-#define NUM_SIDES (6)
-    int3 side_dims[3];
-    AcReal* packed_sides[NUM_VTXBUF_HANDLES][NUM_SIDES];
+    // TODO
 #endif
 };
 
@@ -156,76 +107,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_result, sizeof(AcReal)));
 
 #if AC_MPI_ENABLED
-    // Corners
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        device->corner_dims       = (int3){NGHOST, NGHOST, NGHOST};
-        const size_t corner_bytes = device->corner_dims.x * device->corner_dims.y *
-                                    device->corner_dims.z * sizeof(AcReal);
-
-        for (int j = 0; j < NUM_CORNERS; ++j)
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_corners[i][j], corner_bytes));
-    }
-    // Edges
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        { // left-right
-            device->edge_dims[EDGE_X] = (int3){device_config.int_params[AC_nx], NGHOST, NGHOST};
-            const size_t edge_bytes   = device->edge_dims[EDGE_X].x * device->edge_dims[EDGE_X].y *
-                                      device->edge_dims[EDGE_X].z * sizeof(AcReal);
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_000R], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_010R], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_001R], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_011R], edge_bytes));
-        }
-        { // bottom-top
-            device->edge_dims[EDGE_Y] = (int3){NGHOST, device_config.int_params[AC_ny], NGHOST};
-            const size_t edge_bytes   = device->edge_dims[EDGE_Y].x * device->edge_dims[EDGE_Y].y *
-                                      device->edge_dims[EDGE_Y].z * sizeof(AcReal);
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_000U], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_100U], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_001U], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_101U], edge_bytes));
-        }
-        { // front-back
-            device->edge_dims[EDGE_Z] = (int3){NGHOST, NGHOST, device_config.int_params[AC_nz]};
-            const size_t edge_bytes   = device->edge_dims[EDGE_Z].x * device->edge_dims[EDGE_Z].y *
-                                      device->edge_dims[EDGE_Z].z * sizeof(AcReal);
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_000A], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_100A], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_010A], edge_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_edges[i][EDGE_110A], edge_bytes));
-        }
-    }
-
-    // Sides
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        { // front-back
-            device->side_dims[SIDE_XY] = (int3){device_config.int_params[AC_nx],
-                                                device_config.int_params[AC_ny], NGHOST};
-            const size_t side_bytes = device->side_dims[SIDE_XY].x * device->side_dims[SIDE_XY].y *
-                                      device->side_dims[SIDE_XY].z * sizeof(AcReal);
-            ERRCHK_CUDA_ALWAYS(
-                cudaMalloc((void**)&device->packed_sides[i][SIDE_FRONT], side_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_sides[i][SIDE_BACK], side_bytes));
-        }
-        { // bottom-top
-            device->side_dims[SIDE_XZ] = (int3){device_config.int_params[AC_nx], NGHOST,
-                                                device_config.int_params[AC_nz]};
-            const size_t side_bytes = device->side_dims[SIDE_XZ].x * device->side_dims[SIDE_XZ].y *
-                                      device->side_dims[SIDE_XZ].z * sizeof(AcReal);
-            ERRCHK_CUDA_ALWAYS(
-                cudaMalloc((void**)&device->packed_sides[i][SIDE_BOTTOM], side_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_sides[i][SIDE_TOP], side_bytes));
-        }
-        { // left-right
-            device->side_dims[SIDE_YZ] = (int3){NGHOST, device_config.int_params[AC_ny],
-                                                device_config.int_params[AC_nz]};
-            const size_t side_bytes = device->side_dims[SIDE_YZ].x * device->side_dims[SIDE_YZ].y *
-                                      device->side_dims[SIDE_YZ].z * sizeof(AcReal);
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->packed_sides[i][SIDE_LEFT], side_bytes));
-            ERRCHK_CUDA_ALWAYS(
-                cudaMalloc((void**)&device->packed_sides[i][SIDE_RIGHT], side_bytes));
-        }
-    }
+    // TODO
 #endif
 
     // Device constants
@@ -262,17 +144,7 @@ acDeviceDestroy(Device device)
     cudaFree(device->reduce_result);
 
 #if AC_MPI_ENABLED
-    // Free data required for packed tranfers here (cudaFree)
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        for (int j = 0; j < NUM_CORNERS; ++j)
-            cudaFree(device->packed_corners[i][j]);
-
-        for (int j = 0; j < NUM_EDGES; ++j)
-            cudaFree(device->packed_edges[i][j]);
-
-        for (int j = 0; j < NUM_SIDES; ++j)
-            cudaFree(device->packed_sides[i][j]);
-    }
+    // TODO
 #endif
 
     // Concurrency
@@ -1233,86 +1105,6 @@ static AcResult
 acDeviceCommunicateHalos(const Device device)
 {
     acDeviceSynchronizeStream(device, STREAM_ALL);
-
-    MPI_Datatype datatype = MPI_FLOAT;
-    if (sizeof(AcReal) == 8)
-        datatype = MPI_DOUBLE;
-
-    MPI_Request send_corner_req[NUM_VTXBUF_HANDLES][NUM_CORNERS];
-    MPI_Request recv_corner_req[NUM_VTXBUF_HANDLES][NUM_CORNERS];
-
-    int pid, nprocs;
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    const int3 decomposition = decompose(nprocs);
-    int3 pid3d               = getPid3D(pid, decomposition);
-
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        // Recv corners
-        {
-            /// From 000
-            const int recv_pid = getPid1D(pid3d + (int3){1, 1, 1}, decomposition);
-            const size_t count = device->corner_dims.x * //
-                                 device->corner_dims.y * //
-                                 device->corner_dims.z;
-            MPI_Irecv(&device->packed_corners[i][CORNER_111], count, datatype, recv_pid, CORNER_000,
-                      MPI_COMM_WORLD, &(recv_corner_req[i][CORNER_111]));
-        }
-        {
-            /// 100
-        } {
-            /// 010
-        } { /// 110
-        }
-    }
-
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        // Pack data and send corners
-        { /// 000
-            const int send_pid = getPid1D(pid3d + (int3){-1, -1, -1}, decomposition);
-            const size_t count = device->corner_dims.x * //
-                                 device->corner_dims.y * //
-                                 device->corner_dims.z;
-            acKernelPackData(device->streams[STREAM_DEFAULT], device->vba.in[i],
-                             (int3){NGHOST, NGHOST, NGHOST}, device->corner_dims,
-                             device->packed_corners[i][CORNER_000]);
-            MPI_Isend(&device->packed_corners[i][CORNER_000], count, datatype, send_pid, CORNER_000,
-                      MPI_COMM_WORLD, &(send_corner_req[i][CORNER_000]));
-        }
-        {
-            /// 100
-        } {
-            /// 010
-        } { /// 110
-        }
-    }
-
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        // Unpack data
-        {
-            /// 000
-            const int nx = device->local_config.int_params[AC_nx];
-            const int ny = device->local_config.int_params[AC_ny];
-            const int nz = device->local_config.int_params[AC_nz];
-            MPI_Wait(&(recv_corner_req[i][CORNER_111]), MPI_STATUS_IGNORE);
-            acKernelUnpackData(device->streams[STREAM_DEFAULT],
-                               device->packed_corners[i][CORNER_111], device->corner_dims,
-                               (int3){nx, ny, nz}, device->vba.in[i]);
-        }
-        {
-            /// 100
-        } {
-            /// 010
-        } { /// 110
-        }
-    }
-
-    // for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-    //    MPI_Waitall(NUM_CORNERS, send_corner_req[i], MPI_STATUSES_IGNORE);
-
-    // for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
-    //    MPI_Wait(&(send_corner_req[i][CORNER_000]), MPI_STATUS_IGNORE);
-
     // TODO
     WARNING("acDeviceCommunicateHalos not yet implemented. Tests will fail (bounds must be "
             "up-to-date before calling acDeviceGatherMeshMPI)");
@@ -1454,7 +1246,7 @@ acDeviceRunMPITest(void)
         // const float dt = FLT_EPSILON; // TODO
         // acDeviceIntegrateStepMPI(device, dt); // TODO
         // acDeviceBoundStepMPI(device); TODO
-        acDeviceCommunicateHalos(device);
+        // acDeviceCommunicateHalos(device);
         acDeviceSynchronizeStream(device, STREAM_ALL);
 
         acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
