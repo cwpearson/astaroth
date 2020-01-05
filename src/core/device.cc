@@ -33,6 +33,8 @@
 
 #include "kernels/common.cuh"
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 struct device_s {
     int id;
     AcMeshInfo local_config;
@@ -988,7 +990,7 @@ getPid3D(const int pid, const int3 decomposition)
 }
 
 static int
-getPid1D(const int3 pid, const int3 decomposition)
+getPid(const int3 pid, const int3 decomposition)
 {
     return mod(pid.x, decomposition.x) +                   //
            mod(pid.y, decomposition.y) * decomposition.x + //
@@ -1101,13 +1103,115 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
 
 #include "kernels/packing.cuh"
 
+static void
+print_int3(const int3 val)
+{
+    printf("(%d, %d, %d)", val.x, val.y, val.z);
+}
+
+static bool
+isWithin(const int3 idx, const int3 min, const int3 max)
+{
+    if (idx.x < max.x &&  //
+        idx.y < max.y &&  //
+        idx.z < max.z &&  //
+        idx.x >= min.x && //
+        idx.y >= min.y && //
+        idx.z >= min.z)
+        return true;
+    else
+        return false;
+}
+
 static AcResult
-acDeviceCommunicateHalos(const Device device)
+acDeviceCommunicateHalosMPI(const Device device)
 {
     acDeviceSynchronizeStream(device, STREAM_ALL);
-    // TODO
-    WARNING("acDeviceCommunicateHalos not yet implemented. Tests will fail (bounds must be "
-            "up-to-date before calling acDeviceGatherMeshMPI)");
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const int3 decomp = decompose(nprocs);
+
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+    const int3 mm = (int3){
+        device->local_config.int_params[AC_mx],
+        device->local_config.int_params[AC_my],
+        device->local_config.int_params[AC_mz],
+    };
+
+    const int3 a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+        (int3){NGHOST, nn.y, NGHOST},   //
+        (int3){nn.x, nn.y, NGHOST},     //
+        (int3){NGHOST, NGHOST, nn.z},   //
+        (int3){nn.x, NGHOST, nn.z},     //
+        (int3){NGHOST, nn.y, nn.z},     //
+        (int3){nn.x, nn.y, nn.z},
+    };
+
+    const int3 sides[] = {
+        (int3){nn.x, nn.y, NGHOST},
+        (int3){nn.x, NGHOST, nn.z},
+        (int3){NGHOST, nn.y, nn.z},
+    };
+
+    const int3 edges[] = {
+        (int3){nn.x, NGHOST, NGHOST},
+        (int3){NGHOST, nn.y, NGHOST},
+        (int3){NGHOST, NGHOST, nn.z},
+    };
+
+    const int3 corners[] = {
+        (int3){NGHOST, NGHOST, NGHOST},
+    };
+
+    for (int k = -1; k <= 1; ++k) {
+        for (int j = -1; j <= 1; ++j) {
+            for (int i = -1; i <= 1; ++i) {
+                if (i == 0 && j == 0 && k == 0)
+                    continue;
+
+                const int3 neighbor    = (int3){i, j, k};
+                const int neighbor_idx = getPid(neighbor, decomp);
+
+                // Sides
+                for (size_t pcounter = 0; pcounter < ARRAY_SIZE(a0s); ++pcounter) {
+                    const int3 a0 = a0s[pcounter];
+
+                    for (size_t scounter = 0; scounter < ARRAY_SIZE(sides); ++scounter) {
+                        const int3 a1 = a0 + sides[scounter];
+                        if (!isWithin(a1, (int3){0, 0, 0}, mm))
+                            continue;
+
+                        const int3 b0_neighbor = a0 - neighbor * nn;
+                        const int3 b1_neighbor = a1 - neighbor * nn;
+
+                        // communicateBlockWithNeighbor(COMM_SEND, a0, a1, b0, b1, neighbor_idx);
+
+                        if (isWithin(b0_neighbor, (int3){0, 0, 0}, mm) &&
+                            isWithin(b1_neighbor, (int3){0, 0, 0}, mm + (int3){1, 1, 1})) {
+                            printf("\t\t%d (side): ", neighbor_idx);
+                            print_int3(neighbor);
+                            printf("\n");
+                            printf("\t\t\t:");
+                            print_int3(b0_neighbor);
+                            printf("\n");
+                            printf("\t\t\t:");
+                            print_int3(b1_neighbor);
+                            printf("\n");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     return AC_SUCCESS;
 }
 
@@ -1224,12 +1328,12 @@ acDeviceRunMPITest(void)
     }
     /*
     // Attempt to enable peer access to the most expensive neighbors (sides)
-    const int left  = getPid1D(pid3d + (int3){-1, 0, 0}, decomposition);
-    const int right = getPid1D(pid3d + (int3){1, 0, 0}, decomposition);
-    const int up    = getPid1D(pid3d + (int3){0, 1, 0}, decomposition);
-    const int down  = getPid1D(pid3d + (int3){0, -1, 0}, decomposition);
-    const int front = getPid1D(pid3d + (int3){0, 0, 1}, decomposition);
-    const int back  = getPid1D(pid3d + (int3){0, 0, -1}, decomposition);
+    const int left  = getPid(pid3d + (int3){-1, 0, 0}, decomposition);
+    const int right = getPid(pid3d + (int3){1, 0, 0}, decomposition);
+    const int up    = getPid(pid3d + (int3){0, 1, 0}, decomposition);
+    const int down  = getPid(pid3d + (int3){0, -1, 0}, decomposition);
+    const int front = getPid(pid3d + (int3){0, 0, 1}, decomposition);
+    const int back  = getPid(pid3d + (int3){0, 0, -1}, decomposition);
 
     cudaSetDevice(device->id);
     WARNCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(left, 0));
@@ -1246,7 +1350,7 @@ acDeviceRunMPITest(void)
         // const float dt = FLT_EPSILON; // TODO
         // acDeviceIntegrateStepMPI(device, dt); // TODO
         // acDeviceBoundStepMPI(device); TODO
-        // acDeviceCommunicateHalos(device);
+        acDeviceCommunicateHalosMPI(device);
         acDeviceSynchronizeStream(device, STREAM_ALL);
 
         acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
