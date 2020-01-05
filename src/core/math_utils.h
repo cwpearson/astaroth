@@ -101,6 +101,11 @@ operator+(const int3& a, const int3& b)
     return (int3){a.x + b.x, a.y + b.y, a.z + b.z};
 }
 
+static HOST_DEVICE_INLINE int3 operator*(const int3& a, const int3& b)
+{
+    return (int3){a.x * b.x, a.y * b.y, a.z * b.z};
+}
+
 static HOST_DEVICE_INLINE void
 operator+=(AcReal3& lhs, const AcReal3& rhs)
 {
