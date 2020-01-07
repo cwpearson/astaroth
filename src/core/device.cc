@@ -35,12 +35,6 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
-typedef struct {
-    int3 dims;
-    AcReal* in;
-    AcReal* out;
-} PackedData;
-
 struct device_s {
     int id;
     AcMeshInfo local_config;
@@ -54,13 +48,7 @@ struct device_s {
     AcReal* reduce_result;
 
 #if AC_MPI_ENABLED
-
-#define NUM_SIDES (6)
-#define NUM_EDGES (12)
-#define NUM_CORNERS (8)
-    PackedData sides[NUM_VTXBUF_HANDLES][NUM_SIDES];
-    PackedData edges[NUM_VTXBUF_HANDLES][NUM_EDGES];
-    PackedData corners[NUM_VTXBUF_HANDLES][NUM_CORNERS];
+    // TODO
 #endif
 };
 
@@ -78,29 +66,6 @@ print_int3(const int3 val)
     printf("(%d, %d, %d)", val.x, val.y, val.z);
 }
 
-PackedData
-acDeviceMallocPackedData(const int3 dims)
-{
-    PackedData data = {0};
-    data.dims       = dims;
-
-    const size_t bytes = dims.x * dims.y * dims.z * sizeof(data.in[0]);
-    ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&data.in, bytes));
-    ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&data.out, bytes));
-
-    return data;
-}
-
-AcResult
-acDeviceFreePackedData(PackedData* data)
-{
-    data->dims = (int3){-1, -1, -1};
-
-    cudaFree(data->in);
-    cudaFree(data->out);
-    return AC_SUCCESS;
-}
-
 static bool
 isWithin(const int3 idx, const int3 min, const int3 max)
 {
@@ -113,120 +78,6 @@ isWithin(const int3 idx, const int3 min, const int3 max)
         return true;
     else
         return false;
-}
-
-AcResult
-acDeviceMallocPackedSidesEdgesCorners(Device device)
-{
-    const int3 nn = (int3){
-        device->local_config.int_params[AC_nx],
-        device->local_config.int_params[AC_ny],
-        device->local_config.int_params[AC_nz],
-    };
-
-    const int3 mm = (int3){
-        device->local_config.int_params[AC_mx],
-        device->local_config.int_params[AC_my],
-        device->local_config.int_params[AC_mz],
-    };
-
-    const int3 a0s[] = {
-        (int3){NGHOST, NGHOST, NGHOST}, //
-        (int3){nn.x, NGHOST, NGHOST},   //
-        (int3){NGHOST, nn.y, NGHOST},   //
-        (int3){nn.x, nn.y, NGHOST},     //
-        (int3){NGHOST, NGHOST, nn.z},   //
-        (int3){nn.x, NGHOST, nn.z},     //
-        (int3){NGHOST, nn.y, nn.z},     //
-        (int3){nn.x, nn.y, nn.z},
-    };
-
-    const int3 sides[] = {
-        (int3){nn.x, nn.y, NGHOST},
-        (int3){nn.x, NGHOST, nn.z},
-        (int3){NGHOST, nn.y, nn.z},
-    };
-
-    const int3 edges[] = {
-        (int3){nn.x, NGHOST, NGHOST},
-        (int3){NGHOST, nn.y, NGHOST},
-        (int3){NGHOST, NGHOST, nn.z},
-    };
-
-    const int3 corners[] = {
-        (int3){NGHOST, NGHOST, NGHOST},
-    };
-
-    for (size_t i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        for (size_t pcounter = 0; pcounter < ARRAY_SIZE(a0s); ++pcounter) { // for start pos
-            const int3 a0 = a0s[pcounter];
-
-            // for sides
-            size_t j = 0;
-            for (size_t scounter = 0; scounter < ARRAY_SIZE(sides); ++scounter) {
-                const int3 a1 = a0 + sides[scounter];
-                if (!isWithin(a1, (int3){0, 0, 0}, mm + (int3){1, 1, 1}))
-                    continue;
-
-                ERRCHK_ALWAYS(j < NUM_SIDES)
-                device->sides[i][j] = acDeviceMallocPackedData(sides[scounter]);
-                if (!i) {
-                    printf("Allocated side ");
-                    print_int3(device->sides[i][j].dims);
-                    printf(" for packed data\n");
-                }
-                ++j;
-            }
-            // for edges
-            j = 0;
-            for (size_t scounter = 0; scounter < ARRAY_SIZE(edges); ++scounter) {
-                const int3 a1 = a0 + edges[scounter];
-                if (!isWithin(a1, (int3){0, 0, 0}, mm + (int3){1, 1, 1}))
-                    continue;
-
-                ERRCHK_ALWAYS(j < NUM_EDGES)
-                device->edges[i][j] = acDeviceMallocPackedData(edges[scounter]);
-                if (!i) {
-                    printf("Allocated edge ");
-                    print_int3(device->edges[i][j].dims);
-                    printf(" for packed data\n");
-                }
-                ++j;
-            }
-            // for corners
-            j = 0;
-            for (size_t scounter = 0; scounter < ARRAY_SIZE(corners); ++scounter) {
-                const int3 a1 = a0 + corners[scounter];
-                if (!isWithin(a1, (int3){0, 0, 0}, mm + (int3){1, 1, 1}))
-                    continue;
-
-                ERRCHK_ALWAYS(j < NUM_CORNERS)
-                device->corners[i][j] = acDeviceMallocPackedData(corners[scounter]);
-                if (!i) {
-                    printf("Allocated corner ");
-                    print_int3(device->corners[i][j].dims);
-                    printf(" for packed data\n");
-                }
-                ++j;
-            }
-        }
-    }
-    return AC_SUCCESS;
-}
-
-AcResult
-acDeviceFreePackedSidesEdgesCorners(Device device)
-{
-    for (size_t i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        for (size_t j = 0; j < NUM_SIDES; ++j)
-            acDeviceFreePackedData(&device->sides[i][j]);
-
-        for (size_t j = 0; j < NUM_EDGES; ++j)
-            acDeviceFreePackedData(&device->edges[i][j]);
-
-        for (size_t j = 0; j < NUM_CORNERS; ++j)
-            acDeviceFreePackedData(&device->corners[i][j]);
-    }
 }
 
 AcResult
@@ -278,7 +129,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_result, sizeof(AcReal)));
 
 #if AC_MPI_ENABLED
-    acDeviceMallocPackedSidesEdgesCorners(device);
+    // TODO
 #endif
 
     // Device constants
@@ -315,7 +166,7 @@ acDeviceDestroy(Device device)
     cudaFree(device->reduce_result);
 
 #if AC_MPI_ENABLED
-    acDeviceFreePackedSidesEdgesCorners(device);
+    // TODO
 #endif
 
     // Concurrency
@@ -1282,86 +1133,6 @@ acDeviceCommunicateHalosMPI(const Device device)
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     const int3 decomp = decompose(nprocs);
 
-    const int3 nn = (int3){
-        device->local_config.int_params[AC_nx],
-        device->local_config.int_params[AC_ny],
-        device->local_config.int_params[AC_nz],
-    };
-    const int3 mm = (int3){
-        device->local_config.int_params[AC_mx],
-        device->local_config.int_params[AC_my],
-        device->local_config.int_params[AC_mz],
-    };
-
-    const int3 a0s[] = {
-        (int3){NGHOST, NGHOST, NGHOST}, //
-        (int3){nn.x, NGHOST, NGHOST},   //
-        (int3){NGHOST, nn.y, NGHOST},   //
-        (int3){nn.x, nn.y, NGHOST},     //
-        (int3){NGHOST, NGHOST, nn.z},   //
-        (int3){nn.x, NGHOST, nn.z},     //
-        (int3){NGHOST, nn.y, nn.z},     //
-        (int3){nn.x, nn.y, nn.z},
-    };
-
-    const int3 sides[] = {
-        (int3){nn.x, nn.y, NGHOST},
-        (int3){nn.x, NGHOST, nn.z},
-        (int3){NGHOST, nn.y, nn.z},
-    };
-
-    const int3 edges[] = {
-        (int3){nn.x, NGHOST, NGHOST},
-        (int3){NGHOST, nn.y, NGHOST},
-        (int3){NGHOST, NGHOST, nn.z},
-    };
-
-    const int3 corners[] = {
-        (int3){NGHOST, NGHOST, NGHOST},
-    };
-
-    for (int k = -1; k <= 1; ++k) {
-        for (int j = -1; j <= 1; ++j) {
-            for (int i = -1; i <= 1; ++i) {
-                if (i == 0 && j == 0 && k == 0)
-                    continue;
-
-                const int3 neighbor    = (int3){i, j, k};
-                const int neighbor_idx = getPid(neighbor, decomp);
-
-                // Sides
-                for (size_t pcounter = 0; pcounter < ARRAY_SIZE(a0s); ++pcounter) { // for start pos
-                    const int3 a0 = a0s[pcounter];
-
-                    // for side
-                    for (size_t scounter = 0; scounter < ARRAY_SIZE(sides); ++scounter) {
-                        const int3 a1 = a0 + sides[scounter];
-                        if (!isWithin(a1, (int3){0, 0, 0}, mm + (int3){1, 1, 1}))
-                            continue;
-
-                        const int3 b0_neighbor = a0 - neighbor * nn;
-                        const int3 b1_neighbor = a1 - neighbor * nn;
-
-                        // communicateBlockWithNeighbor(COMM_SEND, a0, a1, b0, b1, neighbor_idx);
-
-                        if (isWithin(b0_neighbor, (int3){0, 0, 0}, mm) &&
-                            isWithin(b1_neighbor, (int3){0, 0, 0}, mm + (int3){1, 1, 1})) {
-                            printf("\t\t%d (side): ", neighbor_idx);
-                            print_int3(neighbor);
-                            printf("\n");
-                            printf("\t\t\t:");
-                            print_int3(b0_neighbor);
-                            printf("\n");
-                            printf("\t\t\t:");
-                            print_int3(b1_neighbor);
-                            printf("\n");
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     return AC_SUCCESS;
 }
 
@@ -1431,9 +1202,9 @@ acDeviceRunMPITest(void)
 
     printf("Decomposition: %d, %d, %d\n", decomposition.x, decomposition.y, decomposition.z);
     printf("Process %d: (%d, %d, %d)\n", pid, pid3d.x, pid3d.y, pid3d.z);
-    ERRCHK(info.int_params[AC_nx] % decomposition.x == 0);
-    ERRCHK(info.int_params[AC_ny] % decomposition.y == 0);
-    ERRCHK(info.int_params[AC_nz] % decomposition.z == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_nx] % decomposition.x == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_ny] % decomposition.y == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_nz] % decomposition.z == 0);
 
     submesh_info.int_params[AC_nx]             = info.int_params[AC_nx] / decomposition.x;
     submesh_info.int_params[AC_ny]             = info.int_params[AC_ny] / decomposition.y;
