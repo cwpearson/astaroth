@@ -3,7 +3,7 @@ Astaroth Specification and User Manual
 
 # Astaroth Specification and User Manual
 
-Copyright (C) 2014-2019, Johannes Pekkila, Miikka Vaisala.
+Copyright (C) 2014-2020, Johannes Pekkila, Miikka Vaisala.
 
 	   Astaroth is free software: you can redistribute it and/or modify
 	   it under the terms of the GNU General Public License as published by
@@ -509,7 +509,7 @@ In addition to basic datatypes in C/C++/CUDA, such as int and int3, we provide t
 
 ## Precision
 
-`Scalars` are 32-bit floating-point numbers by default. Double precision can be turned on by setting cmake option `DOUBLE_PRECISION=ON`. 
+`Scalars` are 32-bit floating-point numbers by default. Double precision can be turned on by setting cmake option `DOUBLE_PRECISION=ON`.
 All real number literals are converted automatically to the correct precision. In cases where , the precision can be declared explicitly by appending `f` or `d` postfix to the real number. For example,
 ```C
 1.0           // The same precision as Scalar/AcReal
@@ -544,7 +544,7 @@ if (a) {
 
 Kernels are small programs executed on the device. Each kernel comprises of all the pipeline stages
 discussed in previous sections. Functions qualified with the type qualifier `Kernel` are analogous
-to `main` functions of host code. 
+to `main` functions of host code.
 
 Kernels must be declared in stencil processing files. DSL kernels can be called from host code
 using the API function
@@ -580,22 +580,22 @@ The type qualifier `Device` indicates which functions can be called from `Kernel
 
 `Uniform`s are global device variables which stay constant for the duration of a kernel launch.
 `Uniform`s can be updated between kernel launches using the `acLoadScalarUniform` and related functions
-discussed in Section 'Loading and storing'. 
+discussed in Section 'Loading and storing'.
 
 `Uniform`s are declared in stencil definition headers. The header must be included in all files
-which use those uniforms. 
+which use those uniforms.
 
 `Uniform`s can be of type `Scalar`, `Vector`, `int`, `int3`, `ScalarField` and `ScalarArray`.
 
 > Note: As of 2019-10-01, the types `ScalarField` (DSL) and `VertexBuffer` (CUDA) are aliases of the
-same type. This naming may be changed in the future. 
+same type. This naming may be changed in the future.
 
 > Note: As of 2019-10-01, ScalarFields cannot be declared as uniforms. Instead, one should declare
 each component as a `ScalarField` and use them to construct a `VectorField` during the stencil
 processing stage. For example, `in VectorField(A, B, C);`, where `A`, `B` and `C` are
 `uniform ScalarField`s.
 
-> Note: As of 2019-10-01, `uniform`s cannot be assigned values in the stencil definition headers. 
+> Note: As of 2019-10-01, `uniform`s cannot be assigned values in the stencil definition headers.
 Instead, one should load the appropriate values during runtime using the `acLoadScalarUniform` and
 related functions.
 
@@ -614,129 +614,6 @@ Astaroth DSL libraries can be included in the same way as C/C++ headers. For exa
 
 Uniforms are as fast as compile-time constants as long as
 
-1. The halting condition of a tight loop does not depend on an uniform or a variable, as this would prevent unrolling of the loop during compile-time. 
+1. The halting condition of a tight loop does not depend on an uniform or a variable, as this would prevent unrolling of the loop during compile-time.
 2. Uniforms are not multiplied with each other. The result should be stored in an auxiliary uniform instead. For example, the result of `nx * ny` should be stored in a new `uniform nxy`
 3. At least 32 neighboring streams in the x-axis access the same `uniform`. That is, the vertices at vertexIdx.x = i... i + 32 should access the same `uniform` where i is a multiple of 32.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
