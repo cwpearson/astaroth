@@ -2,7 +2,7 @@
 
 # Astaroth - A Multi-GPU library for generic stencil computations
 
-[Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Contributing](https://bitbucket.org/jpekkila/astaroth/src/master/Contributing.md) | [Licence](https://bitbucket.org/jpekkila/astaroth/src/master/LICENCE.txt)
+[Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Contributing](https://bitbucket.org/jpekkila/astaroth/src/master/CONTRIBUTING.md) | [Licence](https://bitbucket.org/jpekkila/astaroth/src/master/LICENCE.txt)
 
 Astaroth is a multi-GPU library for three-dimensional stencil computations. It is designed especially for performing high-order stencil
 computations in structured grids, where several coupled fields are updated each time step. Astaroth consists of a multi-GPU and single-GPU
@@ -11,7 +11,7 @@ makes Astaroth especially suitable for multiphysics simulations.
 
 Astaroth is licenced under the terms of the GNU General Public Licence, version 3, or later
 (see [LICENCE.txt](https://bitbucket.org/miikkavaisala/astaroth-code/src/master/astaroth_2.0/LICENCE.txt)). For contributing guidelines, 
-see [Contributing](https://bitbucket.org/jpekkila/astaroth/src/master/Contributing.md).
+see [Contributing](https://bitbucket.org/jpekkila/astaroth/src/master/CONTRIBUTING.md).
 
 
 ## System Requirements
@@ -34,13 +34,13 @@ In the base astaroth directory, run
 > **Optional:** Documentation can be generated with `doxygen doxyfile` (requires Doxygen). The
 generated documentation can be found in `doc/doxygen`.
 
-> **Tip:**  The library is configured by passing [options](## CMake options) to CMake with `-D[option]=[ON|OFF]`.
+> **Tip:**  The library is configured by passing [options](#cmake-options) to CMake with `-D[option]=[ON|OFF]`.
 For example, double precision can be enabled by calling `cmake -DBUILD_DOUBLE_PRECISION=ON ..`.
 See [CMakeLists.txt](https://bitbucket.org/jpekkila/astaroth/src/master/CMakeLists.txt) for an up-to-date list of options.
 
 > **Note:** CMake will inform you if there are missing dependencies.
 
-## CMake options
+## [CMake options](#cmake-options)
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -92,5 +92,5 @@ Otherwise the build steps are the same. Run with `mpirun -np 4 ./mpitest`.
 
 How do I contribute?
 
-> See [Contributing](https://bitbucket.org/jpekkila/astaroth/src/master/Contributing.md).
+> See [Contributing](https://bitbucket.org/jpekkila/astaroth/src/master/CONTRIBUTING.md).
 
