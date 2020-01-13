@@ -40,7 +40,7 @@ See [CMakeLists.txt](https://bitbucket.org/jpekkila/astaroth/src/master/CMakeLis
 
 > **Note:** CMake will inform you if there are missing dependencies.
 
-## CMake Options {: #cmake-options}
+## <a name="cmake-options"></a>CMake Options
 
 | Option | Description | Default |
 |--------|-------------|---------|
