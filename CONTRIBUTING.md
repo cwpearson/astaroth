@@ -11,9 +11,9 @@ This document details how to create good contributions. There are two primary co
 
 *"There is something that needs fixing"*
 
-0. Create your work. See [Programming](## Programming) and [Committing](#Committing) .
+0. Create your work. See [Programming](#markdown-header-programming) and [Committing](#markdown-header-committing) .
 0. When done, check that autotests still pass by running `./ac_run -t`.
-0. **[Recommended]:** Autoformat your code. See [Formatting](#Formatting).
+0. **[Recommended]:** Autoformat your code. See [Formatting](#markdown-header-formatting).
 0. Create a pull request.
 
 ## Programming
@@ -27,7 +27,7 @@ This document details how to create good contributions. There are two primary co
 ## Committing
 * Prefer multiple small commits over few large ones.
 * Provide meaningful commit messages.
-* If a feature consists of multiple commits, consider creating a new branch. See [Managing feature branches](## Managing feature branches) and [About branches in general](## About branches in general) for more details. When done, issue the pull request to the new branch.
+* If a feature consists of multiple commits, consider creating a new branch. See [Managing feature branches](#markdown-header-managing-feature-branches) and [About branches in general](#markdown-header-about-branches-in-general) for more details. When done, issue the pull request to the new branch.
 
 ## Formatting
 
