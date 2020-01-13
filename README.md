@@ -1,6 +1,6 @@
 ![astaroth_logo](./doc/astaroth_logo.svg "Astaroth Sigil")
 
-# Astaroth - A Multi-GPU library for generic stencil computations
+# Astaroth - A Multi-GPU Library for Generic Stencil Computations
 
 [Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Contributing](https://bitbucket.org/jpekkila/astaroth/src/master/CONTRIBUTING.md) | [Licence](https://bitbucket.org/jpekkila/astaroth/src/master/LICENCE.txt)
 
@@ -40,7 +40,7 @@ See [CMakeLists.txt](https://bitbucket.org/jpekkila/astaroth/src/master/CMakeLis
 
 > **Note:** CMake will inform you if there are missing dependencies.
 
-## [CMake options](#cmake-options)
+## CMake Options {: #cmake-options}
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -54,7 +54,7 @@ See [CMakeLists.txt](https://bitbucket.org/jpekkila/astaroth/src/master/CMakeLis
 | DSL_MODULE_DIR | Defines the directory to be scanned when looking for DSL files | `astaroth/acc/mhd_solver` |
 
 
-## Standalone module
+## Standalone Module
 
 
 ```Bash
