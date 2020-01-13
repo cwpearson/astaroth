@@ -90,19 +90,19 @@ globalFunction(void)
 
 ## Managing feature branches 
 
-0. Ensure that you're on the latest version of master. `git checkout master && git pull`
+1. Ensure that you're on the latest version of master. `git checkout master && git pull`
 
-0. Create a feature branch with `git checkout -b <feature_name_year-month-date>`, f.ex. `git checkout -b forcingtests_2019-01-01`
+2. Create a feature branch with `git checkout -b <feature_name_year-month-date>`, f.ex. `git checkout -b forcingtests_2019-01-01`
 
-0. Do your commits in that branch until your new feature works
+3. Do your commits in that branch until your new feature works
 
-0. Merge master with your feature branch `git merge master`
+4. Merge master with your feature branch `git merge master`
 
-0. Resolve the conflicts and test that the code compiles and still works by running `./ac_run -t`
+5. Resolve the conflicts and test that the code compiles and still works by running `./ac_run -t`
 
-0. If everything is OK, commit your final changes to the feature branch and merge it to master `git commit && git checkout master && git merge <your feature branch> && git push`
+6. If everything is OK, commit your final changes to the feature branch and merge it to master `git commit && git checkout master && git merge <your feature branch> && git push`
 
-0. Unless you really have to keep your feature branch around for historical/other reasons, remove it from remote by calling `git push origin --delete <your feature branch>`
+7. Unless you really have to keep your feature branch around for historical/other reasons, remove it from remote by calling `git push origin --delete <your feature branch>`
 
 A flowchart is available at [doc/commitflowchart.png](https://bitbucket.org/jpekkila/astaroth/src/2d91df19dcb3/doc/commitflowchart.png?at=master).
 

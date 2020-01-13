@@ -5,7 +5,7 @@ Astaroth Documentation {#mainpage}
 
 # Astaroth - A Multi-GPU Library for Generic Stencil Computations
 
-[Specification](doc/Astaroth_API_specification_and_user_manual/API_specification_and_user_manual.md) | [Contributing](CONTRIBUTING.md) | [Licence](https://bitbucket.org/jpekkila/astaroth/src/master/LICENCE.txt) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home)
+[Specification](doc/Astaroth_API_specification_and_user_manual/API_specification_and_user_manual.md) | [Contributing](CONTRIBUTING.md) | [Licence](LICENCE.md) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home)
 
 Astaroth is a multi-GPU library for three-dimensional stencil computations. It is designed especially for performing high-order stencil
 computations in structured grids, where several coupled fields are updated each time step. Astaroth consists of a multi-GPU and single-GPU
@@ -13,7 +13,7 @@ APIs and provides a domain-specific language for translating high-level descript
 makes Astaroth especially suitable for multiphysics simulations.
 
 Astaroth is licenced under the terms of the GNU General Public Licence, version 3, or later
-(see [LICENCE.txt](https://bitbucket.org/miikkavaisala/astaroth-code/src/master/astaroth_2.0/LICENCE.txt)). For contributing guidelines, 
+(see [LICENCE.txt](LICENCE.md)). For contributing guidelines, 
 see [Contributing](CONTRIBUTING.md).
 
 
@@ -83,15 +83,11 @@ See `analysis/python/` directory of existing data visualization and analysis scr
 
 Can I use the code even if I don't make my changes public?
 
-> [GPL](https://bitbucket.org/jpekkila/astaroth/src/master/LICENCE.txt) requires only that if you release a binary based on Astaroth to the
-public, then you should also release the source code for it. In private you can do whatever you want (secret forks, secret collaborations,
-etc).
+> [GPL](LICENCE.md) requires only that if you release a binary based on Astaroth to the public, then you should also release the source code for it. In private you can do whatever you want (secret forks, secret collaborations, etc).
 
 How do I compile with MPI support?
 
-> MPI implementation for Astaroth is still work in progress, these commands are for testing only.  
-Invoke CMake with `cmake -DMPI_ENABLED=ON -DBUILD_MPI_TEST=ON -DCMAKE_CXX_COMPILER=$(which mpicxx) ..`.  
-Otherwise the build steps are the same. Run with `mpirun -np 4 ./mpitest`.
+> MPI implementation for Astaroth is still work in progress, these commands are for testing only. Invoke CMake with `cmake -DMPI_ENABLED=ON -DBUILD_MPI_TEST=ON -DCMAKE_CXX_COMPILER=$(which mpicxx) ..`. Otherwise the build steps are the same. Run with `mpirun -np 4 ./mpitest`.
 
 How do I contribute?
 
