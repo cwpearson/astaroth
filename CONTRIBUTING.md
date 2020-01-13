@@ -1,20 +1,23 @@
+Contributing
+============
+
 # Contributing
 
 Contributions to Astaroth are very welcome!
 
 This document details how to create good contributions. There are two primary concerns: 
 
-0. The codebase should stay maintainable and commits should adhere to a consistent style.
-0. New additions should not disrupt the work of others.
+1. The codebase should stay maintainable and commits should adhere to a consistent style.
+2. New additions should not disrupt the work of others.
 
 ## Basic workflow
 
-*"There is something that needs fixing"*
+> "There is something that needs fixing"
 
-0. Create your work. See [Programming](#markdown-header-programming) and [Committing](#markdown-header-committing) .
-0. When done, check that autotests still pass by running `./ac_run -t`.
-0. **[Recommended]:** Autoformat your code. See [Formatting](#markdown-header-formatting).
-0. Create a pull request.
+1. Create your work. See [Programming](#markdown-header-programming) and [Committing](#markdown-header-committing) .
+2. When done, check that autotests still pass by running `./ac_run -t`.
+3. **[Recommended]:** Autoformat your code. See [Formatting](#markdown-header-formatting).
+4. Create a pull request.
 
 ## Programming
 * **Strive for code clarity over micro-optimizations.**

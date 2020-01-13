@@ -1,3 +1,6 @@
+Astaroth DSL compiler
+============
+
 # Dependencies
 ## Debian/Ubuntu
 `apt install flex bison build-essential`
