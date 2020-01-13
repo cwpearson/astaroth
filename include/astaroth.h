@@ -99,6 +99,8 @@ AcResult acLoadWithOffset(const AcMesh host_mesh, const int3 src, const int num_
 /** */
 int acGetNumDevicesPerNode(void);
 
+Node acGetNode(void);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
