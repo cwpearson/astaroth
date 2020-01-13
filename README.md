@@ -34,13 +34,13 @@ In the base astaroth directory, run
 > **Optional:** Documentation can be generated with `doxygen doxyfile` (requires Doxygen). The
 generated documentation can be found in `doc/doxygen`.
 
-> **Tip:**  The library is configured by passing [options](#cmake-options) to CMake with `-D[option]=[ON|OFF]`.
+> **Tip:**  The library is configured by passing [options](#markdown-header-cmake-options) to CMake with `-D[option]=[ON|OFF]`.
 For example, double precision can be enabled by calling `cmake -DBUILD_DOUBLE_PRECISION=ON ..`.
 See [CMakeLists.txt](https://bitbucket.org/jpekkila/astaroth/src/master/CMakeLists.txt) for an up-to-date list of options.
 
 > **Note:** CMake will inform you if there are missing dependencies.
 
-## <a name="cmake-options"></a>CMake Options
+## CMake Options
 
 | Option | Description | Default |
 |--------|-------------|---------|
