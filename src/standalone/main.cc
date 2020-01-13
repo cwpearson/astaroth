@@ -61,6 +61,79 @@ errorlog_quit(void)
     }
 }
 
+typedef struct {
+    char* key[2];
+    char* description;
+} Option;
+
+static Option
+createOption(const char* key, const char* key_short, const char* description)
+{
+    Option option;
+
+    option.key[0]      = strdup(key);
+    option.key[1]      = strdup(key_short);
+    option.description = strdup(description);
+
+    return option;
+}
+
+static void
+destroyOption(Option* option)
+{
+    free(option->key[0]);
+    free(option->key[1]);
+    free(option->description);
+}
+
+typedef enum {
+    HELP,
+    TEST,
+    BENCHMARK,
+    SIMULATE,
+    RENDER,
+    CONFIG,
+    NUM_OPTIONS,
+} OptionType;
+
+static int
+findOption(const char* str, const Option options[NUM_OPTIONS])
+{
+    for (int i = 0; i < NUM_OPTIONS; ++i)
+        if (!strcmp(options[i].key[0], str) || !strcmp(options[i].key[1], str))
+            return i;
+
+    return -1;
+}
+
+static void
+print_options(const Option options[NUM_OPTIONS])
+{
+    // Formatting
+    int keylen[2] = {0};
+    for (int i = 0; i < NUM_OPTIONS; ++i) {
+        int len0 = strlen(options[i].key[0]);
+        int len1 = strlen(options[i].key[1]);
+        if (keylen[0] < len0)
+            keylen[0] = len0;
+        if (keylen[1] < len1)
+            keylen[1] = len1;
+    }
+
+    for (int i = 0; i < NUM_OPTIONS; ++i)
+        printf("\t%*s | %*s: %s\n", keylen[0], options[i].key[0], keylen[1], options[i].key[1],
+               options[i].description);
+}
+
+static void
+print_help(const Option options[NUM_OPTIONS])
+{
+    puts("Usage: ./ac_run [options]");
+    print_options(options);
+    printf("\n");
+    puts("For bug reporting, see README.md");
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -69,36 +142,76 @@ main(int argc, char* argv[])
         atexit(errorlog_quit);
     }
 
-    printf("Args: \n");
-    for (int i = 0; i < argc; ++i)
-        printf("%d: %s\n", i, argv[i]);
-
-    char* config_path;
-    (argc == 3) ? config_path = strdup(argv[2])
-                : config_path = strdup(AC_DEFAULT_CONFIG);
-
-    printf("Config path: %s\n", config_path);
-    ERRCHK(config_path);
+    // Create options
+    // clang-format off
+    Option options[NUM_OPTIONS];
+    options[HELP]               = createOption("--help", "-h", "Prints this help.");
+    options[TEST]               = createOption("--test", "-t", "Runs autotests.");
+    options[BENCHMARK]          = createOption("--benchmark", "-b", "Runs benchmarks.");
+    options[SIMULATE]           = createOption("--simulate", "-s", "Runs the simulation.");
+    options[RENDER]             = createOption("--render", "-r", "Runs the real-time renderer.");
+    options[CONFIG]             = createOption("--config", "-c", "Uses the config file given after this flag instead of the default.");
+    // clang-format on
 
     if (argc == 1) {
-        return run_renderer(config_path);
-    }
-    else if (argc == 2 || argc == 3) {
-        if (strcmp(argv[1], "-t") == 0)
-            return run_autotest(config_path);
-        else if (strcmp(argv[1], "-b") == 0)
-            return run_benchmark(config_path);
-        else if (strcmp(argv[1], "-s") == 0)
-            return run_simulation(config_path);
-        else if (strcmp(argv[1], "-r") == 0)
-            return run_renderer(config_path);
-        else
-            WARNING("Unrecognized option");
+        print_help(options);
     }
     else {
-        WARNING("Too many options given");
+        char* config_path = NULL;
+        for (int i = 1; i < argc; ++i) {
+            const int option = findOption(argv[i], options);
+            switch (option) {
+            case CONFIG:
+                if (i + 1 < argc) {
+                    config_path = strdup(argv[i + 1]);
+                }
+                else {
+                    printf("Syntax error. Usage: --config <config path>.\n");
+                    return EXIT_FAILURE;
+                }
+                break;
+            default:
+                break; // Do nothing
+            }
+        }
+        if (!config_path)
+            config_path = strdup(AC_DEFAULT_CONFIG);
+
+        printf("Config path: %s\n", config_path);
+        ERRCHK_ALWAYS(config_path);
+
+        for (int i = 1; i < argc; ++i) {
+            const int option = findOption(argv[i], options);
+            switch (option) {
+            case HELP:
+                print_help(options);
+                break;
+            case TEST:
+                run_autotest(config_path);
+                break;
+            case BENCHMARK:
+                run_benchmark(config_path);
+                break;
+            case SIMULATE:
+                run_simulation(config_path);
+                break;
+            case RENDER:
+                run_renderer(config_path);
+                break;
+            case CONFIG:
+                ++i;
+                break;
+            default:
+                printf("Invalid option %s\n", argv[i]);
+                break; // Do nothing
+            }
+        }
+
+        free(config_path);
     }
 
-    free(config_path);
-    return EXIT_FAILURE;
+    for (int i = 0; i < NUM_OPTIONS; ++i)
+        destroyOption(&options[i]);
+
+    return EXIT_SUCCESS;
 }
