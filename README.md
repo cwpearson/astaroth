@@ -84,13 +84,11 @@ Can I use the code even if I don't make my changes public?
 public, then you should also release the source code for it. In private you can do whatever you want (secret forks, secret collaborations,
 etc).
 
-
 How do I compile with MPI support?
 
 > MPI implementation for Astaroth is still work in progress, these commands are for testing only.  
 Invoke CMake with `cmake -DMPI_ENABLED=ON -DBUILD_MPI_TEST=ON -DCMAKE_CXX_COMPILER=$(which mpicxx) ..`.  
 Otherwise the build steps are the same. Run with `mpirun -np 4 ./mpitest`.
-
 
 How do I contribute?
 
