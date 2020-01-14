@@ -1,9 +1,4 @@
-Astaroth Documentation {#mainpage}
-============
-
-![Astaroth Sigil](doc/astaroth_logo.svg)
-
-# Astaroth - A Multi-GPU Library for Generic Stencil Computations
+# Astaroth - A Multi-GPU Library for Generic Stencil Computations {#mainpage}
 
 [Specification](doc/Astaroth_API_specification_and_user_manual/API_specification_and_user_manual.md) | [Contributing](CONTRIBUTING.md) | [Licence](LICENCE.md) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home)
 

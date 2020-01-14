@@ -1,6 +1,3 @@
-Astaroth Specification and User Manual
-============
-
 # Astaroth Specification and User Manual
 
 Copyright (C) 2014-2020, Johannes Pekkila, Miikka Vaisala.
@@ -52,17 +49,17 @@ usable via the Astaroth API. While the Astaroth library is written in C++/CUDA, 
 the C99 standard.
 
 
-# Publications
+## Publications
 
 The foundational work was done in (Väisälä, Pekkilä, 2017) and the library, API and DSL described
 in this document were introduced in (Pekkilä, 2019). We kindly wish the users of Astaroth to cite
 to these publications in their work.
 
-> J. Pekkilä, Astaroth: A Library for Stencil Computations on Graphics Processing Units. Master's thesis, Aalto University School of Science, Espoo, Finland, 2019.
+> [J. Pekkilä, Astaroth: A Library for Stencil Computations on Graphics Processing Units. Master's thesis, Aalto University School of Science, Espoo, Finland, 2019.](http://urn.fi/URN:NBN:fi:aalto-201906233993)
 
-> M. S. Väisälä, Magnetic Phenomena of the Interstellar Medium in Theory and Observation. PhD thesis, University of Helsinki, Finland, 2017.
+> [M. S. Väisälä, Magnetic Phenomena of the Interstellar Medium in Theory and Observation. PhD thesis, University of Helsinki, Finland, 2017.](http://urn.fi/URN:ISBN:978-951-51-2778-5)
 
-> J. Pekkilä, M. S. Väisälä, M. Käpylä, P. J. Käpylä, and O. Anjum, “Methods for compressible fluid simulation on GPUs using high-order finite differences, ”Computer Physics Communications, vol. 217, pp. 11–22, Aug. 2017.
+> [J. Pekkilä, M. S. Väisälä, M. Käpylä, P. J. Käpylä, and O. Anjum, “Methods for compressible fluid simulation on GPUs using high-order finite differences, ”Computer Physics Communications, vol. 217, pp. 11–22, Aug. 2017.](https://doi.org/10.1016/j.cpc.2017.03.011)
 
 
 
@@ -218,9 +215,10 @@ AcResult acDeviceLoadMeshInfo(const Device device, const Stream stream,
                               const AcMeshInfo device_config);
 ```
 
+### Integration, Reductions and Boundary Conditions
 
-### Computation
-
+The library provides the following functions for integration, reductions and computing periodic
+boundary conditions.
 ```C
 AcResult acDeviceIntegrateSubstep(const Device device, const Stream stream, const int step_number,
                                   const int3 start, const int3 end, const AcReal dt);
@@ -248,7 +246,16 @@ AcResult acNodeReduceVec(const Node node, const Stream stream_type, const Reduct
                          const VertexBufferHandle vtxbuf2, AcReal* result);
 ```
 
-### Stream Synchronization
+Finally, there's a library function that is automatically generated for all user-specified `Kernel`
+functions written with the Astaroth DSL,
+```C
+AcResult acDeviceKernel_##identifier(const Device device, const Stream stream,
+                                     const int3 start, const int3 end);
+```
+Where `##identifier` is replaced with the name of the user-specified kernel. For example, a device
+function `Kernel solve()` can be called with `acDeviceKernel_solve()` via the API.
+
+## Stream Synchronization
 
 All library functions that take a `Stream` as a parameter are asynchronous. When calling these
 functions, control returns immediately back to the host even if the called device function has not
@@ -270,13 +277,20 @@ synchronized at once by passing the alias `STREAM_ALL` to the synchronization fu
 Usage of streams is demonstrated with the following example.
 ```C
 funcA(STREAM_0);
-funcB(STREAM_0); // Blocks until funcA has completed
-funcC(STREAM_1); // May execute in parallel with funcB
+funcB(STREAM_0);                      // Blocks until funcA has completed
+funcC(STREAM_1);                      // May execute in parallel with funcB
 barrierSynchronizeStream(STREAM_ALL); // Blocks until functions in all streams have completed
-funcD(STREAM_2); // Is started when command returns from synchronizeStream()
+funcD(STREAM_2);                      // Is started when command returns from synchronizeStream()
 ```
 
-### Data Synchronization
+Astaroth API provides the following functions for barrier synchronization.
+```C
+AcResult acSynchronize(void);
+AcResult acNodeSynchronizeStream(const Node node, const Stream stream);
+AcResult acDeviceSynchronizeStream(const Device device, const Stream stream);
+```
+
+## Data Synchronization
 
 Stream synchronization works in the same fashion on node and device layers. However on the node
 layer, one has to take in account that a portion of the mesh is shared between devices and that the
@@ -296,7 +310,7 @@ AcResult acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
 
 > **NOTE**: Local halos must be up to date before synchronizing the data. Local halos are the grid points outside the computational domain which are used only by a single device. The mesh is distributed to multiple devices by blocking along the z axis. If there are *n* devices and the z-dimension of the computational domain is *nz*, then each device is assigned *nz / n* two-dimensional planes. For example with two devices, the data block that has to be up to date ranges from *(0, 0, nz)* to *(mx, my, nz + 2 * NGHOST)*.
 
-### Input and Output Buffers
+## Input and Output Buffers
 
 The mesh is duplicated to input and output buffers for performance reasons. The input buffers are
 read-only in user-specified compute kernels, which allows us to read them via the texture cache
@@ -357,14 +371,14 @@ Meshes are the primary structures for passing information to the library and ker
 of a `Mesh` is declared as
 ```C
 typedef struct {
-    int int_params[NUM_INT_PARAMS];
-    int3 int3_params[NUM_INT3_PARAMS];
-    AcReal real_params[NUM_REAL_PARAMS];
+    int     int_params[NUM_INT_PARAMS];
+    int3    int3_params[NUM_INT3_PARAMS];
+    AcReal  real_params[NUM_REAL_PARAMS];
     AcReal3 real3_params[NUM_REAL3_PARAMS];
 } AcMeshInfo;
 
 typedef struct {
-    AcReal* vertex_buffer[NUM_VTXBUF_HANDLES];
+    AcReal*    vertex_buffer[NUM_VTXBUF_HANDLES];
     AcMeshInfo info;
 } AcMesh;
 ```
@@ -415,45 +429,7 @@ Let *i* be the device id. The portion of the halos shared by neighboring devices
 `acNodeSynchronizeVertexBuffer` and `acNodeSynchronizeMesh` communicate these shared areas among
 the devices in the node.
 
-## Integration, Reductions and Boundary Conditions
-
-The library provides the following functions for integration, reductions and computing periodic
-boundary conditions.
-```C
-AcResult acDeviceIntegrateSubstep(const Device device, const Stream stream, const int step_number,
-                                  const int3 start, const int3 end, const AcReal dt);
-AcResult acDevicePeriodicBoundcondStep(const Device device, const Stream stream,
-                                       const VertexBufferHandle vtxbuf_handle, const int3 start,
-                                       const int3 end);
-AcResult acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 start,
-                                    const int3 end);
-AcResult acDeviceReduceScal(const Device device, const Stream stream, const ReductionType rtype,
-                            const VertexBufferHandle vtxbuf_handle, AcReal* result);
-AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const ReductionType rtype,
-                           const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
-                           const VertexBufferHandle vtxbuf2, AcReal* result);
-
-AcResult acNodeIntegrateSubstep(const Node node, const Stream stream, const int step_number,
-                                const int3 start, const int3 end, const AcReal dt);
-AcResult acNodeIntegrate(const Node node, const AcReal dt);
-AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream,
-                                     const VertexBufferHandle vtxbuf_handle);
-AcResult acNodePeriodicBoundconds(const Node node, const Stream stream);
-AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
-                          const VertexBufferHandle vtxbuf_handle, AcReal* result);
-AcResult acNodeReduceVec(const Node node, const Stream stream_type, const ReductionType rtype,
-                         const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
-                         const VertexBufferHandle vtxbuf2, AcReal* result);
-```
-
-Finally, there's a library function that is automatically generated for all user-specified `Kernel`
-functions written with the Astaroth DSL,
-```C
-AcResult acDeviceKernel_##identifier(const Device device, const Stream stream,
-                                     const int3 start, const int3 end);
-```
-Where `##identifier` is replaced with the name of the user-specified kernel. For example, a device
-function `Kernel solve()` can be called with `acDeviceKernel_solve()` via the API.
+> **NOTE:** The decomposition scheme is subject to change.
 
 # Astaroth Domain-Specific Language
 

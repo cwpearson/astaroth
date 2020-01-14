@@ -1,6 +1,3 @@
-Contributing
-============
-
 # Contributing
 
 Contributions to Astaroth are very welcome!

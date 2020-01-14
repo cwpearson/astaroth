@@ -16,6 +16,13 @@
     You should have received a copy of the GNU General Public License
     along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
 */
+/**
+ * @file Single-Device Interface
+ * \brief Provides functions for controlling a single device.
+ *
+ * Detailed info.
+ *
+ */
 #pragma once
 
 #ifdef __cplusplus
