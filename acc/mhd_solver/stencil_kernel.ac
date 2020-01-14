@@ -607,7 +607,7 @@ forcing(int3 globalVertexIdx, Scalar dt)
         Vector force = helical_forcing(magnitude, k_force, xx, ff_re, ff_im, phase);
 
         // Scaling N = magnitude*cs*sqrt(k*cs/dt)  * dt
-        const Scalar NN = cs * sqrt(AC_kaver * cs);
+        const Scalar NN = cs * magnitude * sqrt(AC_kaver * cs);
         // MV: Like in the Pencil Code. I don't understandf the logic here.
         force.x = sqrt(dt) * NN * force.x;
         force.y = sqrt(dt) * NN * force.y;
