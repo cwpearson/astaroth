@@ -37,7 +37,9 @@ def plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3):
         plt.close() 
 
 def plot_ts(ts, isotherm=False, show_all=False, lnrho=False, uutot=False, 
-            uux=False, uuy=False, uuz=False, ss=False, acc=False, sink=False):
+            uux=False, uuy=False, uuz=False, 
+            aax=False, aay=False, aaz=False, 
+            ss=False, acc=False, sink=False, rho=False):
 
     if show_all:
         lnrho=True
@@ -107,6 +109,30 @@ def plot_ts(ts, isotherm=False, show_all=False, lnrho=False, uutot=False,
         yaxis1 = 'uuz_rms'
         yaxis2 = 'uuz_min'
         yaxis3 = 'uuz_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+    if aax:   
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'aax_rms'
+        yaxis2 = 'aax_min'
+        yaxis3 = 'aax_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+        
+    if aay:   
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'aay_rms'
+        yaxis2 = 'aay_min'
+        yaxis3 = 'aay_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+        
+    if aaz:   
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'aaz_rms'
+        yaxis2 = 'aaz_min'
+        yaxis3 = 'aaz_max'
         plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
   
     if ss:   

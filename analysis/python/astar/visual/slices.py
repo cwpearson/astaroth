@@ -26,7 +26,8 @@ CM_INFERNO = plt.get_cmap('inferno')
 
 def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
 	   slicetype = 'middle', colrange=None, colormap=CM_INFERNO ,
-           contourplot=False, points_from_centre = -1, bfieldlines=False, velfieldlines=False):
+           contourplot=False, points_from_centre = -1, bfieldlines=False, velfieldlines=False, trimghost = 0):
+
     fig = plt.figure(figsize=(8, 8))
     grid = gridspec.GridSpec(2, 3, wspace=0.4, hspace=0.4, width_ratios=[1,1, 0.15])
     ax00   = fig.add_subplot( grid[0,0] )
@@ -40,21 +41,30 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
         yz_slice = input_grid[mesh.xmid, :, :]
         xz_slice = input_grid[:, mesh.ymid, :]
         xy_slice = input_grid[:, :, mesh.zmid]
-        if colrange==None:
-            plotnorm = colors.Normalize(vmin=input_grid.min(),vmax=input_grid.max()) 
-        else:
-            plotnorm = colors.Normalize(vmin=colrange[0],vmax=colrange[1]) 
     elif slicetype == 'sum':
         yz_slice = np.sum(input_grid, axis=0) 
         xz_slice = np.sum(input_grid, axis=1) 
         xy_slice = np.sum(input_grid, axis=2) 
-        cmin = np.amin([yz_slice.min(), xz_slice.min(), xy_slice.min()])
-        cmax = np.amax([yz_slice.max(), xz_slice.max(), xy_slice.max()])
-        if colrange==None:
-            plotnorm = colors.Normalize(vmin=cmin,vmax=cmax) 
-        else:
-            plotnorm = colors.Normalize(vmin=colrange[0],vmax=colrange[1]) 
-       
+
+    yz_slice = yz_slice[trimghost : yz_slice.shape[0]-trimghost,
+                        trimghost : yz_slice.shape[1]-trimghost]
+    xz_slice = xz_slice[trimghost : xz_slice.shape[0]-trimghost,
+                        trimghost : xz_slice.shape[1]-trimghost]
+    xy_slice = xy_slice[trimghost : xy_slice.shape[0]-trimghost,
+                        trimghost : xy_slice.shape[1]-trimghost]
+    mesh_xx_tmp  = mesh.xx[trimghost : mesh.xx.shape[0]-trimghost] 
+    mesh_yy_tmp  = mesh.yy[trimghost : mesh.yy.shape[0]-trimghost]  
+    mesh_zz_tmp  = mesh.zz[trimghost : mesh.zz.shape[0]-trimghost] 
+
+    #Set the coulourscale
+    cmin = np.amin([yz_slice.min(), xz_slice.min(), xy_slice.min()])
+    cmax = np.amax([yz_slice.max(), xz_slice.max(), xy_slice.max()])
+    if colrange==None:
+        plotnorm = colors.Normalize(vmin=cmin,vmax=cmax) 
+    else:
+        plotnorm = colors.Normalize(vmin=colrange[0],vmax=colrange[1]) 
+
+    
     if points_from_centre > 0:
         yz_slice = yz_slice[int(yz_slice.shape[0]/2)-points_from_centre : int(yz_slice.shape[0]/2)+points_from_centre,
                             int(yz_slice.shape[1]/2)-points_from_centre : int(yz_slice.shape[1]/2)+points_from_centre]
@@ -62,11 +72,11 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
                             int(xz_slice.shape[1]/2)-points_from_centre : int(xz_slice.shape[1]/2)+points_from_centre]
         xy_slice = xy_slice[int(xy_slice.shape[0]/2)-points_from_centre : int(xy_slice.shape[0]/2)+points_from_centre,
                             int(xy_slice.shape[1]/2)-points_from_centre : int(xy_slice.shape[1]/2)+points_from_centre]
-        mesh.xx = mesh.xx[int(mesh.xx.shape[0]/2)-points_from_centre : int(mesh.xx.shape[0]/2)+points_from_centre] 
-        mesh.yy = mesh.yy[int(mesh.yy.shape[0]/2)-points_from_centre : int(mesh.yy.shape[0]/2)+points_from_centre]  
-        mesh.zz = mesh.zz[int(mesh.zz.shape[0]/2)-points_from_centre : int(mesh.zz.shape[0]/2)+points_from_centre] 
+        mesh_xx_tmp = mesh.xx[int(mesh.xx.shape[0]/2)-points_from_centre : int(mesh.xx.shape[0]/2)+points_from_centre] 
+        mesh_yy_tmp = mesh.yy[int(mesh.yy.shape[0]/2)-points_from_centre : int(mesh.yy.shape[0]/2)+points_from_centre]  
+        mesh_zz_tmp = mesh.zz[int(mesh.zz.shape[0]/2)-points_from_centre : int(mesh.zz.shape[0]/2)+points_from_centre] 
     
-    yy, zz = np.meshgrid(mesh.yy, mesh.zz, indexing='ij')
+    yy, zz = np.meshgrid(mesh_xx_tmp, mesh_xx_tmp, indexing='ij')
     if contourplot:
         map1 = ax00.contourf(yy, zz, yz_slice, norm=plotnorm, cmap=colormap, nlev=10)
     else:
@@ -76,9 +86,10 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
     ax00.set_title('%s t = %.4e' % (title, mesh.timestamp) )    
     ax00.set_aspect('equal')
 
-    ax00.contour(yy, zz, np.sqrt((yy-yy.max()/2.0)**2.0 + (zz-zz.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
+    if mesh.minfo.contents["AC_accretion_range"] > 0.0:
+        ax00.contour(yy, zz, np.sqrt((yy-yy.max()/2.0)**2.0 + (zz-zz.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
     
-    xx, zz = np.meshgrid(mesh.xx, mesh.zz, indexing='ij')
+    xx, zz = np.meshgrid(mesh_xx_tmp, mesh_zz_tmp, indexing='ij')
     if contourplot:
         ax10.contourf(xx, zz, xz_slice, norm=plotnorm, cmap=colormap, nlev=10)
     else:
@@ -87,9 +98,10 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
     ax10.set_ylabel('z')
     ax10.set_aspect('equal')
 
-    ax10.contour(xx, zz, np.sqrt((xx-xx.max()/2.0)**2.0 + (zz-zz.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
+    if mesh.minfo.contents["AC_accretion_range"] > 0.0:
+        ax10.contour(xx, zz, np.sqrt((xx-xx.max()/2.0)**2.0 + (zz-zz.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
     
-    xx, yy = np.meshgrid(mesh.xx, mesh.yy, indexing='ij')
+    xx, yy = np.meshgrid(mesh_xx_tmp, mesh_yy_tmp, indexing='ij')
     if contourplot:
         ax11.contourf(xx, yy, xy_slice, norm=plotnorm, cmap=colormap, nlev=10)
     else:
@@ -98,7 +110,8 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
     ax11.set_ylabel('y')
     ax11.set_aspect('equal')
 
-    ax11.contour(xx, yy, np.sqrt((xx-xx.max()/2.0)**2.0 + (yy-yy.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
+    if mesh.minfo.contents["AC_accretion_range"] > 0.0:
+        ax11.contour(xx, yy, np.sqrt((xx-xx.max()/2.0)**2.0 + (yy-yy.max()/2.0)**2.0), [mesh.minfo.contents["AC_accretion_range"]]) 
 
     if bfieldlines:
         ax00.streamplot(mesh.yy, mesh.zz, np.mean(mesh.bb[1], axis=0), np.mean(mesh.bb[2], axis=0))
