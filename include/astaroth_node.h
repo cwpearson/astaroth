@@ -69,7 +69,7 @@ Resets all devices on the current node.
  */
 AcResult acNodeDestroy(Node node);
 
-/** 
+/**
 Prints information about the devices available on the current node.
 
 Requires that Node has been initialized with
@@ -77,7 +77,7 @@ Requires that Node has been initialized with
 */
 AcResult acNodePrintInfo(const Node node);
 
-/** 
+/**
 
 
 
