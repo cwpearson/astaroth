@@ -8,7 +8,7 @@ APIs and provides a domain-specific language for translating high-level descript
 makes Astaroth especially suitable for multiphysics simulations.
 
 Astaroth is licenced under the terms of the GNU General Public Licence, version 3, or later
-(see [LICENCE.txt](LICENCE.md)). For contributing guidelines, 
+(see [LICENCE.txt](LICENCE.md)). For contributing guidelines,
 see [Contributing](CONTRIBUTING.md).
 
 
@@ -46,7 +46,8 @@ See [CMakeLists.txt](https://bitbucket.org/jpekkila/astaroth/src/master/CMakeLis
 | BUILD_STANDALONE | Builds a standalone library for testing, benchmarking and simulation | ON |
 | BUILD_UTILS | Builds a generic utility library (WIP replacement for BUILD_STANDALONE) | ON |
 | BUILD_RT_VISUALIZATION | Builds the real-time visualization module | OFF |
-| BUILD_DOUBLE_PRECISION | Generates double precision code | OFF |
+| BUILD_SAMPLES | Builds projects in samples subdirectory | OFF |
+| DOUBLE_PRECISION | Generates double precision code | OFF |
 | MULTIGPU_ENABLED | Enables Astaroth to use multiple GPUs on a single node | ON |
 | MPI_ENABLED | Enables additional functions for MPI communciation | OFF |
 | DSL_MODULE_DIR | Defines the directory to be scanned when looking for DSL files | `astaroth/acc/mhd_solver` |
@@ -87,4 +88,3 @@ How do I compile with MPI support?
 How do I contribute?
 
 > See [Contributing](CONTRIBUTING.md).
-

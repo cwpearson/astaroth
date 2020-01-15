@@ -25,7 +25,7 @@ option(BUILD_DEBUG              "Builds the program with extensive error checkin
 option(BUILD_STANDALONE         "Builds the standalone Astaroth"                            ON)
 option(BUILD_UTILS              "Builds the utility library"                                ON)
 option(BUILD_RT_VISUALIZATION   "Builds the module for real-time visualization using SDL2"  OFF)
-option(BUILD_SAMPLES            "Builds samples"                                            OFF)
+option(BUILD_SAMPLES            "Builds projects in samples subdirectory"                   OFF)
 option(DOUBLE_PRECISION         "Generates double precision code"                           OFF)
 option(MULTIGPU_ENABLED         "If enabled, uses all the available GPUs"                   ON)
 option(MPI_ENABLED              "Enables additional functions for MPI communciation"        OFF)
