@@ -21,9 +21,9 @@ pipelines:
           - mkdir -p build && cd build
           - apt-get update
           - apt-get install -y cmake flex bison
-          - cmake -DDSL_MODULE_DIR="acc/mhd_solver" -DBUILD_STANDALONE=ON -DBUILD_UTILS=ON -DBUILD_RT_VISUALIZATION=ON -DBUILD_SAMPLES=ON -DDOUBLE_PRECISION=OFF -DMULTIGPU_ENABLED=ON -DMPI_ENABLED=ON .. # Single precision
+          - cmake -DDSL_MODULE_DIR="acc/mhd_solver" -DBUILD_STANDALONE=ON -DBUILD_UTILS=ON -DBUILD_RT_VISUALIZATION=OFF -DBUILD_SAMPLES=ON -DDOUBLE_PRECISION=OFF -DMULTIGPU_ENABLED=ON -DMPI_ENABLED=ON .. # Single precision
           - make -j
           - rm -rf *
-          - cmake -DDSL_MODULE_DIR="acc/mhd_solver" -DBUILD_STANDALONE=ON -DBUILD_UTILS=ON -DBUILD_RT_VISUALIZATION=ON -DBUILD_SAMPLES=ON -DDOUBLE_PRECISION=ON -DMULTIGPU_ENABLED=ON -DMPI_ENABLED=ON .. # Double precision
+          - cmake -DDSL_MODULE_DIR="acc/mhd_solver" -DBUILD_STANDALONE=ON -DBUILD_UTILS=ON -DBUILD_RT_VISUALIZATION=OFF -DBUILD_SAMPLES=ON -DDOUBLE_PRECISION=ON -DMULTIGPU_ENABLED=ON -DMPI_ENABLED=ON .. # Double precision
           - make -j
           # - ./ac_run -t
