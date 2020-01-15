@@ -25,8 +25,6 @@ option(BUILD_DEBUG              "Builds the program with extensive error checkin
 option(BUILD_STANDALONE         "Builds the standalone Astaroth"                            ON)
 option(BUILD_UTILS              "Builds the utility library"                                ON)
 option(BUILD_RT_VISUALIZATION   "Builds the module for real-time visualization using SDL2"  OFF)
-option(BUILD_C_API_TEST         "Builds a C program to test whether the API is conformant"  OFF)
-option(BUILD_MPI_TEST           "Builds a C program to test whether MPI works"              OFF)
 option(BUILD_SAMPLES            "Builds samples"                                            OFF)
 option(DOUBLE_PRECISION         "Generates double precision code"                           OFF)
 option(MULTIGPU_ENABLED         "If enabled, uses all the available GPUs"                   ON)
@@ -94,20 +92,16 @@ include_directories(include)
 include_directories(${CMAKE_BINARY_DIR})
 
 ## Subdirectories
-add_subdirectory(src/core) # The core library
+add_subdirectory(src/core)      # The core library
+
+if (BUILD_UTILS)
+    add_subdirectory(src/utils) # The utility library
+endif ()
 
 if (BUILD_STANDALONE)
     add_subdirectory(src/standalone)
 endif ()
 
-if (BUILD_C_API_TEST)
-    add_subdirectory(src/ctest)
-endif ()
-
-if (BUILD_MPI_TEST)
-    add_subdirectory(src/mpitest)
-endif ()
-
-if (BUILD_UTILS)
-    add_subdirectory(src/utils)
+if (BUILD_SAMPLES)
+    add_subdirectory(samples)
 endif ()
