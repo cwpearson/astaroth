@@ -51,7 +51,7 @@ set(DSL_HEADERS "${PROJECT_BINARY_DIR}/user_kernels.h"
                 "${PROJECT_BINARY_DIR}/user_defines.h")
 add_custom_command (
     COMMENT "Building ACC objects ${DSL_MODULE_DIR}"
-    COMMAND ${CMAKE_SOURCE_DIR}/scripts/compile_acc_module.sh ${DSL_MODULE_DIR}
+    COMMAND ${CMAKE_SOURCE_DIR}/acc/compile_acc_module.sh ${DSL_MODULE_DIR}
     DEPENDS ${DSL_SOURCES}
     OUTPUT ${DSL_HEADERS}
 )
