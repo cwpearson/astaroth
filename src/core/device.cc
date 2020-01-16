@@ -1096,11 +1096,322 @@ getPid(const int3 pid, const int3 decomposition)
            mod(pid.z, decomposition.z) * decomposition.x * decomposition.y;
 }
 
+static AcResult
+acDeviceDistributeMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Distributing mesh...\n");
+    fflush(stdout);
+    assert(dst);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+    // Submesh nn
+    const int3 nn = (int3){
+        dst->info.int_params[AC_nx],
+        dst->info.int_params[AC_ny],
+        dst->info.int_params[AC_nz],
+    };
+
+    // Submesh mm
+    const int3 mm = (int3){
+        dst->info.int_params[AC_mx],
+        dst->info.int_params[AC_my],
+        dst->info.int_params[AC_mz],
+    };
+
+    // Send to self
+    if (pid == 0) {
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+            // For pencils
+            for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+                for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                    const int i       = NGHOST;
+                    const int count   = nn.x;
+                    const int src_idx = acVertexBufferIdx(i, j, k, src.info);
+                    const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
+                    memcpy(&dst->vertex_buffer[vtxbuf][dst_idx], //
+                           &src.vertex_buffer[vtxbuf][src_idx],  //
+                           count * sizeof(src.vertex_buffer[i][0]));
+                }
+            }
+        }
+    }
+
+    for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+        // For pencils
+        for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+            for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                const int i     = NGHOST;
+                const int count = nn.x;
+
+                if (pid != 0) {
+                    const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
+                    // Recv
+                    MPI_Status status;
+                    MPI_Recv(&dst->vertex_buffer[vtxbuf][dst_idx], count, datatype, 0, 0,
+                             MPI_COMM_WORLD, &status);
+                }
+                else {
+                    for (int tgt_pid = 1; tgt_pid < nprocs; ++tgt_pid) {
+                        const int3 tgt_pid3d = getPid3D(tgt_pid, decomposition);
+                        const int src_idx    = acVertexBufferIdx(i + tgt_pid3d.x * nn.x, //
+                                                              j + tgt_pid3d.y * nn.y, //
+                                                              k + tgt_pid3d.z * nn.z, //
+                                                              src.info);
+
+                        // Send
+                        MPI_Send(&src.vertex_buffer[vtxbuf][src_idx], count, datatype, tgt_pid, 0,
+                                 MPI_COMM_WORLD);
+                    }
+                }
+            }
+        }
+    }
+    return AC_SUCCESS;
+}
+
+static AcResult
+acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Gathering mesh...\n");
+    fflush(stdout);
+    assert(dst);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+    // Submesh nn
+    const int3 nn = (int3){
+        src.info.int_params[AC_nx],
+        src.info.int_params[AC_ny],
+        src.info.int_params[AC_nz],
+    };
+
+    // Submesh mm
+    const int3 mm = (int3){
+        src.info.int_params[AC_mx],
+        src.info.int_params[AC_my],
+        src.info.int_params[AC_mz],
+    };
+
+    // Send to self
+    if (pid == 0) {
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+            // For pencils
+            for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+                for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                    const int i       = NGHOST;
+                    const int count   = nn.x;
+                    const int src_idx = acVertexBufferIdx(i, j, k, src.info);
+                    const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
+                    memcpy(&dst->vertex_buffer[vtxbuf][dst_idx], //
+                           &src.vertex_buffer[vtxbuf][src_idx],  //
+                           count * sizeof(src.vertex_buffer[i][0]));
+                }
+            }
+        }
+    }
+
+    for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+        // For pencils
+        for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+            for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                const int i     = NGHOST;
+                const int count = nn.x;
+
+                if (pid != 0) {
+                    // Send
+                    const int src_idx = acVertexBufferIdx(i, j, k, src.info);
+                    MPI_Send(&src.vertex_buffer[vtxbuf][src_idx], count, datatype, 0, 0,
+                             MPI_COMM_WORLD);
+                }
+                else {
+                    for (int tgt_pid = 1; tgt_pid < nprocs; ++tgt_pid) {
+                        const int3 tgt_pid3d = getPid3D(tgt_pid, decomposition);
+                        const int dst_idx    = acVertexBufferIdx(i + tgt_pid3d.x * nn.x, //
+                                                              j + tgt_pid3d.y * nn.y, //
+                                                              k + tgt_pid3d.z * nn.z, //
+                                                              dst->info);
+
+                        // Recv
+                        MPI_Status status;
+                        MPI_Recv(&dst->vertex_buffer[vtxbuf][dst_idx], count, datatype, tgt_pid, 0,
+                                 MPI_COMM_WORLD, &status);
+                    }
+                }
+            }
+        }
+    }
+    return AC_SUCCESS;
+}
+
+/*
+// Close to correct 3D distribute/gather but deadlocks
+static AcResult
+acDeviceDistributeMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Distributing mesh...\n");
+    assert(dst);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+    // Submesh nn
+    const int3 nn = (int3){
+        dst->info.int_params[AC_nx],
+        dst->info.int_params[AC_ny],
+        dst->info.int_params[AC_nz],
+    };
+
+    // Submesh mm
+    const int3 mm = (int3){
+        dst->info.int_params[AC_mx],
+        dst->info.int_params[AC_my],
+        dst->info.int_params[AC_mz],
+    };
+
+    for (int tgt_pid = 0; tgt_pid < nprocs; ++tgt_pid) {
+        const int3 tgt_pid3d = getPid3D(tgt_pid, decomposition);
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+
+            // For pencils
+            for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+                for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                    const int i       = NGHOST;
+                    const int count   = nn.x;
+                    const int src_idx = acVertexBufferIdx(i + tgt_pid3d.x * nn.x, //
+                                                          j + tgt_pid3d.y * nn.y, //
+                                                          k + tgt_pid3d.z * nn.z, //
+                                                          src.info);
+                    const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
+
+                    if (pid == 0) {
+                        // Send
+                        if (pid == tgt_pid) {
+                            // Send to self
+                            memcpy(&dst->vertex_buffer[vtxbuf][dst_idx], //
+                                   &src.vertex_buffer[vtxbuf][src_idx],  //
+                                   count * sizeof(src.vertex_buffer[i][0]));
+                        }
+                        else {
+                            // Send to others
+                            MPI_Send(&src.vertex_buffer[vtxbuf][src_idx], count, datatype, tgt_pid,
+                                     vtxbuf + (j + k * (NGHOST + nn.y)) * NUM_VTXBUF_HANDLES,
+                                     MPI_COMM_WORLD);
+                        }
+                    }
+                    else {
+                        // Recv
+                        MPI_Status status;
+                        MPI_Recv(&dst->vertex_buffer[vtxbuf][dst_idx], count, datatype, 0,
+                                 vtxbuf + (j + k * (NGHOST + nn.y)) * NUM_VTXBUF_HANDLES,
+                                 MPI_COMM_WORLD, &status);
+                    }
+                }
+            }
+        }
+    }
+    return AC_SUCCESS;
+}
+
+static AcResult
+acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
+{
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Distributing mesh...\n");
+    assert(dst);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+    // Submesh nn
+    const int3 nn = (int3){
+        dst->info.int_params[AC_nx],
+        dst->info.int_params[AC_ny],
+        dst->info.int_params[AC_nz],
+    };
+
+    // Submesh mm
+    const int3 mm = (int3){
+        dst->info.int_params[AC_mx],
+        dst->info.int_params[AC_my],
+        dst->info.int_params[AC_mz],
+    };
+
+    for (int tgt_pid = 0; tgt_pid < nprocs; ++tgt_pid) {
+        const int3 tgt_pid3d = getPid3D(tgt_pid, decomposition);
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+
+            // For pencils
+            for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+                for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                    const int i       = NGHOST;
+                    const int count   = nn.x;
+                    const int src_idx = acVertexBufferIdx(i, j, k, src.info);
+                    const int dst_idx = acVertexBufferIdx(i + tgt_pid3d.x * nn.x, //
+                                                          j + tgt_pid3d.y * nn.y, //
+                                                          k + tgt_pid3d.z * nn.z, //
+                                                          dst->info);
+
+                    if (pid == 0) {
+                        // Send
+                        if (pid == tgt_pid) {
+                            // Send to self
+                            memcpy(&dst->vertex_buffer[vtxbuf][dst_idx], //
+                                   &src.vertex_buffer[vtxbuf][src_idx],  //
+                                   count * sizeof(src.vertex_buffer[i][0]));
+                        }
+                        else {
+                            // Recv from others
+                            MPI_Status status;
+                            MPI_Recv(&dst->vertex_buffer[vtxbuf][dst_idx], count, datatype, tgt_pid,
+                                     vtxbuf, MPI_COMM_WORLD, &status);
+                        }
+                    }
+                    else {
+                        // Send to 0
+                        MPI_Send(&src.vertex_buffer[vtxbuf][src_idx], count, datatype, 0, vtxbuf,
+                                 MPI_COMM_WORLD);
+                    }
+                }
+            }
+        }
+    }
+    return AC_SUCCESS;
+}
+*/
+
+/*
 static void
 acDeviceDistributeMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
 {
     MPI_Barrier(MPI_COMM_WORLD);
     printf("Distributing mesh...\n");
+    assert(dst);
 
     MPI_Datatype datatype = MPI_FLOAT;
     if (sizeof(AcReal) == 8)
@@ -1110,33 +1421,31 @@ acDeviceDistributeMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* ds
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
-    const size_t count = acVertexBufferSize(dst->info);
+    // const size_t count = acVertexBufferSize(dst->info);
+    const int3 offset = (int3){
+        src.info.int_params[AC_nx] / decomposition.x,
+        src.info.int_params[AC_ny] / decomposition.y,
+        src.info.int_params[AC_nz] / decomposition.z,
+    };
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
 
         if (pid == 0) {
             // Communicate to self
-            assert(dst);
             memcpy(&dst->vertex_buffer[i][0], //
                    &src.vertex_buffer[i][0],  //
                    count * sizeof(src.vertex_buffer[i][0]));
 
             // Communicate to others
-            for (int j = 1; j < num_processes; ++j) {
-                const int3 target_pid = getPid3D(j, decomposition);
-                const int3 offset     = (int3){
-                    src.info.int_params[AC_nx] / decomposition.x,
-                    src.info.int_params[AC_ny] / decomposition.y,
-                    src.info.int_params[AC_nz] / decomposition.z,
-                };
-                const size_t src_idx = acVertexBufferIdx(target_pid.x * offset.x,
+            for (int tgt = 1; tgt < num_processes; ++tgt) {
+                const int3 target_pid = getPid3D(tgt, decomposition);
+                const size_t src_idx  = acVertexBufferIdx(target_pid.x * offset.x,
                                                          target_pid.y * offset.y,
                                                          target_pid.z * offset.z, src.info);
 
-                MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, j, 0, MPI_COMM_WORLD);
+                MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, tgt, 0, MPI_COMM_WORLD);
             }
         }
         else {
-            assert(dst);
 
             // Recv
             const size_t dst_idx = 0;
@@ -1146,6 +1455,7 @@ acDeviceDistributeMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* ds
         }
     }
 }
+
 
 static void
 acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
@@ -1199,6 +1509,7 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
         }
     }
 }
+*/
 
 /*
 static AcResult
@@ -2210,7 +2521,9 @@ acDeviceRunMPITest(void)
     acMeshRandomize(&submesh);
 
 #if BENCH_STRONG_SCALING
+    MPI_Barrier(MPI_COMM_WORLD);
     acDeviceDistributeMeshMPI(model, decomposition, &submesh);
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
     // Init the GPU
@@ -2254,7 +2567,7 @@ acDeviceRunMPITest(void)
         acDeviceCommunicateHalosMPI(device);
         acDeviceSynchronizeStream(device, STREAM_ALL);
 
-        acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
+        // acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh); // TODO re-enable
         acDeviceGatherMeshMPI(submesh, decomposition, &candidate);
         if (pid == 0) {
             // acModelIntegrateStep(model, FLT_EPSILON); // TODO
