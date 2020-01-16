@@ -89,7 +89,7 @@ isWithin(const int3 idx, const int3 min, const int3 max)
 static PackedData
 acCreatePackedData(const int3 dims)
 {
-    PackedData data = {0};
+    PackedData data = {};
 
     data.dims = dims;
 
@@ -104,6 +104,46 @@ acDestroyPackedData(PackedData* data)
 {
     data->dims = (int3){-1, -1, -1};
     cudaFree(data->data);
+    data->data = NULL;
+
+    return AC_SUCCESS;
+}
+
+static PackedData
+acCreatePackedDataHost(const int3 dims)
+{
+    PackedData data = {};
+
+    data.dims = dims;
+
+    const size_t bytes = dims.x * dims.y * dims.z * sizeof(data.data[0]) * NUM_VTXBUF_HANDLES;
+    data.data          = (AcReal*)malloc(bytes);
+    ERRCHK_ALWAYS(data.data);
+
+    return data;
+}
+
+static void
+acTransferPackedDataToHost(const PackedData ddata, PackedData* hdata)
+{
+    const size_t bytes = ddata.dims.x * ddata.dims.y * ddata.dims.z * sizeof(ddata.data[0]) *
+                         NUM_VTXBUF_HANDLES;
+    ERRCHK_CUDA_ALWAYS(cudaMemcpy(hdata->data, ddata.data, bytes, cudaMemcpyDeviceToHost));
+}
+
+static void
+acTransferPackedDataToDevice(const PackedData hdata, PackedData* ddata)
+{
+    const size_t bytes = hdata.dims.x * hdata.dims.y * hdata.dims.z * sizeof(hdata.data[0]) *
+                         NUM_VTXBUF_HANDLES;
+    ERRCHK_CUDA_ALWAYS(cudaMemcpy(ddata->data, hdata.data, bytes, cudaMemcpyHostToDevice));
+}
+
+static AcResult
+acDestroyPackedDataHost(PackedData* data)
+{
+    data->dims = (int3){-1, -1, -1};
+    free(data->data);
     data->data = NULL;
 
     return AC_SUCCESS;
@@ -1220,7 +1260,7 @@ acDeviceCommunicateHalosMPI(const Device device)
 
                 const int3 neighbor = (int3){i, j, k};
 
-                for (int a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
                     const int3 a0 = a0s[a_idx];
                     const int3 a1 = a0 + device->corners_send[a_idx].dims;
 
@@ -1241,7 +1281,7 @@ acDeviceCommunicateHalosMPI(const Device device)
                         print_int3(b0);
                         printf("\n");
 
-                        for (int b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
                             if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
                                 b0s[b_idx].z == b0.z) {
 
@@ -1340,15 +1380,15 @@ acDeviceCommunicateCornersMPI(const Device device)
                 if (i == 0 && j == 0 && k == 0)
                     continue;
 
-                for (int a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
-                    for (int b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                    for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
                         const int3 neighbor = (int3){i, j, k};
 
                         const int3 a0 = a0s[a_idx];
-                        const int3 a1 = a0 + dims;
+                        // const int3 a1 = a0 + dims;
 
                         const int3 b0 = a0 - neighbor * nn;
-                        const int3 b1 = a1 - neighbor * nn;
+                        // const int3 b1 = a1 - neighbor * nn;
 
                         if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
 
@@ -1361,15 +1401,29 @@ acDeviceCommunicateCornersMPI(const Device device)
                             acKernelPackData(stream, device->vba, a0, src);
                             acDeviceSynchronizeStream(device, STREAM_DEFAULT);
 
+                            // Host ////////////////////////////////////////////////
+                            PackedData src_host = acCreatePackedDataHost(dims);
+                            PackedData dst_host = acCreatePackedDataHost(dims);
+                            acTransferPackedDataToHost(src, &src_host);
+                            ////////////////////////////////////////////////////////
+
                             const int3 pid3d = getPid3D(pid, decomp);
                             MPI_Request send_req, recv_req;
-                            MPI_Isend(src.data, count, datatype, getPid(pid3d + neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &send_req);
-                            MPI_Irecv(dst.data, count, datatype, getPid(pid3d - neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &recv_req);
+                            MPI_Isend(src_host.data, count, datatype,
+                                      getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                      &send_req);
+                            MPI_Irecv(dst_host.data, count, datatype,
+                                      getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                      &recv_req);
 
                             MPI_Status status;
                             MPI_Wait(&recv_req, &status);
+
+                            // Host ////////////////////////////////////////////////
+                            acTransferPackedDataToDevice(dst_host, &dst);
+                            acDestroyPackedDataHost(&src_host);
+                            acDestroyPackedDataHost(&dst_host);
+                            ////////////////////////////////////////////////////////
 
                             acKernelUnpackData(stream, dst, b0, device->vba);
                             acDeviceSynchronizeStream(device, STREAM_DEFAULT);
@@ -1433,15 +1487,15 @@ acDeviceCommunicateEdgesMPI(const Device device)
                 if (i == 0 && j == 0 && k == 0)
                     continue;
 
-                for (int a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
-                    for (int b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                    for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
                         const int3 neighbor = (int3){i, j, k};
 
                         const int3 a0 = a0s[a_idx];
-                        const int3 a1 = a0 + dims;
+                        // const int3 a1 = a0 + dims;
 
                         const int3 b0 = a0 - neighbor * nn;
-                        const int3 b1 = a1 - neighbor * nn;
+                        // const int3 b1 = a1 - neighbor * nn;
 
                         if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
                             printf("Transfer: ");
@@ -1487,7 +1541,7 @@ static AcResult
 acDeviceCommunicateHalosMPI(const Device device)
 {
     acDeviceCommunicateCornersMPI(device);
-    acDeviceCommunicateEdgesMPI(device);
+    // acDeviceCommunicateEdgesMPI(device);
     return AC_SUCCESS;
 }
 /*
@@ -1543,7 +1597,7 @@ acDeviceCommunicateHalosMPI(const Device device)
 
                 const int3 neighbor = (int3){i, j, k};
 
-                for (int a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
                     const int3 a0 = a0s[a_idx];
                     const int3 a1 = a0 + device->corners_send[a_idx].dims;
 
@@ -1564,7 +1618,7 @@ acDeviceCommunicateHalosMPI(const Device device)
                         print_int3(b0);
                         printf("\n");
 
-                        for (int b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
                             if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
                                 b0s[b_idx].z == b0.z) {
 
