@@ -1416,11 +1416,12 @@ acDeviceCommunicateCornersMPI(const Device device)
                                       getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
                                       &recv_req);
 
-                            MPI_Status status;
-                            MPI_Wait(&recv_req, &status);
+                            MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                            MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
 
                             // Host ////////////////////////////////////////////////
                             acTransferPackedDataToDevice(dst_host, &dst);
+                            acDeviceSynchronizeStream(device, STREAM_ALL);
                             acDestroyPackedDataHost(&src_host);
                             acDestroyPackedDataHost(&dst_host);
                             ////////////////////////////////////////////////////////
@@ -1462,71 +1463,520 @@ acDeviceCommunicateEdgesMPI(const Device device)
         device->local_config.int_params[AC_nz],
     };
 
-    // X-axis (TODO Y and Z)
-    // Pack data
-    const int3 a0s[] = {
-        (int3){NGHOST, NGHOST, NGHOST}, //
-        (int3){NGHOST, nn.y, NGHOST},   //
+    {
+        // X-axis
+        // Pack data
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){NGHOST, nn.y, NGHOST},   //
 
-        (int3){NGHOST, NGHOST, nn.z}, //
-        (int3){NGHOST, nn.y, nn.z},   //
+            (int3){NGHOST, NGHOST, nn.z}, //
+            (int3){NGHOST, nn.y, nn.z},   //
+        };
+        const int3 b0s[] = {
+            (int3){NGHOST, 0, 0},
+            (int3){NGHOST, NGHOST + nn.y, 0},
+
+            (int3){NGHOST, 0, NGHOST + nn.z},
+            (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
+        };
+
+        const int3 dims = (int3){nn.x, NGHOST, NGHOST};
+
+        for (int k = -1; k <= 1; ++k) {
+            for (int j = -1; j <= 1; ++j) {
+                for (int i = -1; i <= 1; ++i) {
+                    if (i == 0 && j == 0 && k == 0)
+                        continue;
+
+                    for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                            const int3 neighbor = (int3){i, j, k};
+
+                            const int3 a0 = a0s[a_idx];
+                            // const int3 a1 = a0 + dims;
+
+                            const int3 b0 = a0 - neighbor * nn;
+                            // const int3 b1 = a1 - neighbor * nn;
+
+                            if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
+                                b0s[b_idx].z == b0.z) {
+
+                                const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                                PackedData src = acCreatePackedData(dims);
+                                PackedData dst = acCreatePackedData(dims);
+
+                                const cudaStream_t stream = device->streams[STREAM_DEFAULT];
+                                acKernelPackData(stream, device->vba, a0, src);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                // Host ////////////////////////////////////////////////
+                                PackedData src_host = acCreatePackedDataHost(dims);
+                                PackedData dst_host = acCreatePackedDataHost(dims);
+                                acTransferPackedDataToHost(src, &src_host);
+                                ////////////////////////////////////////////////////////
+
+                                const int3 pid3d = getPid3D(pid, decomp);
+                                MPI_Request send_req, recv_req;
+                                MPI_Isend(src_host.data, count, datatype,
+                                          getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &send_req);
+                                MPI_Irecv(dst_host.data, count, datatype,
+                                          getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &recv_req);
+
+                                MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                                MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+
+                                // Host ////////////////////////////////////////////////
+                                acTransferPackedDataToDevice(dst_host, &dst);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
+                                acDestroyPackedDataHost(&src_host);
+                                acDestroyPackedDataHost(&dst_host);
+                                ////////////////////////////////////////////////////////
+
+                                acKernelUnpackData(stream, dst, b0, device->vba);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                acDestroyPackedData(&src);
+                                acDestroyPackedData(&dst);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        // Y-axis
+        // Pack data
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){nn.x, NGHOST, NGHOST},   //
+
+            (int3){NGHOST, NGHOST, nn.z}, //
+            (int3){nn.x, NGHOST, nn.z},   //
+        };
+        const int3 b0s[] = {
+            (int3){0, NGHOST, 0},
+            (int3){NGHOST + nn.x, NGHOST, 0},
+
+            (int3){0, NGHOST, NGHOST + nn.z},
+            (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
+        };
+
+        const int3 dims = (int3){NGHOST, nn.y, NGHOST};
+
+        for (int k = -1; k <= 1; ++k) {
+            for (int j = -1; j <= 1; ++j) {
+                for (int i = -1; i <= 1; ++i) {
+                    if (i == 0 && j == 0 && k == 0)
+                        continue;
+
+                    for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                            const int3 neighbor = (int3){i, j, k};
+
+                            const int3 a0 = a0s[a_idx];
+                            // const int3 a1 = a0 + dims;
+
+                            const int3 b0 = a0 - neighbor * nn;
+                            // const int3 b1 = a1 - neighbor * nn;
+
+                            if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
+                                b0s[b_idx].z == b0.z) {
+
+                                const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                                PackedData src = acCreatePackedData(dims);
+                                PackedData dst = acCreatePackedData(dims);
+
+                                const cudaStream_t stream = device->streams[STREAM_DEFAULT];
+                                acKernelPackData(stream, device->vba, a0, src);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                // Host ////////////////////////////////////////////////
+                                PackedData src_host = acCreatePackedDataHost(dims);
+                                PackedData dst_host = acCreatePackedDataHost(dims);
+                                acTransferPackedDataToHost(src, &src_host);
+                                ////////////////////////////////////////////////////////
+
+                                const int3 pid3d = getPid3D(pid, decomp);
+                                MPI_Request send_req, recv_req;
+                                MPI_Isend(src_host.data, count, datatype,
+                                          getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &send_req);
+                                MPI_Irecv(dst_host.data, count, datatype,
+                                          getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &recv_req);
+
+                                MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                                MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+
+                                // Host ////////////////////////////////////////////////
+                                acTransferPackedDataToDevice(dst_host, &dst);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
+                                acDestroyPackedDataHost(&src_host);
+                                acDestroyPackedDataHost(&dst_host);
+                                ////////////////////////////////////////////////////////
+
+                                acKernelUnpackData(stream, dst, b0, device->vba);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                acDestroyPackedData(&src);
+                                acDestroyPackedData(&dst);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        // Z-axis
+        // Pack data
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){nn.x, NGHOST, NGHOST},   //
+
+            (int3){NGHOST, nn.y, NGHOST}, //
+            (int3){nn.x, nn.y, NGHOST},   //
+        };
+        const int3 b0s[] = {
+            (int3){0, 0, NGHOST},
+            (int3){NGHOST + nn.x, 0, NGHOST},
+
+            (int3){0, NGHOST + nn.y, NGHOST},
+            (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
+        };
+
+        const int3 dims = (int3){NGHOST, NGHOST, nn.z};
+
+        for (int k = -1; k <= 1; ++k) {
+            for (int j = -1; j <= 1; ++j) {
+                for (int i = -1; i <= 1; ++i) {
+                    if (i == 0 && j == 0 && k == 0)
+                        continue;
+
+                    for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                            const int3 neighbor = (int3){i, j, k};
+
+                            const int3 a0 = a0s[a_idx];
+                            // const int3 a1 = a0 + dims;
+
+                            const int3 b0 = a0 - neighbor * nn;
+                            // const int3 b1 = a1 - neighbor * nn;
+
+                            if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
+                                b0s[b_idx].z == b0.z) {
+
+                                const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                                PackedData src = acCreatePackedData(dims);
+                                PackedData dst = acCreatePackedData(dims);
+
+                                const cudaStream_t stream = device->streams[STREAM_DEFAULT];
+                                acKernelPackData(stream, device->vba, a0, src);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                // Host ////////////////////////////////////////////////
+                                PackedData src_host = acCreatePackedDataHost(dims);
+                                PackedData dst_host = acCreatePackedDataHost(dims);
+                                acTransferPackedDataToHost(src, &src_host);
+                                ////////////////////////////////////////////////////////
+
+                                const int3 pid3d = getPid3D(pid, decomp);
+                                MPI_Request send_req, recv_req;
+                                MPI_Isend(src_host.data, count, datatype,
+                                          getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &send_req);
+                                MPI_Irecv(dst_host.data, count, datatype,
+                                          getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &recv_req);
+
+                                MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                                MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+
+                                // Host ////////////////////////////////////////////////
+                                acTransferPackedDataToDevice(dst_host, &dst);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
+                                acDestroyPackedDataHost(&src_host);
+                                acDestroyPackedDataHost(&dst_host);
+                                ////////////////////////////////////////////////////////
+
+                                acKernelUnpackData(stream, dst, b0, device->vba);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                acDestroyPackedData(&src);
+                                acDestroyPackedData(&dst);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return AC_SUCCESS;
+}
+
+static AcResult
+acDeviceCommunicateSidesMPI(const Device device)
+{
+    cudaSetDevice(device->id);
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const int3 decomp = decompose(nprocs);
+
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
     };
-    const int3 b0s[] = {
-        (int3){NGHOST, 0, 0},
-        (int3){NGHOST, NGHOST + nn.y, 0},
 
-        (int3){NGHOST, 0, NGHOST + nn.z},
-        (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
-    };
+    {
+        // XY-axis
+        // Pack data
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){NGHOST, NGHOST, nn.z},   //
+        };
+        const int3 b0s[] = {
+            (int3){NGHOST, NGHOST, 0},             //
+            (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
+        };
 
-    const int3 dims = (int3){nn.x, NGHOST, NGHOST};
+        const int3 dims = (int3){nn.x, nn.y, NGHOST};
 
-    for (int k = -1; k <= 1; ++k) {
-        for (int j = -1; j <= 1; ++j) {
-            for (int i = -1; i <= 1; ++i) {
-                if (i == 0 && j == 0 && k == 0)
-                    continue;
+        for (int k = -1; k <= 1; ++k) {
+            for (int j = -1; j <= 1; ++j) {
+                for (int i = -1; i <= 1; ++i) {
+                    if (i == 0 && j == 0 && k == 0)
+                        continue;
 
-                for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
-                    for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
-                        const int3 neighbor = (int3){i, j, k};
+                    for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                            const int3 neighbor = (int3){i, j, k};
 
-                        const int3 a0 = a0s[a_idx];
-                        // const int3 a1 = a0 + dims;
+                            const int3 a0 = a0s[a_idx];
+                            // const int3 a1 = a0 + dims;
 
-                        const int3 b0 = a0 - neighbor * nn;
-                        // const int3 b1 = a1 - neighbor * nn;
+                            const int3 b0 = a0 - neighbor * nn;
+                            // const int3 b1 = a1 - neighbor * nn;
 
-                        if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
-                            printf("Transfer: ");
-                            print_int3(a0);
-                            printf(" -> ");
-                            print_int3(b0);
-                            printf("\n");
-                            const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+                            if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
+                                b0s[b_idx].z == b0.z) {
 
-                            PackedData src = acCreatePackedData(dims);
-                            PackedData dst = acCreatePackedData(dims);
+                                const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
-                            const cudaStream_t stream = device->streams[STREAM_DEFAULT];
-                            acKernelPackData(stream, device->vba, a0, src);
-                            acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+                                PackedData src = acCreatePackedData(dims);
+                                PackedData dst = acCreatePackedData(dims);
 
-                            const int3 pid3d = getPid3D(pid, decomp);
-                            MPI_Request send_req, recv_req;
-                            MPI_Isend(src.data, count, datatype, getPid(pid3d + neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &send_req);
-                            MPI_Irecv(dst.data, count, datatype, getPid(pid3d - neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &recv_req);
+                                const cudaStream_t stream = device->streams[STREAM_DEFAULT];
+                                acKernelPackData(stream, device->vba, a0, src);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
 
-                            MPI_Wait(&send_req, MPI_STATUS_IGNORE);
-                            MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+                                // Host ////////////////////////////////////////////////
+                                PackedData src_host = acCreatePackedDataHost(dims);
+                                PackedData dst_host = acCreatePackedDataHost(dims);
+                                acTransferPackedDataToHost(src, &src_host);
+                                ////////////////////////////////////////////////////////
 
-                            acKernelUnpackData(stream, dst, b0, device->vba);
-                            acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+                                const int3 pid3d = getPid3D(pid, decomp);
+                                MPI_Request send_req, recv_req;
+                                MPI_Isend(src_host.data, count, datatype,
+                                          getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &send_req);
+                                MPI_Irecv(dst_host.data, count, datatype,
+                                          getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &recv_req);
 
-                            acDestroyPackedData(&src);
-                            acDestroyPackedData(&dst);
+                                MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                                MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+
+                                // Host ////////////////////////////////////////////////
+                                acTransferPackedDataToDevice(dst_host, &dst);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
+                                acDestroyPackedDataHost(&src_host);
+                                acDestroyPackedDataHost(&dst_host);
+                                ////////////////////////////////////////////////////////
+
+                                acKernelUnpackData(stream, dst, b0, device->vba);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                acDestroyPackedData(&src);
+                                acDestroyPackedData(&dst);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        // XZ-axis
+        // Pack data
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){NGHOST, nn.y, NGHOST},   //
+        };
+        const int3 b0s[] = {
+            (int3){NGHOST, 0, NGHOST},             //
+            (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
+        };
+        const int3 dims = (int3){nn.x, NGHOST, nn.z};
+
+        for (int k = -1; k <= 1; ++k) {
+            for (int j = -1; j <= 1; ++j) {
+                for (int i = -1; i <= 1; ++i) {
+                    if (i == 0 && j == 0 && k == 0)
+                        continue;
+
+                    for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                            const int3 neighbor = (int3){i, j, k};
+
+                            const int3 a0 = a0s[a_idx];
+                            // const int3 a1 = a0 + dims;
+
+                            const int3 b0 = a0 - neighbor * nn;
+                            // const int3 b1 = a1 - neighbor * nn;
+
+                            if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
+                                b0s[b_idx].z == b0.z) {
+
+                                const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                                PackedData src = acCreatePackedData(dims);
+                                PackedData dst = acCreatePackedData(dims);
+
+                                const cudaStream_t stream = device->streams[STREAM_DEFAULT];
+                                acKernelPackData(stream, device->vba, a0, src);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                // Host ////////////////////////////////////////////////
+                                PackedData src_host = acCreatePackedDataHost(dims);
+                                PackedData dst_host = acCreatePackedDataHost(dims);
+                                acTransferPackedDataToHost(src, &src_host);
+                                ////////////////////////////////////////////////////////
+
+                                const int3 pid3d = getPid3D(pid, decomp);
+                                MPI_Request send_req, recv_req;
+                                MPI_Isend(src_host.data, count, datatype,
+                                          getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &send_req);
+                                MPI_Irecv(dst_host.data, count, datatype,
+                                          getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &recv_req);
+
+                                MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                                MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+
+                                // Host ////////////////////////////////////////////////
+                                acTransferPackedDataToDevice(dst_host, &dst);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
+                                acDestroyPackedDataHost(&src_host);
+                                acDestroyPackedDataHost(&dst_host);
+                                ////////////////////////////////////////////////////////
+
+                                acKernelUnpackData(stream, dst, b0, device->vba);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                acDestroyPackedData(&src);
+                                acDestroyPackedData(&dst);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        // YZ-axis
+        // Pack data
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){nn.x, NGHOST, NGHOST},   //
+        };
+        const int3 b0s[] = {
+            (int3){0, NGHOST, NGHOST},             //
+            (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
+        };
+        const int3 dims = (int3){NGHOST, nn.y, nn.z};
+
+        for (int k = -1; k <= 1; ++k) {
+            for (int j = -1; j <= 1; ++j) {
+                for (int i = -1; i <= 1; ++i) {
+                    if (i == 0 && j == 0 && k == 0)
+                        continue;
+
+                    for (size_t a_idx = 0; a_idx < ARRAY_SIZE(a0s); ++a_idx) {
+                        for (size_t b_idx = 0; b_idx < ARRAY_SIZE(b0s); ++b_idx) {
+                            const int3 neighbor = (int3){i, j, k};
+
+                            const int3 a0 = a0s[a_idx];
+                            // const int3 a1 = a0 + dims;
+
+                            const int3 b0 = a0 - neighbor * nn;
+                            // const int3 b1 = a1 - neighbor * nn;
+
+                            if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y &&
+                                b0s[b_idx].z == b0.z) {
+
+                                const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                                PackedData src = acCreatePackedData(dims);
+                                PackedData dst = acCreatePackedData(dims);
+
+                                const cudaStream_t stream = device->streams[STREAM_DEFAULT];
+                                acKernelPackData(stream, device->vba, a0, src);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                // Host ////////////////////////////////////////////////
+                                PackedData src_host = acCreatePackedDataHost(dims);
+                                PackedData dst_host = acCreatePackedDataHost(dims);
+                                acTransferPackedDataToHost(src, &src_host);
+                                ////////////////////////////////////////////////////////
+
+                                const int3 pid3d = getPid3D(pid, decomp);
+                                MPI_Request send_req, recv_req;
+                                MPI_Isend(src_host.data, count, datatype,
+                                          getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &send_req);
+                                MPI_Irecv(dst_host.data, count, datatype,
+                                          getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                          &recv_req);
+
+                                MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                                MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+
+                                // Host ////////////////////////////////////////////////
+                                acTransferPackedDataToDevice(dst_host, &dst);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
+                                acDestroyPackedDataHost(&src_host);
+                                acDestroyPackedDataHost(&dst_host);
+                                ////////////////////////////////////////////////////////
+
+                                acKernelUnpackData(stream, dst, b0, device->vba);
+                                acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                                acDestroyPackedData(&src);
+                                acDestroyPackedData(&dst);
+                            }
                         }
                     }
                 }
@@ -1541,7 +1991,8 @@ static AcResult
 acDeviceCommunicateHalosMPI(const Device device)
 {
     acDeviceCommunicateCornersMPI(device);
-    // acDeviceCommunicateEdgesMPI(device);
+    acDeviceCommunicateEdgesMPI(device);
+    acDeviceCommunicateSidesMPI(device);
     return AC_SUCCESS;
 }
 /*
