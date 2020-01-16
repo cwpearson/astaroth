@@ -79,7 +79,7 @@ See `analysis/python/` directory of existing data visualization and analysis scr
 
 Can I use the code even if I don't make my changes public?
 
-> [GPL](LICENCE.md) requires only that if you release a binary based on Astaroth to the public, then you should also release the source code for it. In private you can do whatever you want (secret forks, secret collaborations, etc).
+> [GPL](LICENCE.md) requires only that if you release a binary based on Astaroth to the public, then you should also release the source code for it. In private you can do whatever you want (secret forks, secret collaborations, etc). **Astaroth Code source files (.ac, .h) do not belong to the library and therefore are not licenced under GPL.** The user who created the files holds copyright over them and can choose to distribute them under any licence.
 
 How do I compile with MPI support?
 
