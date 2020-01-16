@@ -1211,10 +1211,10 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
     if (pid == 0) {
         for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
             // For pencils
-            for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
-                for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
-                    const int i       = NGHOST;
-                    const int count   = nn.x;
+            for (int k = 0; k < mm.z; ++k) {
+                for (int j = 0; j < mm.y; ++j) {
+                    const int i       = 0;
+                    const int count   = mm.x;
                     const int src_idx = acVertexBufferIdx(i, j, k, src.info);
                     const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
                     memcpy(&dst->vertex_buffer[vtxbuf][dst_idx], //
@@ -1227,10 +1227,10 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
 
     for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
         // For pencils
-        for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
-            for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
-                const int i     = NGHOST;
-                const int count = nn.x;
+        for (int k = 0; k < mm.z; ++k) {
+            for (int j = 0; j < mm.y; ++j) {
+                const int i     = 0;
+                const int count = mm.x;
 
                 if (pid != 0) {
                     // Send
@@ -1716,6 +1716,8 @@ acDeviceCommunicateCornersMPI(const Device device)
                             PackedData src_host = acCreatePackedDataHost(dims);
                             PackedData dst_host = acCreatePackedDataHost(dims);
                             acTransferPackedDataToHost(src, &src_host);
+                            acDeviceSynchronizeStream(device, STREAM_ALL);
+                            MPI_Barrier(MPI_COMM_WORLD);
                             ////////////////////////////////////////////////////////
 
                             const int3 pid3d = getPid3D(pid, decomp);
@@ -1826,6 +1828,7 @@ acDeviceCommunicateEdgesMPI(const Device device)
                                 PackedData src_host = acCreatePackedDataHost(dims);
                                 PackedData dst_host = acCreatePackedDataHost(dims);
                                 acTransferPackedDataToHost(src, &src_host);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
                                 ////////////////////////////////////////////////////////
 
                                 const int3 pid3d = getPid3D(pid, decomp);
@@ -1912,6 +1915,7 @@ acDeviceCommunicateEdgesMPI(const Device device)
                                 PackedData src_host = acCreatePackedDataHost(dims);
                                 PackedData dst_host = acCreatePackedDataHost(dims);
                                 acTransferPackedDataToHost(src, &src_host);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
                                 ////////////////////////////////////////////////////////
 
                                 const int3 pid3d = getPid3D(pid, decomp);
@@ -1998,6 +2002,7 @@ acDeviceCommunicateEdgesMPI(const Device device)
                                 PackedData src_host = acCreatePackedDataHost(dims);
                                 PackedData dst_host = acCreatePackedDataHost(dims);
                                 acTransferPackedDataToHost(src, &src_host);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
                                 ////////////////////////////////////////////////////////
 
                                 const int3 pid3d = getPid3D(pid, decomp);
@@ -2103,6 +2108,7 @@ acDeviceCommunicateSidesMPI(const Device device)
                                 PackedData src_host = acCreatePackedDataHost(dims);
                                 PackedData dst_host = acCreatePackedDataHost(dims);
                                 acTransferPackedDataToHost(src, &src_host);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
                                 ////////////////////////////////////////////////////////
 
                                 const int3 pid3d = getPid3D(pid, decomp);
@@ -2182,6 +2188,7 @@ acDeviceCommunicateSidesMPI(const Device device)
                                 PackedData src_host = acCreatePackedDataHost(dims);
                                 PackedData dst_host = acCreatePackedDataHost(dims);
                                 acTransferPackedDataToHost(src, &src_host);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
                                 ////////////////////////////////////////////////////////
 
                                 const int3 pid3d = getPid3D(pid, decomp);
@@ -2261,6 +2268,7 @@ acDeviceCommunicateSidesMPI(const Device device)
                                 PackedData src_host = acCreatePackedDataHost(dims);
                                 PackedData dst_host = acCreatePackedDataHost(dims);
                                 acTransferPackedDataToHost(src, &src_host);
+                                acDeviceSynchronizeStream(device, STREAM_ALL);
                                 ////////////////////////////////////////////////////////
 
                                 const int3 pid3d = getPid3D(pid, decomp);
@@ -2564,10 +2572,14 @@ acDeviceRunMPITest(void)
         // const float dt = FLT_EPSILON; // TODO
         // acDeviceIntegrateStepMPI(device, dt); // TODO
         // acDeviceBoundStepMPI(device); TODO
+        acDeviceSynchronizeStream(device, STREAM_ALL);
+        MPI_Barrier(MPI_COMM_WORLD);
         acDeviceCommunicateHalosMPI(device);
         acDeviceSynchronizeStream(device, STREAM_ALL);
+        MPI_Barrier(MPI_COMM_WORLD);
 
-        // acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh); // TODO re-enable
+        acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
+        acDeviceSynchronizeStream(device, STREAM_DEFAULT);
         acDeviceGatherMeshMPI(submesh, decomposition, &candidate);
         if (pid == 0) {
             // acModelIntegrateStep(model, FLT_EPSILON); // TODO
