@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2020, Johannes Pekkila, Miikka Vaisala.
 
     This file is part of Astaroth.
 
@@ -41,16 +41,48 @@ typedef struct {
     Grid subgrid;
 } DeviceConfiguration;
 
-/** */
+/**
+Initializes all devices on the current node.
+
+Devices on the node are configured based on the contents of AcMesh.
+
+@return Exit status. Places the newly created handle in the output parameter.
+@see AcMeshInfo
+
+
+Usage example:
+@code
+AcMeshInfo info;
+acLoadConfig(AC_DEFAULT_CONFIG, &info);
+
+Node node;
+acNodeCreate(0, info, &node);
+acNodeDestroy(node);
+@endcode
+ */
 AcResult acNodeCreate(const int id, const AcMeshInfo node_config, Node* node);
 
-/** */
+/**
+Resets all devices on the current node.
+
+@see acNodeCreate()
+ */
 AcResult acNodeDestroy(Node node);
 
-/** */
+/**
+Prints information about the devices available on the current node.
+
+Requires that Node has been initialized with
+@See acNodeCreate().
+*/
 AcResult acNodePrintInfo(const Node node);
 
-/** */
+/**
+
+
+
+@see DeviceConfiguration
+*/
 AcResult acNodeQueryDeviceConfiguration(const Node node, DeviceConfiguration* config);
 
 /** */

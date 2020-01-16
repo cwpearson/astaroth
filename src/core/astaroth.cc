@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2020, Johannes Pekkila, Miikka Vaisala.
 
     This file is part of Astaroth.
 
@@ -34,8 +34,10 @@ const char* scalararray_names[] = {AC_FOR_SCALARARRAY_HANDLES(AC_GEN_STR)};
 const char* vtxbuf_names[]      = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
 #undef AC_GEN_STR
 
-static const int num_nodes = 1;
-static Node nodes[num_nodes];
+static const int max_num_nodes   = 1;
+static Node nodes[max_num_nodes] = {0};
+
+static int num_nodes = 0;
 
 void
 acPrintMeshInfo(const AcMeshInfo config)
@@ -55,12 +57,14 @@ acPrintMeshInfo(const AcMeshInfo config)
 AcResult
 acInit(const AcMeshInfo mesh_info)
 {
+    num_nodes = 1;
     return acNodeCreate(0, mesh_info, &nodes[0]);
 }
 
 AcResult
 acQuit(void)
 {
+    num_nodes = 0;
     return acNodeDestroy(nodes[0]);
 }
 
@@ -175,4 +179,11 @@ acGetNumDevicesPerNode(void)
     int num_devices;
     ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(&num_devices));
     return num_devices;
+}
+
+Node
+acGetNode(void)
+{
+    ERRCHK_ALWAYS(num_nodes > 0);
+    return nodes[0];
 }

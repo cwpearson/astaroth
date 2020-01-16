@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2020, Johannes Pekkila, Miikka Vaisala.
 
     This file is part of Astaroth.
 
@@ -41,7 +41,6 @@ main(void)
     acMeshRandomize(&model);
     acMeshApplyPeriodicBounds(&model);
 
-    // TODO load to candidate
     ////////////////////////////////////////////////////////////////////////////////////////////////
     acInit(info);
     acLoad(model);

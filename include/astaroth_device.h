@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2020, Johannes Pekkila, Miikka Vaisala.
 
     This file is part of Astaroth.
 
@@ -16,6 +16,13 @@
     You should have received a copy of the GNU General Public License
     along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
 */
+/**
+ * @file Single-Device Interface
+ * \brief Provides functions for controlling a single device.
+ *
+ * Detailed info.
+ *
+ */
 #pragma once
 
 #ifdef __cplusplus

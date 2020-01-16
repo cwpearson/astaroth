@@ -1,5 +1,5 @@
 '''
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2020, Johannes Pekkila, Miikka Vaisala.
 
     This file is part of Astaroth.
 
@@ -21,6 +21,12 @@
 
 import numpy as np
 
+#Optional YT interface
+try:
+    import yt
+    yt_present = True 
+except ImportError:
+    yt_present = False
 
 def set_dtype(endian, AcRealSize):
     if endian == 0:
@@ -55,7 +61,8 @@ def read_bin(fname, fdir, fnum, minfo, numtype=np.longdouble):
      
     return array, timestamp, read_ok 
 
-def read_meshtxt(fdir, fname):
+def read_meshtxt(fdir, fname, dbg_output):
+
     with open(fdir+fname) as f:
         filetext = f.read().splitlines()
 
@@ -65,30 +72,33 @@ def read_meshtxt(fdir, fname):
         line = line.split()
         if line[0] == 'int':
             contents[line[1]] = np.int(line[2])
-            print(line[1], contents[line[1]])
+            if dbg_output:
+                print(line[1], contents[line[1]])
         elif line[0] == 'size_t':
             contents[line[1]] = np.int(line[2])
-            print(line[1], contents[line[1]])
+            if dbg_output:
+                print(line[1], contents[line[1]])
         elif line[0] == 'int3':
             contents[line[1]] = [np.int(line[2]), np.int(line[3]), np.int(line[4])]
-            print(line[1], contents[line[1]])
+            if dbg_output:
+                print(line[1], contents[line[1]])
         elif line[0] == 'real':
             contents[line[1]] = np.float(line[2])
-            print(line[1], contents[line[1]])
+            if dbg_output:
+                print(line[1], contents[line[1]])
         elif line[0] == 'real3':
             contents[line[1]] = [np.float(line[2]), np.float(line[3]), np.float(line[4])]
-            print(line[1], contents[line[1]])
+            if dbg_output:
+                print(line[1], contents[line[1]])
         else: 
             print(line)
             print('ERROR: ' + line[0] +' not recognized!')
 
     return contents
 
-#Now just 2nd order
 def DERX(array, dx):
     output = np.zeros_like(array)
     for i in range(3, array.shape[0]-3): #Keep boundary poits as 0
-        #output[i,:,:] = (- array[i-1,:,:] + array[i+1,:,:])/(2.0*dx)
         output[i,:,:] =( -45.0*array[i-1,:,:] + 45.0*array[i+1,:,:]
                          + 9.0*array[i-2,:,:] -  9.0*array[i+2,:,:]
                          -     array[i-3,:,:] +      array[i+3,:,:] )/(60.0*dx)
@@ -97,7 +107,6 @@ def DERX(array, dx):
 def DERY(array, dy):
     output = np.zeros_like(array)
     for i in range(3,array.shape[1]-3):
-        #output[:,i,:] = (- array[:,i-1,:] + array[:,i+1,:])/(2.0*dy)
         output[:,i,:] =( -45.0*array[:,i-1,:] + 45.0*array[:,i+1,:]
                          + 9.0*array[:,i-2,:] -  9.0*array[:,i+2,:]
                          -     array[:,i-3,:] +      array[:,i+3,:] )/(60.0*dy)
@@ -106,7 +115,6 @@ def DERY(array, dy):
 def DERZ(array, dz):
     output = np.zeros_like(array)
     for i in range(3, array.shape[2]-3):
-        #output[:,:,i] = (- array[:,:,i-1] + array[:,:,i+1])/(2.0*dz)
         output[:,:,i] =( -45.0*array[:,:,i-1] + 45.0*array[:,:,i+1]
                          + 9.0*array[:,:,i-2] -  9.0*array[:,:,i+2]
                          -     array[:,:,i-3] +      array[:,:,i+3] )/(60.0*dz)
@@ -124,8 +132,8 @@ def curl(aa, minfo):
 class MeshInfo():
     '''Object that contains all mesh info'''
 
-    def __init__(self, fdir):
-        self.contents = read_meshtxt(fdir, 'mesh_info.list') 
+    def __init__(self, fdir, dbg_output=False):
+        self.contents = read_meshtxt(fdir, 'mesh_info.list', dbg_output) 
 
 class Mesh:
     '''Class tha contains all 3d mesh data'''
@@ -176,9 +184,88 @@ class Mesh:
             self.xmid = int(self.minfo.contents['AC_mx']/2)
             self.ymid = int(self.minfo.contents['AC_my']/2)
             self.zmid = int(self.minfo.contents['AC_mz']/2)
-    def Bfield(self):
+    def Bfield(self, get_jj = False):
         self.bb = curl(self.aa, self.minfo) 
-        print(self.bb[2]) 
+        if get_jj:
+            self.jj = curl(self.bb, self.minfo) 
+
+    def yt_conversion(self):
+        if yt_present:
+            self.ytdict = dict(density = (np.exp(self.lnrho)*self.minfo.contents['AC_unit_density'], "g/cm**3"),
+                               uux     = (self.uu[0]*self.minfo.contents['AC_unit_velocity'], "cm/s"),
+                               uuy     = (self.uu[1]*self.minfo.contents['AC_unit_velocity'], "cm/s"),
+                               uuz     = (self.uu[2]*self.minfo.contents['AC_unit_velocity'], "cm/s"),
+                               bbx     = (self.bb[0]*self.minfo.contents['AC_unit_magnetic'], "gauss"),
+                               bby     = (self.bb[1]*self.minfo.contents['AC_unit_magnetic'], "gauss"),
+                               bbz     = (self.bb[2]*self.minfo.contents['AC_unit_magnetic'], "gauss"),
+                               )
+            bbox = self.minfo.contents['AC_unit_length'] \
+                   *np.array([[self.xx.min(), self.xx.max()], [self.yy.min(), self.yy.max()], [self.zz.min(), self.zz.max()]])
+            self.ytdata = yt.load_uniform_grid(self.ytdict, self.lnrho.shape, length_unit="cm", bbox=bbox)
+        else:
+            print("ERROR. No YT support found!")
+
+    def export_csv(self):
+        csvfile = open("grid.csv.%s" % self.framenum, "w")
+        csvfile.write("xx, yy, zz, rho, uux, uuy, uuz, bbx, bby, bbz\n")
+        ul = self.minfo.contents['AC_unit_length']
+        uv = self.minfo.contents['AC_unit_velocity']
+        ud = self.minfo.contents['AC_unit_density']
+        um = self.minfo.contents['AC_unit_magnetic']
+        for kk in np.arange(3, self.zz.size-3):
+            for jj in np.arange(3, self.yy.size-3):
+                for ii in np.arange(3, self.xx.size-3):
+                    #print(self.xx.size, self.yy.size, self.zz.size)
+                    linestring = "%e, %e, %e, %e, %e, %e, %e, %e, %e, %e\n"% (self.xx[ii]*ul, self.yy[jj]*ul, self.zz[kk]*ul, 
+                                                                              np.exp(self.lnrho[ii, jj, kk])*ud,
+                                                                              self.uu[0][ii, jj, kk]*uv, self.uu[1][ii, jj, kk]*uv, 
+                                                                              self.uu[2][ii, jj, kk]*uv,
+                                                                              self.bb[0][ii, jj, kk]*um, self.bb[1][ii, jj, kk]*um, 
+                                                                              self.bb[2][ii, jj, kk]*um)
+                    csvfile.write(linestring)  
+        csvfile.close()
+
+    def export_raw(self):
+        uv = self.minfo.contents['AC_unit_velocity']
+        ud = self.minfo.contents['AC_unit_density']
+        um = self.minfo.contents['AC_unit_magnetic']
+        print(self.lnrho.shape, set_dtype(self.minfo.contents['endian'], self.minfo.contents['AcRealSize']))
+
+        f = open("rho%s.raw" % self.framenum, 'w+b')
+        binary_format =(np.exp(self.lnrho)*ud).tobytes()
+        f.write(binary_format)
+        f.close()
+
+        f = open("uux%s.raw" % self.framenum, 'w+b')
+        binary_format =(self.uu[0]*uv).tobytes()
+        f.write(binary_format)
+        f.close()
+
+        f = open("uuy%s.raw" % self.framenum, 'w+b')
+        binary_format =(self.uu[1]*uv).tobytes()
+        f.write(binary_format)
+        f.close()
+
+        f = open("uuz%s.raw" % self.framenum, 'w+b')
+        binary_format =(self.uu[2]*uv).tobytes()
+        f.write(binary_format)
+        f.close()
+
+        f = open("bbx%s.raw" % self.framenum, 'w+b')
+        binary_format =(self.bb[0]*um).tobytes()
+        f.write(binary_format)
+        f.close()
+
+        f = open("bby%s.raw" % self.framenum, 'w+b')
+        binary_format =(self.bb[1]*um).tobytes()
+        f.write(binary_format)
+        f.close()
+
+        f = open("bbz%s.raw" % self.framenum, 'w+b')
+        binary_format =(self.bb[2]*um).tobytes()
+        f.write(binary_format)
+        f.close()
+
 
 
 def parse_ts(fdir, fname):
