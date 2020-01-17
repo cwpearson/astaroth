@@ -600,6 +600,8 @@ acDeviceRunMPITest(void)
 #include "src/utils/memory.h"
 #include "src/utils/verification.h"
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 static int
 mod(const int a, const int b)
 {
@@ -735,13 +737,6 @@ acDeviceDistributeMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* ds
         dst->info.int_params[AC_nx],
         dst->info.int_params[AC_ny],
         dst->info.int_params[AC_nz],
-    };
-
-    // Submesh mm
-    const int3 mm = (int3){
-        dst->info.int_params[AC_mx],
-        dst->info.int_params[AC_my],
-        dst->info.int_params[AC_mz],
     };
 
     // Send to self
@@ -880,11 +875,11 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
 }
 
 static AcResult
-acDeviceCommunicateBlocksMPI(const Device device,     //
-                             const int3* a0s,         // Src idx inside comp. domain
-                             const int3* b0s,         // Dst idx inside bound zone
-                             const int mapping_count, // Num a0s and b0s
-                             const int3 dims)         // Block size
+acDeviceCommunicateBlocksMPI(const Device device,        //
+                             const int3* a0s,            // Src idx inside comp. domain
+                             const int3* b0s,            // Dst idx inside bound zone
+                             const size_t mapping_count, // Num a0s and b0s
+                             const int3 dims)            // Block size
 {
     cudaSetDevice(device->id);
     acDeviceSynchronizeStream(device, STREAM_ALL);
@@ -1008,7 +1003,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         };
         const int3 dims = (int3){NGHOST, NGHOST, NGHOST};
 
-        const int mapping_count = sizeof(a0s) / sizeof(a0s[0]);
+        const size_t mapping_count = ARRAY_SIZE(a0s);
         acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
     }
     { // Edges X
@@ -1028,7 +1023,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         };
         const int3 dims = (int3){nn.x, NGHOST, NGHOST};
 
-        const int mapping_count = sizeof(a0s) / sizeof(a0s[0]);
+        const size_t mapping_count = ARRAY_SIZE(a0s);
         acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
     }
     { // Edges Y
@@ -1048,7 +1043,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         };
         const int3 dims = (int3){NGHOST, nn.y, NGHOST};
 
-        const int mapping_count = sizeof(a0s) / sizeof(a0s[0]);
+        const size_t mapping_count = ARRAY_SIZE(a0s);
         acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
     }
     { // Edges Z
@@ -1069,7 +1064,7 @@ acDeviceCommunicateHalosMPI(const Device device)
 
         const int3 dims = (int3){NGHOST, NGHOST, nn.z};
 
-        const int mapping_count = sizeof(a0s) / sizeof(a0s[0]);
+        const size_t mapping_count = ARRAY_SIZE(a0s);
         acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
     }
 
@@ -1084,7 +1079,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         };
         const int3 dims = (int3){nn.x, nn.y, NGHOST};
 
-        const int mapping_count = sizeof(a0s) / sizeof(a0s[0]);
+        const size_t mapping_count = ARRAY_SIZE(a0s);
         acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
     }
     { // Sides XZ
@@ -1098,7 +1093,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         };
         const int3 dims = (int3){nn.x, NGHOST, nn.z};
 
-        const int mapping_count = sizeof(a0s) / sizeof(a0s[0]);
+        const size_t mapping_count = ARRAY_SIZE(a0s);
         acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
     }
     { // Sides YZ
@@ -1112,7 +1107,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         };
         const int3 dims = (int3){NGHOST, nn.y, nn.z};
 
-        const int mapping_count = sizeof(a0s) / sizeof(a0s[0]);
+        const size_t mapping_count = ARRAY_SIZE(a0s);
         acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
     }
     return AC_SUCCESS;
@@ -1216,7 +1211,7 @@ acDeviceRunMPITest(void)
     if (pid == 0) {
         acMeshApplyPeriodicBounds(&model);
 
-        const bool valid = acVerifyMesh(model, candidate);
+        acVerifyMesh(model, candidate);
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
     }
