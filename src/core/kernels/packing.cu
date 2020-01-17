@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2014-2019, Johannes Pekkilae, Miikka Vaeisalae.
+    Copyright (C) 2014-2020, Johannes Pekkilae, Miikka Vaeisalae.
 
     This file is part of Astaroth.
 
