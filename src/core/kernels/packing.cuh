@@ -28,15 +28,6 @@
 #include "astaroth.h"
 #include "common.cuh"
 
-/*
-AcResult acKernelPackData(const cudaStream_t stream, const AcReal* unpacked,
-                          const int3 unpacked_start, const int3 packed_dimensions, AcReal* packed);
-
-AcResult acKernelUnpackData(const cudaStream_t stream, const AcReal* packed,
-                            const int3 packed_dimensions, const int3 unpacked_start,
-                            AcReal* unpacked);
-*/
-
 typedef struct {
     int3 dims;
     AcReal* data;
@@ -47,12 +38,3 @@ AcResult acKernelPackData(const cudaStream_t stream, const VertexBufferArray vba
 
 AcResult acKernelUnpackData(const cudaStream_t stream, const PackedData packed,
                             const int3 vba_start, VertexBufferArray vba);
-
-AcResult acKernelPackCorner(void);
-AcResult acKernelUnpackCorner(void);
-
-AcResult acKernelPackEdge(void);
-AcResult acKernelUnpackEdge(void);
-
-AcResult acKernelPackSide(void);
-AcResult acKernelUnpackSide(void);
