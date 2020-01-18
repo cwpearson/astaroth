@@ -1,6 +1,6 @@
 # Astaroth - A Multi-GPU Library for Generic Stencil Computations {#mainpage}
 
-[Specification](doc/Astaroth_API_specification_and_user_manual/API_specification_and_user_manual.md) | [Contributing](CONTRIBUTING.md) | [Licence](LICENCE.md) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home)
+[Specification](doc/Astaroth_API_specification_and_user_manual/API_specification_and_user_manual.md) | [Contributing](CONTRIBUTING.md) | [Licence](LICENCE.md) | [Repository](https://bitbucket.org/jpekkila/astaroth) | [Issue Tracker](https://bitbucket.org/jpekkila/astaroth/issues?status=new&status=open) | [Wiki](https://bitbucket.org/jpekkila/astaroth/wiki/Home)
 
 Astaroth is a multi-GPU library for three-dimensional stencil computations. It is designed especially for performing high-order stencil
 computations in structured grids, where several coupled fields are updated each time step. Astaroth consists of a multi-GPU and single-GPU
