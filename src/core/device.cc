@@ -598,6 +598,7 @@ acDeviceRunMPITest(void)
 // From Astaroth Utils
 #include "src/utils/config_loader.h"
 #include "src/utils/memory.h"
+#include "src/utils/timer_hires.h"
 #include "src/utils/verification.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
@@ -874,12 +875,11 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
     return AC_SUCCESS;
 }
 
-static AcResult
-acDeviceCommunicateBlocksMPI(const Device device,        //
-                             const int3* a0s,            // Src idx inside comp. domain
-                             const int3* b0s,            // Dst idx inside bound zone
-                             const size_t mapping_count, // Num a0s and b0s
-                             const int3 dims)            // Block size
+static AcResult acDeviceCommunicateBlocksMPI(const Device device, //
+                                             const int3* a0s,     // Src idx inside comp. domain
+                                             const int3* b0s,     // Dst idx inside bound zone
+                                             const size_t mapping_count, // Num a0s and b0s
+                                             const int3 dims)            // Block size
 {
     cudaSetDevice(device->id);
     acDeviceSynchronizeStream(device, STREAM_ALL);
@@ -1196,9 +1196,25 @@ acDeviceRunMPITest(void)
     MPI_Barrier(MPI_COMM_WORLD);
     //////////////////////////////////////////////////////////////
 
+    // TIMING START //////////////////////////////////////////////
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+    Timer t;
+    timer_reset(&t);
+    //////////////////////////////////////////////////////////////
+
     // INTEGRATION & BOUNDCONDS////////////////////////////////////
     acDeviceCommunicateHalosMPI(device);
     ///////////////////////////////////////////////////////////////
+
+    // TIMING END //////////////////////////////////////////////
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (!pid) {
+        timer_diff_print(t);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    //////////////////////////////////////////////////////////////
 
     // STORE & GATHER /////////////////////////////////////////////
     MPI_Barrier(MPI_COMM_WORLD);
