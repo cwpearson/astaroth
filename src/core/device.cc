@@ -1113,6 +1113,366 @@ acDeviceCommunicateHalosMPI(const Device device)
     return AC_SUCCESS;
 }
 
+typedef struct {
+    PackedData* srcs;
+    PackedData* dsts;
+    PackedData* srcs_host;
+    PackedData* dsts_host;
+    int3 dims;
+    size_t count;
+
+    MPI_Request* send_reqs;
+    MPI_Request* recv_reqs;
+} CommData;
+
+static CommData
+acCreateCommData(const Device device, const int3 dims, const size_t count)
+{
+    cudaSetDevice(device->id);
+
+    CommData data = {};
+
+    data.srcs      = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dsts      = (PackedData*)malloc(count * sizeof(PackedData));
+    data.srcs_host = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dsts_host = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dims      = dims;
+    data.count     = count;
+
+    data.send_reqs = (MPI_Request*)malloc(count * sizeof(MPI_Request));
+    data.recv_reqs = (MPI_Request*)malloc(count * sizeof(MPI_Request));
+
+    ERRCHK_ALWAYS(data.srcs);
+    ERRCHK_ALWAYS(data.dsts);
+    ERRCHK_ALWAYS(data.srcs_host);
+    ERRCHK_ALWAYS(data.dsts_host);
+    ERRCHK_ALWAYS(data.send_reqs);
+    ERRCHK_ALWAYS(data.recv_reqs);
+
+    for (size_t i = 0; i < count; ++i) {
+        data.srcs[i]      = acCreatePackedData(dims);
+        data.dsts[i]      = acCreatePackedData(dims);
+        data.srcs_host[i] = acCreatePackedDataHost(dims);
+        data.dsts_host[i] = acCreatePackedDataHost(dims);
+    }
+
+    return data;
+}
+
+static void
+acDestroyCommData(const Device device, CommData* data)
+{
+    cudaSetDevice(device->id);
+
+    for (size_t i = 0; i < data->count; ++i) {
+        acDestroyPackedData(&data->srcs[i]);
+        acDestroyPackedData(&data->dsts[i]);
+        acDestroyPackedDataHost(&data->srcs_host[i]);
+        acDestroyPackedDataHost(&data->dsts_host[i]);
+    }
+
+    free(data->srcs);
+    free(data->dsts);
+    free(data->srcs_host);
+    free(data->dsts_host);
+
+    free(data->send_reqs);
+    free(data->recv_reqs);
+
+    data->count = -1;
+    data->dims  = (int3){-1, -1, -1};
+}
+
+static void
+acPackCommData(const Device device, const int3* a0s, const size_t count, CommData* data)
+{
+    cudaSetDevice(device->id);
+    cudaStream_t stream = device->streams[STREAM_DEFAULT];
+
+    for (size_t i = 0; i < count; ++i)
+        acKernelPackData(stream, device->vba, a0s[i], data->srcs[i]);
+
+    // HOST
+    acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+    for (size_t i = 0; i < count; ++i)
+        acTransferPackedDataToHost(data->srcs[i], &data->srcs_host[i]);
+    //////
+}
+
+static void
+acUnpackCommData(const Device device, const int3* b0s, const size_t count, CommData* data)
+{
+    cudaSetDevice(device->id);
+    cudaStream_t stream = device->streams[STREAM_DEFAULT];
+
+    // HOST
+    for (size_t i = 0; i < count; ++i)
+        acTransferPackedDataToDevice(data->dsts_host[i], &data->dsts[i]);
+
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    //////
+
+    for (size_t i = 0; i < count; ++i)
+        acKernelUnpackData(stream, data->dsts[i], b0s[i], device->vba);
+}
+
+static AcResult
+acTransferCommData(const Device device, //
+                   const int3* a0s,     // Src idx inside comp. domain
+                   const int3* b0s,     // Dst idx inside bound zone
+                   CommData* data)
+{
+    cudaSetDevice(device->id);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const int3 decomp = decompose(nprocs);
+
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    const int3 dims         = data->dims;
+    const size_t blockcount = data->count;
+
+    for (int k = -1; k <= 1; ++k) {
+        for (int j = -1; j <= 1; ++j) {
+            for (int i = -1; i <= 1; ++i) {
+                if (i == 0 && j == 0 && k == 0)
+                    continue;
+
+                for (size_t a_idx = 0; a_idx < blockcount; ++a_idx) {
+                    for (size_t b_idx = 0; b_idx < blockcount; ++b_idx) {
+                        const int3 neighbor = (int3){i, j, k};
+
+                        const int3 a0 = a0s[a_idx];
+                        // const int3 a1 = a0 + dims;
+
+                        const int3 b0 = a0 - neighbor * nn;
+                        // const int3 b1 = a1 - neighbor * nn;
+
+                        if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
+
+                            const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                            // PackedData src = data->srcs[a_idx];
+                            // PackedData dst = data->dsts[b_idx];
+                            PackedData src = data->srcs_host[a_idx];
+                            PackedData dst = data->dsts_host[b_idx];
+
+                            const int3 pid3d = getPid3D(pid, decomp);
+                            MPI_Request send_req, recv_req;
+                            MPI_Isend(src.data, count, datatype, getPid(pid3d + neighbor, decomp),
+                                      b_idx, MPI_COMM_WORLD, &send_req);
+                            MPI_Irecv(dst.data, count, datatype, getPid(pid3d - neighbor, decomp),
+                                      b_idx, MPI_COMM_WORLD, &recv_req);
+
+                            data->send_reqs[b_idx] = send_req;
+                            data->recv_reqs[b_idx] = recv_req;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return AC_SUCCESS;
+}
+
+static void
+acTransferCommDataWait(const CommData data)
+{
+    for (size_t i = 0; i < data.count; ++i) {
+        MPI_Wait(&data.send_reqs[i], MPI_STATUS_IGNORE);
+        MPI_Wait(&data.recv_reqs[i], MPI_STATUS_IGNORE);
+    }
+}
+
+static AcResult
+acDeviceCommunicateHalosMPIAlt(const Device device)
+{
+    // Configure
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    // Corners
+    const int3 corner_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+        (int3){NGHOST, nn.y, NGHOST},   //
+        (int3){nn.x, nn.y, NGHOST},     //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+        (int3){NGHOST, nn.y, nn.z},   //
+        (int3){nn.x, nn.y, nn.z},
+    };
+    const int3 corner_b0s[] = {
+        (int3){0, 0, 0},
+        (int3){NGHOST + nn.x, 0, 0},
+        (int3){0, NGHOST + nn.y, 0},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
+
+        (int3){0, 0, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
+        (int3){0, NGHOST + nn.y, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
+    };
+    const int3 corner_dims = (int3){NGHOST, NGHOST, NGHOST};
+
+    // Edges X
+    const int3 edgex_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){NGHOST, nn.y, nn.z},   //
+    };
+    const int3 edgex_b0s[] = {
+        (int3){NGHOST, 0, 0},
+        (int3){NGHOST, NGHOST + nn.y, 0},
+
+        (int3){NGHOST, 0, NGHOST + nn.z},
+        (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
+    };
+    const int3 edgex_dims = (int3){nn.x, NGHOST, NGHOST};
+
+    // Edges Y
+    const int3 edgey_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+    };
+    const int3 edgey_b0s[] = {
+        (int3){0, NGHOST, 0},
+        (int3){NGHOST + nn.x, NGHOST, 0},
+
+        (int3){0, NGHOST, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
+    };
+    const int3 edgey_dims = (int3){NGHOST, nn.y, NGHOST};
+
+    // Edges Z
+    const int3 edgez_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, nn.y, NGHOST}, //
+        (int3){nn.x, nn.y, NGHOST},   //
+    };
+    const int3 edgez_b0s[] = {
+        (int3){0, 0, NGHOST},
+        (int3){NGHOST + nn.x, 0, NGHOST},
+
+        (int3){0, NGHOST + nn.y, NGHOST},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
+    };
+
+    const int3 edgez_dims = (int3){NGHOST, NGHOST, nn.z};
+
+    // Sides XY
+    const int3 sidexy_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, NGHOST, nn.z},   //
+    };
+    const int3 sidexy_b0s[] = {
+        (int3){NGHOST, NGHOST, 0},             //
+        (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
+    };
+    const int3 sidexy_dims = (int3){nn.x, nn.y, NGHOST};
+
+    // Sides XZ
+    const int3 sidexz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+    };
+    const int3 sidexz_b0s[] = {
+        (int3){NGHOST, 0, NGHOST},             //
+        (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
+    };
+    const int3 sidexz_dims = (int3){nn.x, NGHOST, nn.z};
+
+    // Sides YZ
+    const int3 sideyz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+    };
+    const int3 sideyz_b0s[] = {
+        (int3){0, NGHOST, NGHOST},             //
+        (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
+    };
+    const int3 sideyz_dims = (int3){NGHOST, nn.y, nn.z};
+
+    // Alloc
+    CommData corner_data = acCreateCommData(device, corner_dims, ARRAY_SIZE(corner_a0s));
+    CommData edgex_data  = acCreateCommData(device, edgex_dims, ARRAY_SIZE(edgex_a0s));
+    CommData edgey_data  = acCreateCommData(device, edgey_dims, ARRAY_SIZE(edgey_a0s));
+    CommData edgez_data  = acCreateCommData(device, edgez_dims, ARRAY_SIZE(edgez_a0s));
+    CommData sidexy_data = acCreateCommData(device, sidexy_dims, ARRAY_SIZE(sidexy_a0s));
+    CommData sidexz_data = acCreateCommData(device, sidexz_dims, ARRAY_SIZE(sidexz_a0s));
+    CommData sideyz_data = acCreateCommData(device, sideyz_dims, ARRAY_SIZE(sideyz_a0s));
+
+    Timer ttot;
+    timer_reset(&ttot);
+
+    acPackCommData(device, corner_a0s, ARRAY_SIZE(corner_a0s), &corner_data);
+    acPackCommData(device, edgex_a0s, ARRAY_SIZE(edgex_a0s), &edgex_data);
+    acPackCommData(device, edgey_a0s, ARRAY_SIZE(edgey_a0s), &edgey_data);
+    acPackCommData(device, edgez_a0s, ARRAY_SIZE(edgez_a0s), &edgez_data);
+    acPackCommData(device, sidexy_a0s, ARRAY_SIZE(sidexy_a0s), &sidexy_data);
+    acPackCommData(device, sidexz_a0s, ARRAY_SIZE(sidexz_a0s), &sidexz_data);
+    acPackCommData(device, sideyz_a0s, ARRAY_SIZE(sideyz_a0s), &sideyz_data);
+
+    acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+    acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+    acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+    acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+    acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+    acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+    acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+
+    acTransferCommDataWait(corner_data);
+    acTransferCommDataWait(edgex_data);
+    acTransferCommDataWait(edgey_data);
+    acTransferCommDataWait(edgez_data);
+    acTransferCommDataWait(sidexy_data);
+    acTransferCommDataWait(sidexz_data);
+    acTransferCommDataWait(sideyz_data);
+
+    acUnpackCommData(device, corner_b0s, ARRAY_SIZE(corner_b0s), &corner_data);
+    acUnpackCommData(device, edgex_b0s, ARRAY_SIZE(edgex_b0s), &edgex_data);
+    acUnpackCommData(device, edgey_b0s, ARRAY_SIZE(edgey_b0s), &edgey_data);
+    acUnpackCommData(device, edgez_b0s, ARRAY_SIZE(edgez_b0s), &edgez_data);
+    acUnpackCommData(device, sidexy_b0s, ARRAY_SIZE(sidexy_b0s), &sidexy_data);
+    acUnpackCommData(device, sidexz_b0s, ARRAY_SIZE(sidexz_b0s), &sidexz_data);
+    acUnpackCommData(device, sideyz_b0s, ARRAY_SIZE(sideyz_b0s), &sideyz_data);
+
+    printf("Total: ");
+    timer_diff_print(ttot);
+
+    acDestroyCommData(device, &corner_data);
+    acDestroyCommData(device, &edgex_data);
+    acDestroyCommData(device, &edgey_data);
+    acDestroyCommData(device, &edgez_data);
+    acDestroyCommData(device, &sidexy_data);
+    acDestroyCommData(device, &sidexz_data);
+    acDestroyCommData(device, &sideyz_data);
+
+    return AC_SUCCESS;
+}
+
 AcResult
 acDeviceRunMPITest(void)
 {
@@ -1204,7 +1564,8 @@ acDeviceRunMPITest(void)
     //////////////////////////////////////////////////////////////
 
     // INTEGRATION & BOUNDCONDS////////////////////////////////////
-    acDeviceCommunicateHalosMPI(device);
+    // acDeviceCommunicateHalosMPI(device);
+    acDeviceCommunicateHalosMPIAlt(device);
     ///////////////////////////////////////////////////////////////
 
     // TIMING END //////////////////////////////////////////////
