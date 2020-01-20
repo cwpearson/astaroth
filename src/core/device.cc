@@ -1283,11 +1283,8 @@ acTransferCommData(const Device device, //
                             PackedData dst = data->dsts_host[b_idx];
 
                             const int3 pid3d = getPid3D(pid, decomp);
-                            MPI_Request recv_req;
                             MPI_Irecv(dst.data, count, datatype, getPid(pid3d - neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &recv_req);
-
-                            data->recv_reqs[b_idx] = recv_req;
+                                      b_idx, MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
                         }
                     }
                 }
@@ -1321,13 +1318,10 @@ acTransferCommData(const Device device, //
                             // PackedData dst = data->dsts_host[b_idx];
 
                             const int3 pid3d = getPid3D(pid, decomp);
-                            MPI_Request send_req;
 
                             cudaStreamSynchronize(data->streams[a_idx]);
                             MPI_Isend(src.data, count, datatype, getPid(pid3d + neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &send_req);
-
-                            data->send_reqs[b_idx] = send_req;
+                                      b_idx, MPI_COMM_WORLD, &data->send_reqs[b_idx]);
                         }
                     }
                 }
