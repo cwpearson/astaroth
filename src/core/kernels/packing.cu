@@ -96,7 +96,7 @@ acKernelPackData(const cudaStream_t stream, const VertexBufferArray vba, const i
                    (unsigned int)ceil(packed.dims.z / (float)tpb.z));
 
     kernel_pack_data<<<bpg, tpb, 0, stream>>>(vba, vba_start, packed);
-    ERRCHK_CUDA_KERNEL_ALWAYS(); // TODO SET W/ DEBUG ONLY
+    ERRCHK_CUDA_KERNEL();
 
     return AC_SUCCESS;
 }
@@ -111,6 +111,6 @@ acKernelUnpackData(const cudaStream_t stream, const PackedData packed, const int
                    (unsigned int)ceil(packed.dims.z / (float)tpb.z));
 
     kernel_unpack_data<<<bpg, tpb, 0, stream>>>(packed, vba_start, vba);
-    ERRCHK_CUDA_KERNEL_ALWAYS(); // TODO SET W/ DEBUG ONLY
+    ERRCHK_CUDA_KERNEL();
     return AC_SUCCESS;
 }
