@@ -690,19 +690,25 @@ acCreatePackedDataHost(const int3 dims)
 }
 
 static void
-acTransferPackedDataToHost(const PackedData ddata, PackedData* hdata)
+acTransferPackedDataToHost(const Device device, const cudaStream_t stream, const PackedData ddata,
+                           PackedData* hdata)
 {
+    cudaSetDevice(device->id);
+
     const size_t bytes = ddata.dims.x * ddata.dims.y * ddata.dims.z * sizeof(ddata.data[0]) *
                          NUM_VTXBUF_HANDLES;
-    ERRCHK_CUDA_ALWAYS(cudaMemcpy(hdata->data, ddata.data, bytes, cudaMemcpyDeviceToHost));
+    ERRCHK_CUDA(cudaMemcpyAsync(hdata->data, ddata.data, bytes, cudaMemcpyDeviceToHost, stream));
 }
 
 static void
-acTransferPackedDataToDevice(const PackedData hdata, PackedData* ddata)
+acTransferPackedDataToDevice(const Device device, const cudaStream_t stream, const PackedData hdata,
+                             PackedData* ddata)
 {
+    cudaSetDevice(device->id);
+
     const size_t bytes = hdata.dims.x * hdata.dims.y * hdata.dims.z * sizeof(hdata.data[0]) *
                          NUM_VTXBUF_HANDLES;
-    ERRCHK_CUDA_ALWAYS(cudaMemcpy(ddata->data, hdata.data, bytes, cudaMemcpyHostToDevice));
+    ERRCHK_CUDA(cudaMemcpyAsync(ddata->data, hdata.data, bytes, cudaMemcpyHostToDevice, stream));
 }
 
 static AcResult
@@ -930,7 +936,8 @@ static AcResult acDeviceCommunicateBlocksMPI(const Device device, //
                             // Host ////////////////////////////////////////////////
                             PackedData src_host = acCreatePackedDataHost(dims);
                             PackedData dst_host = acCreatePackedDataHost(dims);
-                            acTransferPackedDataToHost(src, &src_host);
+                            acTransferPackedDataToHost(device, device->streams[STREAM_DEFAULT], src,
+                                                       &src_host);
                             acDeviceSynchronizeStream(device, STREAM_ALL);
                             MPI_Barrier(MPI_COMM_WORLD);
                             ////////////////////////////////////////////////////////
@@ -948,7 +955,8 @@ static AcResult acDeviceCommunicateBlocksMPI(const Device device, //
                             MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
 
                             // Host ////////////////////////////////////////////////
-                            acTransferPackedDataToDevice(dst_host, &dst);
+                            acTransferPackedDataToDevice(device, device->streams[STREAM_DEFAULT],
+                                                         dst_host, &dst);
                             acDeviceSynchronizeStream(device, STREAM_ALL);
                             acDestroyPackedDataHost(&src_host);
                             acDestroyPackedDataHost(&dst_host);
@@ -1187,33 +1195,38 @@ static void
 acPackCommData(const Device device, const int3* a0s, const size_t count, CommData* data)
 {
     cudaSetDevice(device->id);
-    cudaStream_t stream = device->streams[STREAM_DEFAULT];
+
+    cudaStream_t streams[count];
+    for (size_t i = 0; i < count; ++i)
+        cudaStreamCreate(&streams[i]);
 
     for (size_t i = 0; i < count; ++i)
-        acKernelPackData(stream, device->vba, a0s[i], data->srcs[i]);
+        acKernelPackData(streams[i], device->vba, a0s[i], data->srcs[i]);
 
-    // HOST
-    acDeviceSynchronizeStream(device, STREAM_DEFAULT);
     for (size_t i = 0; i < count; ++i)
-        acTransferPackedDataToHost(data->srcs[i], &data->srcs_host[i]);
-    //////
+        acTransferPackedDataToHost(device, streams[i], data->srcs[i], &data->srcs_host[i]);
+
+    for (size_t i = 0; i < count; ++i)
+        cudaStreamDestroy(streams[i]);
 }
 
 static void
 acUnpackCommData(const Device device, const int3* b0s, const size_t count, CommData* data)
 {
     cudaSetDevice(device->id);
-    cudaStream_t stream = device->streams[STREAM_DEFAULT];
 
-    // HOST
+    cudaStream_t streams[count];
     for (size_t i = 0; i < count; ++i)
-        acTransferPackedDataToDevice(data->dsts_host[i], &data->dsts[i]);
-
-    acDeviceSynchronizeStream(device, STREAM_ALL);
-    //////
+        cudaStreamCreate(&streams[i]);
 
     for (size_t i = 0; i < count; ++i)
-        acKernelUnpackData(stream, data->dsts[i], b0s[i], device->vba);
+        acTransferPackedDataToDevice(device, streams[i], data->dsts_host[i], &data->dsts[i]);
+
+    for (size_t i = 0; i < count; ++i)
+        acKernelUnpackData(streams[i], data->dsts[i], b0s[i], device->vba);
+
+    for (size_t i = 0; i < count; ++i)
+        cudaStreamDestroy(streams[i]);
 }
 
 static AcResult
