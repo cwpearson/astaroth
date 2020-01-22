@@ -53,6 +53,8 @@ kernel_pack_data(const VertexBufferArray vba, const int3 vba_start, PackedData p
                            k_packed * packed.dims.x * packed.dims.y;
 
     const size_t vtxbuf_offset = packed.dims.x * packed.dims.y * packed.dims.z;
+
+    //#pragma unroll
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
         packed.data[packed_idx + i * vtxbuf_offset] = vba.in[i][unpacked_idx];
 }
@@ -82,6 +84,8 @@ kernel_unpack_data(const PackedData packed, const int3 vba_start, VertexBufferAr
                            k_packed * packed.dims.x * packed.dims.y;
 
     const size_t vtxbuf_offset = packed.dims.x * packed.dims.y * packed.dims.z;
+
+    //#pragma unroll
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i)
         vba.in[i][unpacked_idx] = packed.data[packed_idx + i * vtxbuf_offset];
 }
