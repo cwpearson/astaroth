@@ -308,7 +308,7 @@ AcResult acNodeSynchronizeVertexBuffer(const Node node, const Stream stream,
 
 ```
 
-> **NOTE**: Local halos must be up to date before synchronizing the data. Local halos are the grid points outside the computational domain which are used only by a single device. The mesh is distributed to multiple devices by blocking along the z axis. If there are *n* devices and the z-dimension of the computational domain is *nz*, then each device is assigned *nz / n* two-dimensional planes. For example with two devices, the data block that has to be up to date ranges from *(0, 0, nz)* to *(mx, my, nz + 2 * NGHOST)*.
+> **Note:** Local halos must be up to date before synchronizing the data. Local halos are the grid points outside the computational domain which are used only by a single device. The mesh is distributed to multiple devices by blocking along the z axis. If there are *n* devices and the z-dimension of the computational domain is *nz*, then each device is assigned *nz / n* two-dimensional planes. For example with two devices, the data block that has to be up to date ranges from *(0, 0, nz)* to *(mx, my, nz + 2 * NGHOST)*.
 
 ## Input and Output Buffers
 
@@ -325,7 +325,7 @@ is done via the API calls
 AcResult acDeviceSwapBuffers(const Device device);
 AcResult acNodeSwapBuffers(const Node node);
 ```
-> **NOTE**: All functions provided with the API operate on input buffers and ensure that the complete result is available in the input buffer when the function has completed. User-specified kernels are exceptions and write the result to output buffers. Therefore buffers have to be swapped only after calling user-specified kernels.
+> **Note:** All functions provided with the API operate on input buffers and ensure that the complete result is available in the input buffer when the function has completed. User-specified kernels are exceptions and write the result to output buffers. Therefore buffers have to be swapped only after calling user-specified kernels.
 
 ## Devices
 
@@ -429,7 +429,7 @@ Let *i* be the device id. The portion of the halos shared by neighboring devices
 `acNodeSynchronizeVertexBuffer` and `acNodeSynchronizeMesh` communicate these shared areas among
 the devices in the node.
 
-> **NOTE:** The decomposition scheme is subject to change.
+> **Note:** The decomposition scheme is subject to change.
 
 # Astaroth Domain-Specific Language
 
@@ -563,11 +563,11 @@ which use those uniforms.
 
 `Uniform`s can be of type `Scalar`, `Vector`, `int`, `int3`, `ScalarField` and `ScalarArray`.
 
-> Note: As of 2019-10-01, the types `ScalarField` (DSL) and `VertexBuffer` (CUDA) are aliases of the same type. This naming may be changed in the future.
+> **Note:** As of 2019-10-01, the types `ScalarField` (DSL) and `VertexBuffer` (CUDA) are aliases of the same type. This naming may be changed in the future.
 
-> Note: As of 2019-10-01, `VectorField`s cannot be declared as uniforms. Instead, one should declare each component as a `ScalarField` and use them to construct a `VectorField` during the stencil processing stage. For example, `in VectorField(A, B, C);`, where `A`, `B` and `C` are `uniform ScalarField`s.
+> **Note:** As of 2019-10-01, `VectorField`s cannot be declared as uniforms. Instead, one should declare each component as a `ScalarField` and use them to construct a `VectorField` during the stencil processing stage. For example, `in VectorField(A, B, C);`, where `A`, `B` and `C` are `uniform ScalarField`s.
 
-> Note: As of 2019-10-01, `uniform`s cannot be assigned values in the stencil definition headers. Instead, one should load the appropriate values during runtime using the `acLoadScalarUniform` and related functions.
+> **Note:** As of 2019-10-01, `uniform`s cannot be assigned values in the stencil definition headers. Instead, one should load the appropriate values during runtime using the `acLoadScalarUniform` and related functions.
 
 
 ## Standard Libraries

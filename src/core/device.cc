@@ -33,6 +33,8 @@
 
 #include "kernels/common.cuh"
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 struct device_s {
     int id;
     AcMeshInfo local_config;
@@ -44,24 +46,13 @@ struct device_s {
     VertexBufferArray vba;
     AcReal* reduce_scratchpad;
     AcReal* reduce_result;
-
-    /*
-    #if AC_MPI_ENABLED
-        // Declare memory for buffers needed for packed data transfers here
-        AcReal* inner[2];
-        AcReal* outer[2];
-
-        AcReal* inner_host[2];
-        AcReal* outer_host[2];
-    #endif
-    */
 };
 
 #include "kernels/boundconds.cuh"
 #include "kernels/integration.cuh"
 #include "kernels/reductions.cuh"
 
-#if PACKED_DATA_TRANSFERS // Defined in device.cuh
+#if PACKED_DATA_TRANSFERS // TODO DEPRECATED, see AC_MPI_ENABLED instead
 // #include "kernels/pack_unpack.cuh"
 #endif
 
@@ -113,21 +104,6 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
                                   acVertexBufferCompdomainSizeBytes(device_config)));
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_result, sizeof(AcReal)));
 
-    /*
-    #if AC_MPI_ENABLED
-        // Allocate data required for packed transfers here (cudaMalloc)
-        const size_t block_size_bytes = device_config.int_params[AC_mx] *
-                                        device_config.int_params[AC_my] * NGHOST *
-    NUM_VTXBUF_HANDLES * sizeof(AcReal); for (int i = 0; i < 2; ++i) {
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->inner[i], block_size_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->outer[i], block_size_bytes));
-
-            ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->inner_host[i], block_size_bytes));
-            ERRCHK_CUDA_ALWAYS(cudaMallocHost(&device->outer_host[i], block_size_bytes));
-        }
-    #endif
-    */
-
     // Device constants
     acDeviceLoadMeshInfo(device, STREAM_DEFAULT, device_config);
 
@@ -160,19 +136,6 @@ acDeviceDestroy(Device device)
 
     cudaFree(device->reduce_scratchpad);
     cudaFree(device->reduce_result);
-
-    /*
-    #if AC_MPI_ENABLED
-        // Free data required for packed tranfers here (cudaFree)
-        for (int i = 0; i < 2; ++i) {
-            cudaFree(device->inner[i]);
-            cudaFree(device->outer[i]);
-
-            cudaFreeHost(device->inner_host[i]);
-            cudaFreeHost(device->outer_host[i]);
-        }
-    #endif
-    */
 
     // Concurrency
     for (int i = 0; i < NUM_STREAMS; ++i) {
@@ -615,16 +578,30 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
     return AC_SUCCESS;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// MPI tests
-////////////////////////////////////////////////////////////////////////////////////////////////////
-#if AC_MPI_ENABLED == 1
-/**
-    Running: mpirun -np <num processes> <executable>
-*/
+#if PACKED_DATA_TRANSFERS // TODO DEPRECATED, see AC_MPI_ENABLED instead
+// Functions for calling packed data transfers
+#endif
+
+#if AC_MPI_ENABLED == 0
+AcResult
+acDeviceRunMPITest(void)
+{
+    WARNING("MPI was not enabled but acDeviceRunMPITest() was called");
+    return AC_FAILURE;
+}
+#else // MPI_ENABLED ///////////////////////////////////////////////////////////////////////////////
 #include <mpi.h>
 
-#include <assert.h>
+// Kernels
+#include "kernels/packing.cuh"
+
+// From Astaroth Utils
+#include "src/utils/config_loader.h"
+#include "src/utils/memory.h"
+#include "src/utils/timer_hires.h"
+#include "src/utils/verification.h"
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 static int
 mod(const int a, const int b)
@@ -633,585 +610,1065 @@ mod(const int a, const int b)
     return r < 0 ? r + b : r;
 }
 
-static inline int
-get_neighbor(const int3 offset)
+static int
+getPid(const int3 pid, const int3 decomposition)
 {
-    // The number of nodes is n^3 = m = num_processes
-    // Require that the problem size is always equivalent among processes ((floor(cbrt(m))^3 == m)
-    // Require that mesh dimension is (n 2^w), where w is some integer
+    return mod(pid.x, decomposition.x) +                   //
+           mod(pid.y, decomposition.y) * decomposition.x + //
+           mod(pid.z, decomposition.z) * decomposition.x * decomposition.y;
+}
 
-    int pid, num_processes;
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+static int3
+getPid3D(const int pid, const int3 decomposition)
+{
+    const int3 pid3d = (int3){
+        mod(pid, decomposition.x),
+        mod(pid / decomposition.x, decomposition.y),
+        (pid / (decomposition.x * decomposition.y)),
+    };
+    return pid3d;
+}
 
-    const int n = (int)cbrt((float)num_processes);
-    ERRCHK_ALWAYS((int)ceil(cbrt((float)num_processes)) == n);
-    ERRCHK_ALWAYS(n * n * n == num_processes);
+static int3
+decompose(const int target)
+{
+    int decomposition[] = {1, 1, 1};
 
-    return mod(pid + offset.x, n) + offset.y * n + offset.z * n * n;
+    int axis = 0;
+    while (decomposition[0] * decomposition[1] * decomposition[2] < target) {
+        ++decomposition[axis];
+        axis = (axis + 1) % 3;
+    }
+
+    const int found = decomposition[0] * decomposition[1] * decomposition[2];
+    if (found != target) {
+        fprintf(stderr, "Invalid number of processes! Cannot decompose the problem domain!\n");
+        fprintf(stderr, "Target nprocs: %d. Next allowed: %d\n", target, found);
+        ERROR("Invalid nprocs");
+        return (int3){-1, -1, -1};
+    }
+    else {
+        return (int3){decomposition[0], decomposition[1], decomposition[2]};
+    }
+}
+
+static PackedData
+acCreatePackedData(const int3 dims)
+{
+    PackedData data = {};
+
+    data.dims = dims;
+
+    const size_t bytes = dims.x * dims.y * dims.z * sizeof(data.data[0]) * NUM_VTXBUF_HANDLES;
+    ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&data.data, bytes));
+
+    return data;
+}
+
+static AcResult
+acDestroyPackedData(PackedData* data)
+{
+    data->dims = (int3){-1, -1, -1};
+    cudaFree(data->data);
+    data->data = NULL;
+
+    return AC_SUCCESS;
+}
+
+static PackedData
+acCreatePackedDataHost(const int3 dims)
+{
+    PackedData data = {};
+
+    data.dims = dims;
+
+    const size_t bytes = dims.x * dims.y * dims.z * sizeof(data.data[0]) * NUM_VTXBUF_HANDLES;
+    data.data          = (AcReal*)malloc(bytes);
+    ERRCHK_ALWAYS(data.data);
+
+    return data;
 }
 
 static void
-acDeviceDistributeMeshMPI(const AcMesh src, AcMesh* dst)
+acTransferPackedDataToHost(const Device device, const cudaStream_t stream, const PackedData ddata,
+                           PackedData* hdata)
+{
+    cudaSetDevice(device->id);
+
+    const size_t bytes = ddata.dims.x * ddata.dims.y * ddata.dims.z * sizeof(ddata.data[0]) *
+                         NUM_VTXBUF_HANDLES;
+    ERRCHK_CUDA(cudaMemcpyAsync(hdata->data, ddata.data, bytes, cudaMemcpyDeviceToHost, stream));
+}
+
+static void
+acTransferPackedDataToDevice(const Device device, const cudaStream_t stream, const PackedData hdata,
+                             PackedData* ddata)
+{
+    cudaSetDevice(device->id);
+
+    const size_t bytes = hdata.dims.x * hdata.dims.y * hdata.dims.z * sizeof(hdata.data[0]) *
+                         NUM_VTXBUF_HANDLES;
+    ERRCHK_CUDA(cudaMemcpyAsync(ddata->data, hdata.data, bytes, cudaMemcpyHostToDevice, stream));
+}
+
+static AcResult
+acDestroyPackedDataHost(PackedData* data)
+{
+    data->dims = (int3){-1, -1, -1};
+    free(data->data);
+    data->data = NULL;
+
+    return AC_SUCCESS;
+}
+
+// TODO: do with packed data
+static AcResult
+acDeviceDistributeMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
 {
     MPI_Barrier(MPI_COMM_WORLD);
     printf("Distributing mesh...\n");
+    fflush(stdout);
 
     MPI_Datatype datatype = MPI_FLOAT;
     if (sizeof(AcReal) == 8)
         datatype = MPI_DOUBLE;
 
-    int pid, num_processes;
+    int pid, nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-    const size_t count = acVertexBufferSize(dst->info);
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+    ERRCHK_ALWAYS(dst);
 
-        if (pid == 0) {
-            // Communicate to self
-            assert(dst);
-            memcpy(&dst->vertex_buffer[i][0], //
-                   &src.vertex_buffer[i][0],  //
-                   count * sizeof(src.vertex_buffer[i][0]));
+    // Submesh nn
+    const int3 nn = (int3){
+        dst->info.int_params[AC_nx],
+        dst->info.int_params[AC_ny],
+        dst->info.int_params[AC_nz],
+    };
 
-            // Communicate to others
-            for (int j = 1; j < num_processes; ++j) {
-                const size_t src_idx = acVertexBufferIdx(
-                    0, 0, j * src.info.int_params[AC_nz] / num_processes, src.info);
-
-                MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, j, 0, MPI_COMM_WORLD);
+    // Send to self
+    if (pid == 0) {
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+            // For pencils
+            for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+                for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                    const int i       = NGHOST;
+                    const int count   = nn.x;
+                    const int src_idx = acVertexBufferIdx(i, j, k, src.info);
+                    const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
+                    memcpy(&dst->vertex_buffer[vtxbuf][dst_idx], //
+                           &src.vertex_buffer[vtxbuf][src_idx],  //
+                           count * sizeof(src.vertex_buffer[i][0]));
+                }
             }
         }
-        else {
-            assert(dst);
+    }
 
-            // Recv
-            const size_t dst_idx = 0;
-            MPI_Status status;
-            MPI_Recv(&dst->vertex_buffer[i][dst_idx], count, datatype, 0, 0, MPI_COMM_WORLD,
-                     &status);
+    for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+        // For pencils
+        for (int k = NGHOST; k < NGHOST + nn.z; ++k) {
+            for (int j = NGHOST; j < NGHOST + nn.y; ++j) {
+                const int i     = NGHOST;
+                const int count = nn.x;
+
+                if (pid != 0) {
+                    const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
+                    // Recv
+                    MPI_Status status;
+                    MPI_Recv(&dst->vertex_buffer[vtxbuf][dst_idx], count, datatype, 0, 0,
+                             MPI_COMM_WORLD, &status);
+                }
+                else {
+                    for (int tgt_pid = 1; tgt_pid < nprocs; ++tgt_pid) {
+                        const int3 tgt_pid3d = getPid3D(tgt_pid, decomposition);
+                        const int src_idx    = acVertexBufferIdx(i + tgt_pid3d.x * nn.x, //
+                                                              j + tgt_pid3d.y * nn.y, //
+                                                              k + tgt_pid3d.z * nn.z, //
+                                                              src.info);
+
+                        // Send
+                        MPI_Send(&src.vertex_buffer[vtxbuf][src_idx], count, datatype, tgt_pid, 0,
+                                 MPI_COMM_WORLD);
+                    }
+                }
+            }
         }
     }
+    return AC_SUCCESS;
 }
 
-static void
-acDeviceGatherMeshMPI(const AcMesh src, AcMesh* dst)
+// TODO: do with packed data
+static AcResult
+acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
 {
     MPI_Barrier(MPI_COMM_WORLD);
     printf("Gathering mesh...\n");
+    fflush(stdout);
+
     MPI_Datatype datatype = MPI_FLOAT;
     if (sizeof(AcReal) == 8)
         datatype = MPI_DOUBLE;
 
-    int pid, num_processes;
+    int pid, nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-    size_t count = acVertexBufferSize(src.info);
+    if (pid == 0)
+        ERRCHK_ALWAYS(dst);
 
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        // Communicate to self
-        if (pid == 0) {
-            assert(dst);
-            memcpy(&dst->vertex_buffer[i][0], //
-                   &src.vertex_buffer[i][0],  //
-                   count * sizeof(src.vertex_buffer[i][0]));
-
-            for (int j = 1; j < num_processes; ++j) {
-                // Recv
-                const size_t dst_idx = acVertexBufferIdx(
-                    0, 0, j * dst->info.int_params[AC_nz] / num_processes, dst->info);
-
-                assert(dst_idx + count <= acVertexBufferSize(dst->info));
-                MPI_Status status;
-                MPI_Recv(&dst->vertex_buffer[i][dst_idx], count, datatype, j, 0, MPI_COMM_WORLD,
-                         &status);
-            }
-        }
-        else {
-            // Send
-            const size_t src_idx = 0;
-
-            assert(src_idx + count <= acVertexBufferSize(src.info));
-            MPI_Send(&src.vertex_buffer[i][src_idx], count, datatype, 0, 0, MPI_COMM_WORLD);
-        }
-    }
-}
-
-// 1D decomp
-static AcResult
-acDeviceBoundStepMPI(const Device device)
-{
-    const int mx       = device->local_config.int_params[AC_mx];
-    const int my       = device->local_config.int_params[AC_my];
-    const int mz       = device->local_config.int_params[AC_mz];
-    const size_t count = mx * my * NGHOST;
-
-    acDeviceSynchronizeStream(device, STREAM_ALL);
-    // Local boundconds
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        // Front plate local
-        {
-            const int3 start = (int3){0, 0, NGHOST};
-            const int3 end   = (int3){mx, my, 2 * NGHOST};
-            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
-        }
-        // Back plate local
-        {
-            const int3 start = (int3){0, 0, mz - 2 * NGHOST};
-            const int3 end   = (int3){mx, my, mz - NGHOST};
-            acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
-        }
-    }
-#define INNER_BOUNDCOND_STREAM ((Stream)(NUM_STREAMS - 1))
-    // Inner boundconds (while waiting)
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-
-        const int3 start = (int3){0, 0, 2 * NGHOST};
-        const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
-        acDevicePeriodicBoundcondStep(device, INNER_BOUNDCOND_STREAM, (VertexBufferHandle)i, start,
-                                      end);
-    }
-
-    // MPI
-    MPI_Request send_requests[2 * NUM_VTXBUF_HANDLES];
-    MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
-    MPI_Datatype datatype = MPI_FLOAT;
-    if (sizeof(AcReal) == 8)
-        datatype = MPI_DOUBLE;
-
-    int pid, num_processes;
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        { // Recv neighbor's front
-            // ...|ooooxxx|... -> xxx|ooooooo|...
-            const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
-            const int recv_pid   = (pid + num_processes - 1) % num_processes;
-
-            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
-                      &recv_requests[i]);
-        }
-        { // Recv neighbor's back
-            // ...|ooooooo|xxx <- ...|xxxoooo|...
-            const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
-            const int recv_pid   = (pid + 1) % num_processes;
-
-            MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid,
-                      NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
-                      &recv_requests[i + NUM_VTXBUF_HANDLES]);
-        }
-    }
-
-    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        acDeviceSynchronizeStream(device, (Stream)i);
-        {
-            // Send front
-            // ...|ooooxxx|... -> xxx|ooooooo|...
-            const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST, device->local_config);
-            const int send_pid   = (pid + 1) % num_processes;
-
-            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
-                      &send_requests[i]);
-        }
-        { // Send back
-            // ...|ooooooo|xxx <- ...|xxxoooo|...
-            const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
-            const int send_pid   = (pid + num_processes - 1) % num_processes;
-
-            MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
-                      i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD,
-                      &send_requests[i + NUM_VTXBUF_HANDLES]);
-        }
-    }
-    MPI_Waitall(2 * NUM_VTXBUF_HANDLES, recv_requests, MPI_STATUSES_IGNORE);
-    MPI_Waitall(2 * NUM_VTXBUF_HANDLES, send_requests, MPI_STATUSES_IGNORE);
-    return AC_SUCCESS;
-}
-
-// 1D decomp
-static AcResult
-acDeviceIntegrateStepMPI(const Device device, const AcReal dt)
-{
-    const int mx       = device->local_config.int_params[AC_mx];
-    const int my       = device->local_config.int_params[AC_my];
-    const int mz       = device->local_config.int_params[AC_mz];
-    const int nx       = device->local_config.int_params[AC_nx];
-    const int ny       = device->local_config.int_params[AC_ny];
-    const int nz       = device->local_config.int_params[AC_nz];
-    const size_t count = mx * my * NGHOST;
-
-    for (int isubstep = 0; isubstep < 3; ++isubstep) {
-        acDeviceSynchronizeStream(device, STREAM_ALL);
-        // Local boundconds
-        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-            // Front plate local
-            {
-                const int3 start = (int3){0, 0, NGHOST};
-                const int3 end   = (int3){mx, my, 2 * NGHOST};
-                acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
-            }
-            // Back plate local
-            {
-                const int3 start = (int3){0, 0, mz - 2 * NGHOST};
-                const int3 end   = (int3){mx, my, mz - NGHOST};
-                acDevicePeriodicBoundcondStep(device, (Stream)i, (VertexBufferHandle)i, start, end);
-            }
-        }
-#define INNER_BOUNDCOND_STREAM ((Stream)(NUM_STREAMS - 1))
-        // Inner boundconds (while waiting)
-        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-
-            const int3 start = (int3){0, 0, 2 * NGHOST};
-            const int3 end   = (int3){mx, my, mz - 2 * NGHOST};
-            acDevicePeriodicBoundcondStep(device, INNER_BOUNDCOND_STREAM, (VertexBufferHandle)i,
-                                          start, end);
-        }
-
-        // MPI
-        MPI_Request send_requests[2 * NUM_VTXBUF_HANDLES];
-        MPI_Request recv_requests[2 * NUM_VTXBUF_HANDLES];
-        MPI_Datatype datatype = MPI_FLOAT;
-        if (sizeof(AcReal) == 8)
-            datatype = MPI_DOUBLE;
-
-        int pid, num_processes;
-        MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-        MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-
-        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-            { // Recv neighbor's front
-                // ...|ooooxxx|... -> xxx|ooooooo|...
-                const size_t dst_idx = acVertexBufferIdx(0, 0, 0, device->local_config);
-                const int recv_pid   = (pid + num_processes - 1) % num_processes;
-
-                MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid, i, MPI_COMM_WORLD,
-                          &recv_requests[i]);
-            }
-            { // Recv neighbor's back
-                // ...|ooooooo|xxx <- ...|xxxoooo|...
-                const size_t dst_idx = acVertexBufferIdx(0, 0, mz - NGHOST, device->local_config);
-                const int recv_pid   = (pid + 1) % num_processes;
-
-                MPI_Irecv(&device->vba.in[i][dst_idx], count, datatype, recv_pid,
-                          NUM_VTXBUF_HANDLES + i, MPI_COMM_WORLD,
-                          &recv_requests[i + NUM_VTXBUF_HANDLES]);
-            }
-        }
-
-        for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-            acDeviceSynchronizeStream(device, (Stream)i);
-            {
-                // Send front
-                // ...|ooooxxx|... -> xxx|ooooooo|...
-                const size_t src_idx = acVertexBufferIdx(0, 0, mz - 2 * NGHOST,
-                                                         device->local_config);
-                const int send_pid   = (pid + 1) % num_processes;
-
-                MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid, i, MPI_COMM_WORLD,
-                          &send_requests[i]);
-            }
-            { // Send back
-                // ...|ooooooo|xxx <- ...|xxxoooo|...
-                const size_t src_idx = acVertexBufferIdx(0, 0, NGHOST, device->local_config);
-                const int send_pid   = (pid + num_processes - 1) % num_processes;
-
-                MPI_Isend(&device->vba.in[i][src_idx], count, datatype, send_pid,
-                          i + NUM_VTXBUF_HANDLES, MPI_COMM_WORLD,
-                          &send_requests[i + NUM_VTXBUF_HANDLES]);
-            }
-        }
-        // Inner integration
-        {
-            ERRCHK(NUM_STREAMS - 2 >= 0);
-            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = (int3){mx, my, mz} - m1;
-            acDeviceIntegrateSubstep(device, (Stream)(NUM_STREAMS - 2), isubstep, m1, m2, dt);
-        }
-
-        MPI_Waitall(2 * NUM_VTXBUF_HANDLES, recv_requests, MPI_STATUSES_IGNORE);
-        MPI_Waitall(2 * NUM_VTXBUF_HANDLES, send_requests, MPI_STATUSES_IGNORE);
-
-        acDeviceSynchronizeStream(device, INNER_BOUNDCOND_STREAM);
-        { // Front
-            const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
-            const int3 m2 = m1 + (int3){nx, ny, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
-        }
-        { // Back
-            const int3 m1 = (int3){NGHOST, NGHOST, nz};
-            const int3 m2 = m1 + (int3){nx, ny, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
-        }
-        { // Bottom
-            const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){nx, NGHOST, nz - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
-        }
-        { // Top
-            const int3 m1 = (int3){NGHOST, ny, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){nx, NGHOST, nz - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
-        }
-        { // Left
-            const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){NGHOST, ny - 2 * NGHOST, nz - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
-        }
-        { // Right
-            const int3 m1 = (int3){nx, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){NGHOST, ny - 2 * NGHOST, nz - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-        acDeviceSwapBuffers(device);
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-
-    return AC_SUCCESS;
-}
-
-// From Astaroth Utils
-#include "src/utils/config_loader.h"
-#include "src/utils/memory.h"
-#include "src/utils/modelsolver.h"
-#include "src/utils/timer_hires.h"
-#include "src/utils/verification.h"
-
-#include <algorithm>
-#include <vector>
-// --smpiargs="-gpu"
-
-AcResult
-acDeviceRunMPITest(void)
-{
-    // If 1, runs the strong scaling tests and verification.
-    // Verification is disabled when benchmarking weak scaling because the
-    // whole grid is too large to fit into memory.
-#define BENCH_STRONG_SCALING (0)
-
-    MPI_Init(NULL, NULL);
-
-    int num_processes, pid;
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-
-    char processor_name[MPI_MAX_PROCESSOR_NAME];
-    int name_len;
-    MPI_Get_processor_name(processor_name, &name_len);
-    printf("Processor %s. Process %d of %d.\n", processor_name, pid, num_processes);
-
-    // Create model and candidate meshes
-    AcMeshInfo info;
-    acLoadConfig(AC_DEFAULT_CONFIG, &info);
-
-    // Large mesh dim
-    const int nn           = 512;
-    const int num_iters    = 100;
-    info.int_params[AC_nx] = info.int_params[AC_ny] = nn;
-    info.int_params[AC_nz]         = BENCH_STRONG_SCALING ? nn : nn * num_processes;
-    info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
-    info.real_params[AC_inv_dsy]   = AcReal(1.0) / info.real_params[AC_dsy];
-    info.real_params[AC_inv_dsz]   = AcReal(1.0) / info.real_params[AC_dsz];
-    info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
-    acUpdateConfig(&info);
-    acPrintMeshInfo(info);
-    ERRCHK_ALWAYS(info.int_params[AC_nz] % num_processes == 0);
-
-#if BENCH_STRONG_SCALING
-    AcMesh model, candidate;
-
-    // Master CPU
-    if (pid == 0) {
-        acMeshCreate(info, &model);
-        acMeshCreate(info, &candidate);
-
-        acMeshRandomize(&model);
-        acMeshRandomize(&candidate);
-    }
-#endif
-
-    /// DECOMPOSITION
-    AcMeshInfo submesh_info                    = info;
-    const int submesh_nz                       = info.int_params[AC_nz] / num_processes;
-    submesh_info.int_params[AC_nz]             = submesh_nz;
-    submesh_info.int3_params[AC_global_grid_n] = (int3){
-        info.int_params[AC_nx],
-        info.int_params[AC_ny],
-        info.int_params[AC_nz],
+    // Submesh nn
+    const int3 nn = (int3){
+        src.info.int_params[AC_nx],
+        src.info.int_params[AC_ny],
+        src.info.int_params[AC_nz],
     };
-    submesh_info.int3_params[AC_multigpu_offset] = (int3){0, 0, pid * submesh_nz};
-    acUpdateConfig(&submesh_info);
-    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_inv_dsx]));
-    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_cs2_sound]));
-    //
 
-    AcMesh submesh;
-    acMeshCreate(submesh_info, &submesh);
-    acMeshRandomize(&submesh);
+    // Submesh mm
+    const int3 mm = (int3){
+        src.info.int_params[AC_mx],
+        src.info.int_params[AC_my],
+        src.info.int_params[AC_mz],
+    };
 
-#if BENCH_STRONG_SCALING
-    acDeviceDistributeMeshMPI(model, &submesh);
-#endif
+    // Send to self
+    if (pid == 0) {
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+            // For pencils
+            for (int k = 0; k < mm.z; ++k) {
+                for (int j = 0; j < mm.y; ++j) {
+                    const int i       = 0;
+                    const int count   = mm.x;
+                    const int src_idx = acVertexBufferIdx(i, j, k, src.info);
+                    const int dst_idx = acVertexBufferIdx(i, j, k, dst->info);
+                    memcpy(&dst->vertex_buffer[vtxbuf][dst_idx], //
+                           &src.vertex_buffer[vtxbuf][src_idx],  //
+                           count * sizeof(src.vertex_buffer[i][0]));
+                }
+            }
+        }
+    }
 
-    // Init the GPU
-    int devices_per_node = -1;
-    cudaGetDeviceCount(&devices_per_node);
+    for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+        // For pencils
+        for (int k = 0; k < mm.z; ++k) {
+            for (int j = 0; j < mm.y; ++j) {
+                const int i     = 0;
+                const int count = mm.x;
 
-    Device device;
-    acDeviceCreate(pid % devices_per_node, submesh_info, &device);
-    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+                if (pid != 0) {
+                    // Send
+                    const int src_idx = acVertexBufferIdx(i, j, k, src.info);
+                    MPI_Send(&src.vertex_buffer[vtxbuf][src_idx], count, datatype, 0, 0,
+                             MPI_COMM_WORLD);
+                }
+                else {
+                    for (int tgt_pid = 1; tgt_pid < nprocs; ++tgt_pid) {
+                        const int3 tgt_pid3d = getPid3D(tgt_pid, decomposition);
+                        const int dst_idx    = acVertexBufferIdx(i + tgt_pid3d.x * nn.x, //
+                                                              j + tgt_pid3d.y * nn.y, //
+                                                              k + tgt_pid3d.z * nn.z, //
+                                                              dst->info);
 
-    // Enable peer access
-    MPI_Barrier(MPI_COMM_WORLD);
-    const int front = (device->id + 1) % devices_per_node;
-    const int back  = (device->id + devices_per_node - 1) % devices_per_node;
+                        // Recv
+                        MPI_Status status;
+                        MPI_Recv(&dst->vertex_buffer[vtxbuf][dst_idx], count, datatype, tgt_pid, 0,
+                                 MPI_COMM_WORLD, &status);
+                    }
+                }
+            }
+        }
+    }
+    return AC_SUCCESS;
+}
+
+static AcResult acDeviceCommunicateBlocksMPI(const Device device, //
+                                             const int3* a0s,     // Src idx inside comp. domain
+                                             const int3* b0s,     // Dst idx inside bound zone
+                                             const size_t mapping_count, // Num a0s and b0s
+                                             const int3 dims)            // Block size
+{
     cudaSetDevice(device->id);
-    WARNCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(front, 0));
-    WARNCHK_CUDA_ALWAYS(cudaDeviceEnablePeerAccess(back, 0));
-
-// Verification start ///////////////////////////////////////////////////////////////////////
-#if BENCH_STRONG_SCALING
-    {
-        const float dt = FLT_EPSILON;
-        acDeviceIntegrateStepMPI(device, dt);
-        acDeviceBoundStepMPI(device);
-        acDeviceSynchronizeStream(device, STREAM_ALL);
-
-        acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
-        acDeviceGatherMeshMPI(submesh, &candidate);
-        if (pid == 0) {
-            acModelIntegrateStep(model, FLT_EPSILON);
-            acMeshApplyPeriodicBounds(&model);
-
-            const bool valid = acVerifyMesh(model, candidate);
-            acMeshDestroy(&model);
-            acMeshDestroy(&candidate);
-
-            // Write out
-            char buf[256];
-            sprintf(buf, "nprocs_%d_result_%s", num_processes,
-                    valid ? "valid" : "INVALID_CHECK_OUTPUT");
-            FILE* fp = fopen(buf, "w");
-            ERRCHK_ALWAYS(fp);
-            fclose(fp);
-        }
-    }
-#endif
-    // Verification end ///////////////////////////////////////////////////////////////////////
-
-    // Warmup
-    for (int i = 0; i < 10; ++i)
-        acDeviceIntegrateStepMPI(device, 0);
-
     acDeviceSynchronizeStream(device, STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Benchmark start ///////////////////////////////////////////////////////////////////////
-    std::vector<double> results;
-    results.reserve(num_iters);
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
 
-    Timer total_time;
-    timer_reset(&total_time);
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const int3 decomp = decompose(nprocs);
 
-    Timer step_time;
-    for (int i = 0; i < num_iters; ++i) {
-        timer_reset(&step_time);
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
 
-        const AcReal dt = FLT_EPSILON;
-        acDeviceIntegrateStepMPI(device, dt);
-        acDeviceSynchronizeStream(device, STREAM_ALL);
-        MPI_Barrier(MPI_COMM_WORLD);
+    for (int k = -1; k <= 1; ++k) {
+        for (int j = -1; j <= 1; ++j) {
+            for (int i = -1; i <= 1; ++i) {
+                if (i == 0 && j == 0 && k == 0)
+                    continue;
 
-        results.push_back(timer_diff_nsec(step_time) / 1e6);
+                for (size_t a_idx = 0; a_idx < mapping_count; ++a_idx) {
+                    for (size_t b_idx = 0; b_idx < mapping_count; ++b_idx) {
+                        const int3 neighbor = (int3){i, j, k};
+
+                        const int3 a0 = a0s[a_idx];
+                        // const int3 a1 = a0 + dims;
+
+                        const int3 b0 = a0 - neighbor * nn;
+                        // const int3 b1 = a1 - neighbor * nn;
+
+                        if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
+
+                            const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                            PackedData src = acCreatePackedData(dims);
+                            PackedData dst = acCreatePackedData(dims);
+
+                            const cudaStream_t stream = device->streams[STREAM_DEFAULT];
+                            acKernelPackData(stream, device->vba, a0, src);
+                            acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                            // Host ////////////////////////////////////////////////
+                            PackedData src_host = acCreatePackedDataHost(dims);
+                            PackedData dst_host = acCreatePackedDataHost(dims);
+                            acTransferPackedDataToHost(device, device->streams[STREAM_DEFAULT], src,
+                                                       &src_host);
+                            acDeviceSynchronizeStream(device, STREAM_ALL);
+                            MPI_Barrier(MPI_COMM_WORLD);
+                            ////////////////////////////////////////////////////////
+
+                            const int3 pid3d = getPid3D(pid, decomp);
+                            MPI_Request send_req, recv_req;
+                            MPI_Isend(src_host.data, count, datatype,
+                                      getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                      &send_req);
+                            MPI_Irecv(dst_host.data, count, datatype,
+                                      getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
+                                      &recv_req);
+
+                            MPI_Wait(&send_req, MPI_STATUS_IGNORE);
+                            MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
+
+                            // Host ////////////////////////////////////////////////
+                            acTransferPackedDataToDevice(device, device->streams[STREAM_DEFAULT],
+                                                         dst_host, &dst);
+                            acDeviceSynchronizeStream(device, STREAM_ALL);
+                            acDestroyPackedDataHost(&src_host);
+                            acDestroyPackedDataHost(&dst_host);
+                            ////////////////////////////////////////////////////////
+
+                            acKernelUnpackData(stream, dst, b0, device->vba);
+                            acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+
+                            acDestroyPackedData(&src);
+                            acDestroyPackedData(&dst);
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    const double ms_elapsed     = timer_diff_nsec(total_time) / 1e6;
-    const double nth_percentile = 0.90;
-    std::sort(results.begin(), results.end(),
-              [](const double& a, const double& b) { return a < b; });
-
-    if (pid == 0) {
-        printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
-        printf("Total time: %f ms\n", ms_elapsed);
-        printf("Time per step: %f ms\n", ms_elapsed / num_iters);
-
-        const size_t nth_index = int(nth_percentile * num_iters);
-        printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile), results[nth_index]);
-
-        // Write out
-        char buf[256];
-        sprintf(buf, "nprocs_%d_result_%s.bench", num_processes,
-                BENCH_STRONG_SCALING ? "strong" : "weak");
-        FILE* fp = fopen(buf, "w");
-        ERRCHK_ALWAYS(fp);
-        fprintf(fp, "num_processes, percentile (%dth)\n", int(100 * nth_percentile));
-        fprintf(fp, "%d, %g\n", num_processes, results[nth_index]);
-        fclose(fp);
-    }
-    // Benchmark end ///////////////////////////////////////////////////////////////////////
-
-    // Finalize
-    acDeviceDestroy(device);
-    acMeshDestroy(&submesh);
-    MPI_Finalize();
     return AC_SUCCESS;
 }
 
-/*
+static AcResult
+acDeviceCommunicateHalosMPI(const Device device)
+{
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    { // Corners
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){nn.x, NGHOST, NGHOST},   //
+            (int3){NGHOST, nn.y, NGHOST},   //
+            (int3){nn.x, nn.y, NGHOST},     //
+
+            (int3){NGHOST, NGHOST, nn.z}, //
+            (int3){nn.x, NGHOST, nn.z},   //
+            (int3){NGHOST, nn.y, nn.z},   //
+            (int3){nn.x, nn.y, nn.z},
+        };
+        const int3 b0s[] = {
+            (int3){0, 0, 0},
+            (int3){NGHOST + nn.x, 0, 0},
+            (int3){0, NGHOST + nn.y, 0},
+            (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
+
+            (int3){0, 0, NGHOST + nn.z},
+            (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
+            (int3){0, NGHOST + nn.y, NGHOST + nn.z},
+            (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
+        };
+        const int3 dims = (int3){NGHOST, NGHOST, NGHOST};
+
+        const size_t mapping_count = ARRAY_SIZE(a0s);
+        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
+    }
+    { // Edges X
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){NGHOST, nn.y, NGHOST},   //
+
+            (int3){NGHOST, NGHOST, nn.z}, //
+            (int3){NGHOST, nn.y, nn.z},   //
+        };
+        const int3 b0s[] = {
+            (int3){NGHOST, 0, 0},
+            (int3){NGHOST, NGHOST + nn.y, 0},
+
+            (int3){NGHOST, 0, NGHOST + nn.z},
+            (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
+        };
+        const int3 dims = (int3){nn.x, NGHOST, NGHOST};
+
+        const size_t mapping_count = ARRAY_SIZE(a0s);
+        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
+    }
+    { // Edges Y
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){nn.x, NGHOST, NGHOST},   //
+
+            (int3){NGHOST, NGHOST, nn.z}, //
+            (int3){nn.x, NGHOST, nn.z},   //
+        };
+        const int3 b0s[] = {
+            (int3){0, NGHOST, 0},
+            (int3){NGHOST + nn.x, NGHOST, 0},
+
+            (int3){0, NGHOST, NGHOST + nn.z},
+            (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
+        };
+        const int3 dims = (int3){NGHOST, nn.y, NGHOST};
+
+        const size_t mapping_count = ARRAY_SIZE(a0s);
+        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
+    }
+    { // Edges Z
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){nn.x, NGHOST, NGHOST},   //
+
+            (int3){NGHOST, nn.y, NGHOST}, //
+            (int3){nn.x, nn.y, NGHOST},   //
+        };
+        const int3 b0s[] = {
+            (int3){0, 0, NGHOST},
+            (int3){NGHOST + nn.x, 0, NGHOST},
+
+            (int3){0, NGHOST + nn.y, NGHOST},
+            (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
+        };
+
+        const int3 dims = (int3){NGHOST, NGHOST, nn.z};
+
+        const size_t mapping_count = ARRAY_SIZE(a0s);
+        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
+    }
+
+    { // Sides XY
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){NGHOST, NGHOST, nn.z},   //
+        };
+        const int3 b0s[] = {
+            (int3){NGHOST, NGHOST, 0},             //
+            (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
+        };
+        const int3 dims = (int3){nn.x, nn.y, NGHOST};
+
+        const size_t mapping_count = ARRAY_SIZE(a0s);
+        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
+    }
+    { // Sides XZ
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){NGHOST, nn.y, NGHOST},   //
+        };
+        const int3 b0s[] = {
+            (int3){NGHOST, 0, NGHOST},             //
+            (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
+        };
+        const int3 dims = (int3){nn.x, NGHOST, nn.z};
+
+        const size_t mapping_count = ARRAY_SIZE(a0s);
+        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
+    }
+    { // Sides YZ
+        const int3 a0s[] = {
+            (int3){NGHOST, NGHOST, NGHOST}, //
+            (int3){nn.x, NGHOST, NGHOST},   //
+        };
+        const int3 b0s[] = {
+            (int3){0, NGHOST, NGHOST},             //
+            (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
+        };
+        const int3 dims = (int3){NGHOST, nn.y, nn.z};
+
+        const size_t mapping_count = ARRAY_SIZE(a0s);
+        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
+    }
+    return AC_SUCCESS;
+}
+
+typedef struct {
+    PackedData* srcs;
+    PackedData* dsts;
+    PackedData* srcs_host;
+    PackedData* dsts_host;
+    int3 dims;
+    size_t count;
+
+    cudaStream_t* streams;
+    MPI_Request* send_reqs;
+    MPI_Request* recv_reqs;
+} CommData;
+
+static CommData
+acCreateCommData(const Device device, const int3 dims, const size_t count)
+{
+    cudaSetDevice(device->id);
+
+    CommData data = {};
+
+    data.srcs      = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dsts      = (PackedData*)malloc(count * sizeof(PackedData));
+    data.srcs_host = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dsts_host = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dims      = dims;
+    data.count     = count;
+
+    data.streams   = (cudaStream_t*)malloc(count * sizeof(cudaStream_t));
+    data.send_reqs = (MPI_Request*)malloc(count * sizeof(MPI_Request));
+    data.recv_reqs = (MPI_Request*)malloc(count * sizeof(MPI_Request));
+
+    ERRCHK_ALWAYS(data.srcs);
+    ERRCHK_ALWAYS(data.dsts);
+    ERRCHK_ALWAYS(data.srcs_host);
+    ERRCHK_ALWAYS(data.dsts_host);
+    ERRCHK_ALWAYS(data.send_reqs);
+    ERRCHK_ALWAYS(data.recv_reqs);
+
+    for (size_t i = 0; i < count; ++i) {
+        data.srcs[i]      = acCreatePackedData(dims);
+        data.dsts[i]      = acCreatePackedData(dims);
+        data.srcs_host[i] = acCreatePackedDataHost(dims);
+        data.dsts_host[i] = acCreatePackedDataHost(dims);
+
+        cudaStreamCreate(&data.streams[i]);
+    }
+
+    return data;
+}
+
+static void
+acDestroyCommData(const Device device, CommData* data)
+{
+    cudaSetDevice(device->id);
+
+    for (size_t i = 0; i < data->count; ++i) {
+        acDestroyPackedData(&data->srcs[i]);
+        acDestroyPackedData(&data->dsts[i]);
+        acDestroyPackedDataHost(&data->srcs_host[i]);
+        acDestroyPackedDataHost(&data->dsts_host[i]);
+
+        cudaStreamDestroy(data->streams[i]);
+    }
+
+    free(data->srcs);
+    free(data->dsts);
+    free(data->srcs_host);
+    free(data->dsts_host);
+
+    free(data->streams);
+    free(data->send_reqs);
+    free(data->recv_reqs);
+
+    data->count = -1;
+    data->dims  = (int3){-1, -1, -1};
+}
+
+static void
+acPackCommData(const Device device, const int3* a0s, CommData* data)
+{
+    cudaSetDevice(device->id);
+    for (size_t i = 0; i < data->count; ++i)
+        acKernelPackData(data->streams[i], device->vba, a0s[i], data->srcs[i]);
+}
+
+static void
+acTransferCommDataToHost(const Device device, CommData* data)
+{
+    cudaSetDevice(device->id);
+    for (size_t i = 0; i < data->count; ++i)
+        acTransferPackedDataToHost(device, data->streams[i], data->srcs[i], &data->srcs_host[i]);
+}
+
+static void
+acUnpackCommData(const Device device, const int3* b0s, CommData* data)
+{
+    cudaSetDevice(device->id);
+
+    for (size_t i = 0; i < data->count; ++i)
+        acKernelUnpackData(data->streams[i], data->dsts[i], b0s[i], device->vba);
+}
+
+static void
+acTransferCommDataToDevice(const Device device, CommData* data)
+{
+    cudaSetDevice(device->id);
+    for (size_t i = 0; i < data->count; ++i)
+        acTransferPackedDataToDevice(device, data->streams[i], data->dsts_host[i], &data->dsts[i]);
+}
+
+static AcResult
+acTransferCommData(const Device device, //
+                   const int3* a0s,     // Src idx inside comp. domain
+                   const int3* b0s,     // Dst idx inside bound zone
+                   CommData* data)
+{
+    cudaSetDevice(device->id);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const int3 decomp = decompose(nprocs);
+
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    const int3 dims         = data->dims;
+    const size_t blockcount = data->count;
+
+    for (int k = -1; k <= 1; ++k) {
+        for (int j = -1; j <= 1; ++j) {
+            for (int i = -1; i <= 1; ++i) {
+                if (i == 0 && j == 0 && k == 0)
+                    continue;
+
+                for (size_t a_idx = 0; a_idx < blockcount; ++a_idx) {
+                    for (size_t b_idx = 0; b_idx < blockcount; ++b_idx) {
+                        const int3 neighbor = (int3){i, j, k};
+
+                        const int3 a0 = a0s[a_idx];
+                        // const int3 a1 = a0 + dims;
+
+                        const int3 b0 = a0 - neighbor * nn;
+                        // const int3 b1 = a1 - neighbor * nn;
+
+                        if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
+
+                            const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                            // PackedData src = data->srcs[a_idx];
+                            // PackedData dst = data->dsts[b_idx];
+                            // PackedData src = data->srcs_host[a_idx];
+                            PackedData dst = data->dsts_host[b_idx];
+
+                            const int3 pid3d = getPid3D(pid, decomp);
+                            MPI_Irecv(dst.data, count, datatype, getPid(pid3d - neighbor, decomp),
+                                      b_idx, MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (int k = -1; k <= 1; ++k) {
+        for (int j = -1; j <= 1; ++j) {
+            for (int i = -1; i <= 1; ++i) {
+                if (i == 0 && j == 0 && k == 0)
+                    continue;
+
+                for (size_t a_idx = 0; a_idx < blockcount; ++a_idx) {
+                    for (size_t b_idx = 0; b_idx < blockcount; ++b_idx) {
+                        const int3 neighbor = (int3){i, j, k};
+
+                        const int3 a0 = a0s[a_idx];
+                        // const int3 a1 = a0 + dims;
+
+                        const int3 b0 = a0 - neighbor * nn;
+                        // const int3 b1 = a1 - neighbor * nn;
+
+                        if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
+
+                            const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+                            // PackedData src = data->srcs[a_idx];
+                            // PackedData dst = data->dsts[b_idx];
+                            PackedData src = data->srcs_host[a_idx];
+                            // PackedData dst = data->dsts_host[b_idx];
+
+                            const int3 pid3d = getPid3D(pid, decomp);
+
+                            cudaStreamSynchronize(data->streams[a_idx]);
+                            MPI_Isend(src.data, count, datatype, getPid(pid3d + neighbor, decomp),
+                                      b_idx, MPI_COMM_WORLD, &data->send_reqs[b_idx]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return AC_SUCCESS;
+}
+
+static void
+acTransferCommDataWait(const CommData data)
+{
+    for (size_t i = 0; i < data.count; ++i) {
+        MPI_Wait(&data.send_reqs[i], MPI_STATUS_IGNORE);
+        MPI_Wait(&data.recv_reqs[i], MPI_STATUS_IGNORE);
+    }
+}
+
+static AcResult
+acDeviceCommunicateHalosMPIAlt(const Device device)
+{
+    // Configure
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    // Corners
+    const int3 corner_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+        (int3){NGHOST, nn.y, NGHOST},   //
+        (int3){nn.x, nn.y, NGHOST},     //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+        (int3){NGHOST, nn.y, nn.z},   //
+        (int3){nn.x, nn.y, nn.z},
+    };
+    const int3 corner_b0s[] = {
+        (int3){0, 0, 0},
+        (int3){NGHOST + nn.x, 0, 0},
+        (int3){0, NGHOST + nn.y, 0},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
+
+        (int3){0, 0, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
+        (int3){0, NGHOST + nn.y, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
+    };
+    const int3 corner_dims = (int3){NGHOST, NGHOST, NGHOST};
+
+    // Edges X
+    const int3 edgex_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){NGHOST, nn.y, nn.z},   //
+    };
+    const int3 edgex_b0s[] = {
+        (int3){NGHOST, 0, 0},
+        (int3){NGHOST, NGHOST + nn.y, 0},
+
+        (int3){NGHOST, 0, NGHOST + nn.z},
+        (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
+    };
+    const int3 edgex_dims = (int3){nn.x, NGHOST, NGHOST};
+
+    // Edges Y
+    const int3 edgey_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+    };
+    const int3 edgey_b0s[] = {
+        (int3){0, NGHOST, 0},
+        (int3){NGHOST + nn.x, NGHOST, 0},
+
+        (int3){0, NGHOST, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
+    };
+    const int3 edgey_dims = (int3){NGHOST, nn.y, NGHOST};
+
+    // Edges Z
+    const int3 edgez_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, nn.y, NGHOST}, //
+        (int3){nn.x, nn.y, NGHOST},   //
+    };
+    const int3 edgez_b0s[] = {
+        (int3){0, 0, NGHOST},
+        (int3){NGHOST + nn.x, 0, NGHOST},
+
+        (int3){0, NGHOST + nn.y, NGHOST},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
+    };
+
+    const int3 edgez_dims = (int3){NGHOST, NGHOST, nn.z};
+
+    // Sides XY
+    const int3 sidexy_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, NGHOST, nn.z},   //
+    };
+    const int3 sidexy_b0s[] = {
+        (int3){NGHOST, NGHOST, 0},             //
+        (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
+    };
+    const int3 sidexy_dims = (int3){nn.x, nn.y, NGHOST};
+
+    // Sides XZ
+    const int3 sidexz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+    };
+    const int3 sidexz_b0s[] = {
+        (int3){NGHOST, 0, NGHOST},             //
+        (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
+    };
+    const int3 sidexz_dims = (int3){nn.x, NGHOST, nn.z};
+
+    // Sides YZ
+    const int3 sideyz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+    };
+    const int3 sideyz_b0s[] = {
+        (int3){0, NGHOST, NGHOST},             //
+        (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
+    };
+    const int3 sideyz_dims = (int3){NGHOST, nn.y, nn.z};
+
+    // Alloc
+    CommData corner_data = acCreateCommData(device, corner_dims, ARRAY_SIZE(corner_a0s));
+    CommData edgex_data  = acCreateCommData(device, edgex_dims, ARRAY_SIZE(edgex_a0s));
+    CommData edgey_data  = acCreateCommData(device, edgey_dims, ARRAY_SIZE(edgey_a0s));
+    CommData edgez_data  = acCreateCommData(device, edgez_dims, ARRAY_SIZE(edgez_a0s));
+    CommData sidexy_data = acCreateCommData(device, sidexy_dims, ARRAY_SIZE(sidexy_a0s));
+    CommData sidexz_data = acCreateCommData(device, sidexz_dims, ARRAY_SIZE(sidexz_a0s));
+    CommData sideyz_data = acCreateCommData(device, sideyz_dims, ARRAY_SIZE(sideyz_a0s));
+
+    // Warmup
+    for (int i = 0; i < 10; ++i) {
+        acPackCommData(device, corner_a0s, &corner_data);
+        acPackCommData(device, edgex_a0s, &edgex_data);
+        acPackCommData(device, edgey_a0s, &edgey_data);
+        acPackCommData(device, edgez_a0s, &edgez_data);
+        acPackCommData(device, sidexy_a0s, &sidexy_data);
+        acPackCommData(device, sidexz_a0s, &sidexz_data);
+        acPackCommData(device, sideyz_a0s, &sideyz_data);
+
+        acTransferCommDataToHost(device, &corner_data);
+        acTransferCommDataToHost(device, &edgex_data);
+        acTransferCommDataToHost(device, &edgey_data);
+        acTransferCommDataToHost(device, &edgez_data);
+        acTransferCommDataToHost(device, &sidexy_data);
+        acTransferCommDataToHost(device, &sidexz_data);
+        acTransferCommDataToHost(device, &sideyz_data);
+
+        acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+        acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+        acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+        acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+        acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+        acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+        acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+
+        acTransferCommDataWait(corner_data);
+        acTransferCommDataWait(edgex_data);
+        acTransferCommDataWait(edgey_data);
+        acTransferCommDataWait(edgez_data);
+        acTransferCommDataWait(sidexy_data);
+        acTransferCommDataWait(sidexz_data);
+        acTransferCommDataWait(sideyz_data);
+
+        acTransferCommDataToDevice(device, &corner_data);
+        acTransferCommDataToDevice(device, &edgex_data);
+        acTransferCommDataToDevice(device, &edgey_data);
+        acTransferCommDataToDevice(device, &edgez_data);
+        acTransferCommDataToDevice(device, &sidexy_data);
+        acTransferCommDataToDevice(device, &sidexz_data);
+        acTransferCommDataToDevice(device, &sideyz_data);
+
+        acUnpackCommData(device, corner_b0s, &corner_data);
+        acUnpackCommData(device, edgex_b0s, &edgex_data);
+        acUnpackCommData(device, edgey_b0s, &edgey_data);
+        acUnpackCommData(device, edgez_b0s, &edgez_data);
+        acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+        acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+        acUnpackCommData(device, sideyz_b0s, &sideyz_data);
+    }
+
+    // Communicate
+    Timer ttot;
+    cudaDeviceSynchronize();
+    MPI_Barrier(MPI_COMM_WORLD);
+    timer_reset(&ttot);
+
+    acPackCommData(device, corner_a0s, &corner_data);
+    acPackCommData(device, edgex_a0s, &edgex_data);
+    acPackCommData(device, edgey_a0s, &edgey_data);
+    acPackCommData(device, edgez_a0s, &edgez_data);
+    acPackCommData(device, sidexy_a0s, &sidexy_data);
+    acPackCommData(device, sidexz_a0s, &sidexz_data);
+    acPackCommData(device, sideyz_a0s, &sideyz_data);
+
+    acTransferCommDataToHost(device, &corner_data);
+    acTransferCommDataToHost(device, &edgex_data);
+    acTransferCommDataToHost(device, &edgey_data);
+    acTransferCommDataToHost(device, &edgez_data);
+    acTransferCommDataToHost(device, &sidexy_data);
+    acTransferCommDataToHost(device, &sidexz_data);
+    acTransferCommDataToHost(device, &sideyz_data);
+
+    acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+    acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+    acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+    acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+    acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+    acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+    acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+
+    acTransferCommDataWait(corner_data);
+    acTransferCommDataWait(edgex_data);
+    acTransferCommDataWait(edgey_data);
+    acTransferCommDataWait(edgez_data);
+    acTransferCommDataWait(sidexy_data);
+    acTransferCommDataWait(sidexz_data);
+    acTransferCommDataWait(sideyz_data);
+
+    acTransferCommDataToDevice(device, &corner_data);
+    acTransferCommDataToDevice(device, &edgex_data);
+    acTransferCommDataToDevice(device, &edgey_data);
+    acTransferCommDataToDevice(device, &edgez_data);
+    acTransferCommDataToDevice(device, &sidexy_data);
+    acTransferCommDataToDevice(device, &sidexz_data);
+    acTransferCommDataToDevice(device, &sideyz_data);
+
+    acUnpackCommData(device, corner_b0s, &corner_data);
+    acUnpackCommData(device, edgex_b0s, &edgex_data);
+    acUnpackCommData(device, edgey_b0s, &edgey_data);
+    acUnpackCommData(device, edgez_b0s, &edgez_data);
+    acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+    acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+    acUnpackCommData(device, sideyz_b0s, &sideyz_data);
+
+    /*
+    acPackCommData(device, corner_a0s, &corner_data);
+    acPackCommData(device, edgex_a0s, &edgex_data);
+    acPackCommData(device, edgey_a0s, &edgey_data);
+    acPackCommData(device, edgez_a0s, &edgez_data);
+    acPackCommData(device, sidexy_a0s, &sidexy_data);
+    acPackCommData(device, sidexz_a0s, &sidexz_data);
+    acPackCommData(device, sideyz_a0s, &sideyz_data);
+
+    acTransferCommDataToHost(device, &corner_data);
+    acTransferCommDataToHost(device, &edgex_data);
+    acTransferCommDataToHost(device, &edgey_data);
+    acTransferCommDataToHost(device, &edgez_data);
+    acTransferCommDataToHost(device, &sidexy_data);
+    acTransferCommDataToHost(device, &sidexz_data);
+    acTransferCommDataToHost(device, &sideyz_data);
+
+    acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+    acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+    acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+    acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+    acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+    acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+    acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+
+    acTransferCommDataWait(corner_data);
+    acTransferCommDataWait(edgex_data);
+    acTransferCommDataWait(edgey_data);
+    acTransferCommDataWait(edgez_data);
+    acTransferCommDataWait(sidexy_data);
+    acTransferCommDataWait(sidexz_data);
+    acTransferCommDataWait(sideyz_data);
+
+    acTransferCommDataToDevice(device, &corner_data);
+    acTransferCommDataToDevice(device, &edgex_data);
+    acTransferCommDataToDevice(device, &edgey_data);
+    acTransferCommDataToDevice(device, &edgez_data);
+    acTransferCommDataToDevice(device, &sidexy_data);
+    acTransferCommDataToDevice(device, &sidexz_data);
+    acTransferCommDataToDevice(device, &sideyz_data);
+
+    acUnpackCommData(device, corner_b0s, &corner_data);
+    acUnpackCommData(device, edgex_b0s, &edgex_data);
+    acUnpackCommData(device, edgey_b0s, &edgey_data);
+    acUnpackCommData(device, edgez_b0s, &edgez_data);
+    acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+    acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+    acUnpackCommData(device, sideyz_b0s, &sideyz_data);
+    */
+
+    cudaDeviceSynchronize();
+    MPI_Barrier(MPI_COMM_WORLD);
+    int pid;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    if (!pid) {
+        printf("---------------------------Total: ");
+        timer_diff_print(ttot);
+    }
+
+    // Dealloc
+    acDestroyCommData(device, &corner_data);
+    acDestroyCommData(device, &edgex_data);
+    acDestroyCommData(device, &edgey_data);
+    acDestroyCommData(device, &edgez_data);
+    acDestroyCommData(device, &sidexy_data);
+    acDestroyCommData(device, &sidexz_data);
+    acDestroyCommData(device, &sideyz_data);
+
+    return AC_SUCCESS;
+}
+
 AcResult
 acDeviceRunMPITest(void)
 {
-    int num_processes, pid;
     MPI_Init(NULL, NULL);
-    // int provided;
-    // MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided); // Hybrid MP + MPI
-    // ERRCHK_ALWAYS(provided == MPI_THREAD_MULTIPLE);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
 
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int name_len;
     MPI_Get_processor_name(processor_name, &name_len);
-    printf("Processor %s. Process %d of %d.\n", processor_name, pid, num_processes);
-
-#ifdef MPIX_CUDA_AWARE_SUPPORT
-    if (MPIX_Query_cuda_support())
-        printf("CUDA-aware MPI supported (MPIX)\n");
-    else
-        WARNING("CUDA-aware MPI not supported with this MPI library (MPIX)\n");
-#else
-    printf("MPIX_CUDA_AWARE_SUPPORT was not defined. Do not know whether CUDA-aware MPI is "
-           "supported\n");
-#endif
-
-    if (getenv("MPICH_RDMA_ENABLED_CUDA") && atoi(getenv("MPICH_RDMA_ENABLED_CUDA")))
-        printf("CUDA-aware MPI supported (MPICH)\n");
-    else
-        WARNING("MPICH not used or this MPI library does not support CUDA-aware MPI\n");
+    printf("Processor %s. Process %d of %d.\n", processor_name, pid, nprocs);
 
     // Create model and candidate meshes
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
-
-    // Large mesh dim
-    const int nn           = 128;
-    const int num_iters    = 1;
-    info.int_params[AC_nx] = info.int_params[AC_ny] = info.int_params[AC_nz] = nn;
+    // Some real params must be calculated (for the MHD case) // TODO DANGEROUS
     info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
     info.real_params[AC_inv_dsy]   = AcReal(1.0) / info.real_params[AC_dsy];
     info.real_params[AC_inv_dsz]   = AcReal(1.0) / info.real_params[AC_dsz];
     info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
-    acUpdateConfig(&info);
-    ERRCHK_ALWAYS(is_valid(info.real_params[AC_inv_dsx]));
-    ERRCHK_ALWAYS(is_valid(info.real_params[AC_cs2_sound]));
-    acPrintMeshInfo(info);
 
-#define VERIFY (1)
-
-#if VERIFY
     AcMesh model, candidate;
 
     // Master CPU
@@ -1222,123 +1679,99 @@ acDeviceRunMPITest(void)
         acMeshRandomize(&model);
         acMeshRandomize(&candidate);
     }
-#endif
-    ERRCHK_ALWAYS(info.int_params[AC_nz] % num_processes == 0);
 
-    /// DECOMPOSITION
-    AcMeshInfo submesh_info                    = info;
-    const int submesh_nz                       = info.int_params[AC_nz] / num_processes;
-    submesh_info.int_params[AC_nz]             = submesh_nz;
+    /// DECOMPOSITION & SUBMESH ///////////////////////////////////
+    AcMeshInfo submesh_info  = info;
+    const int3 decomposition = decompose(nprocs);
+    const int3 pid3d         = getPid3D(pid, decomposition);
+
+    printf("Decomposition: %d, %d, %d\n", decomposition.x, decomposition.y, decomposition.z);
+    printf("Process %d: (%d, %d, %d)\n", pid, pid3d.x, pid3d.y, pid3d.z);
+    ERRCHK_ALWAYS(info.int_params[AC_nx] % decomposition.x == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_ny] % decomposition.y == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_nz] % decomposition.z == 0);
+
+    submesh_info.int_params[AC_nx]             = info.int_params[AC_nx] / decomposition.x;
+    submesh_info.int_params[AC_ny]             = info.int_params[AC_ny] / decomposition.y;
+    submesh_info.int_params[AC_nz]             = info.int_params[AC_nz] / decomposition.z;
     submesh_info.int3_params[AC_global_grid_n] = (int3){
         info.int_params[AC_nx],
         info.int_params[AC_ny],
         info.int_params[AC_nz],
     };
-    submesh_info.int3_params[AC_multigpu_offset] = (int3){0, 0, pid * submesh_nz};
+    submesh_info.int3_params[AC_multigpu_offset] = (int3){-1, -1, -1}; // TODO
+    WARNING("AC_multigpu_offset not yet implemented");
     acUpdateConfig(&submesh_info);
     ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_inv_dsx]));
     ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_cs2_sound]));
-    //
 
     AcMesh submesh;
     acMeshCreate(submesh_info, &submesh);
     acMeshRandomize(&submesh);
-#if VERIFY
-    acDeviceDistributeMeshMPI(model, &submesh);
-#endif
+    ////////////////////////////////////////////////////////////////
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // GPU INIT ////////////////////////////////////////////////////
     int devices_per_node = -1;
     cudaGetDeviceCount(&devices_per_node);
 
     Device device;
     acDeviceCreate(pid % devices_per_node, submesh_info, &device);
-    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+    // TODO enable peer access
+    ////////////////////////////////////////////////////////////////
 
-    // Warmup
-    for (int i = 0; i < 0; ++i) {
-        acDeviceIntegrateStepMPI(device, 0);
-    }
+    // DISTRIBUTE & LOAD //////////////////////////////////////////
+    acDeviceDistributeMeshMPI(model, decomposition, &submesh);
+    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
+    ///////////////////////////////////////////////////////////////
+
+    // SYNC //////////////////////////////////////////////////////
     acDeviceSynchronizeStream(device, STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
+    //////////////////////////////////////////////////////////////
 
-    // Benchmark
-    std::vector<double> results;
-    results.reserve(num_iters);
+    // TIMING START //////////////////////////////////////////////
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+    Timer t;
+    timer_reset(&t);
+    //////////////////////////////////////////////////////////////
 
-    Timer total_time;
-    timer_reset(&total_time);
+    // INTEGRATION & BOUNDCONDS////////////////////////////////////
+    // acDeviceCommunicateHalosMPI(device);
+    acDeviceCommunicateHalosMPIAlt(device);
+    ///////////////////////////////////////////////////////////////
 
-    Timer step_time;
-    for (int i = 0; i < num_iters; ++i) {
-        timer_reset(&step_time);
-        acDeviceIntegrateStepMPI(device, FLT_EPSILON);
-        acDeviceSynchronizeStream(device, STREAM_ALL);
-        MPI_Barrier(MPI_COMM_WORLD);
-        results.push_back(timer_diff_nsec(step_time) / 1e6);
+    // TIMING END //////////////////////////////////////////////
+    acDeviceSynchronizeStream(device, STREAM_ALL);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (!pid) {
+        timer_diff_print(t);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    //////////////////////////////////////////////////////////////
 
-    const double ms_elapsed     = timer_diff_nsec(total_time) / 1e6;
-    const double nth_percentile = 0.95;
-    std::sort(results.begin(), results.end(),
-              [](const double& a, const double& b) { return a < b; });
-
-    if (pid == 0) {
-        printf("vertices: %d^3, iterations: %d\n", nn, num_iters);
-        printf("Total time: %f ms\n", ms_elapsed);
-        printf("Time per step: %f ms\n", ms_elapsed / num_iters);
-
-        const size_t nth_index = int(nth_percentile * num_iters);
-        printf("%dth percentile per step: %f ms\n", int(100 * nth_percentile), results[nth_index]);
-
-        // Write out
-        char buf[256];
-        sprintf(buf, "nprocs_%d_result.bench", num_processes);
-        FILE* fp = fopen(buf, "w");
-        ERRCHK_ALWAYS(fp);
-        fprintf(fp, "num_processes, percentile (%dth)\n", int(100 * nth_percentile));
-        fprintf(fp, "%d, %g\n", num_processes, results[nth_index]);
-        fclose(fp);
-    }
-
-    ////////////////////////////// Timer end
-    acDeviceBoundStepMPI(device);
+    // STORE & GATHER /////////////////////////////////////////////
+    MPI_Barrier(MPI_COMM_WORLD);
     acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
-    acDeviceDestroy(device);
-    ////////////////////////////////////////////////////////////////////////////////////////////////
+    acDeviceSynchronizeStream(device, STREAM_DEFAULT);
+    acDeviceGatherMeshMPI(submesh, decomposition, &candidate);
+    //////////////////////////////////////////////////////////////
 
-#if VERIFY
-    acDeviceGatherMeshMPI(submesh, &candidate);
-#endif
-    acMeshDestroy(&submesh);
-
-#if VERIFY
-    // Master CPU
+    // VERIFY ////////////////////////////////////////////////////
     if (pid == 0) {
-        for (int i = 0; i < num_iters; ++i) {
-            acModelIntegrateStep(model, FLT_EPSILON);
-        }
         acMeshApplyPeriodicBounds(&model);
 
         acVerifyMesh(model, candidate);
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
     }
-#endif
+    //////////////////////////////////////////////////////////////
 
+    // DESTROY ///////////////////////////////////////////////////
+    acDeviceDestroy(device);
+    acMeshDestroy(&submesh);
     MPI_Finalize();
-    return AC_FAILURE;
+    //////////////////////////////////////////////////////////////
+    return AC_SUCCESS;
 }
-*/
-#else
-AcResult
-acDeviceRunMPITest(void)
-{
-    WARNING("MPI was not enabled but acDeviceRunMPITest() was called");
-    return AC_FAILURE;
-}
-#endif
-
-#if PACKED_DATA_TRANSFERS // DEPRECATED, see AC_MPI_ENABLED instead
-// Functions for calling packed data transfers
-#endif
+#endif // MPI_ENABLED //////////////////////////////////////////////////////////////////////////////
