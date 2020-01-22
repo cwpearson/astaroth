@@ -881,11 +881,12 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
     return AC_SUCCESS;
 }
 
-static AcResult acDeviceCommunicateBlocksMPI(const Device device, //
-                                             const int3* a0s,     // Src idx inside comp. domain
-                                             const int3* b0s,     // Dst idx inside bound zone
-                                             const size_t mapping_count, // Num a0s and b0s
-                                             const int3 dims)            // Block size
+static AcResult
+acDeviceCommunicateBlocksMPI(const Device device,        //
+                             const int3* a0s,            // Src idx inside comp. domain
+                             const int3* b0s,            // Dst idx inside bound zone
+                             const size_t mapping_count, // Num a0s and b0s
+                             const int3 dims)            // Block size
 {
     cudaSetDevice(device->id);
     acDeviceSynchronizeStream(device, STREAM_ALL);
@@ -974,150 +975,6 @@ static AcResult acDeviceCommunicateBlocksMPI(const Device device, //
         }
     }
 
-    return AC_SUCCESS;
-}
-
-static AcResult
-acDeviceCommunicateHalosMPI(const Device device)
-{
-    const int3 nn = (int3){
-        device->local_config.int_params[AC_nx],
-        device->local_config.int_params[AC_ny],
-        device->local_config.int_params[AC_nz],
-    };
-
-    { // Corners
-        const int3 a0s[] = {
-            (int3){NGHOST, NGHOST, NGHOST}, //
-            (int3){nn.x, NGHOST, NGHOST},   //
-            (int3){NGHOST, nn.y, NGHOST},   //
-            (int3){nn.x, nn.y, NGHOST},     //
-
-            (int3){NGHOST, NGHOST, nn.z}, //
-            (int3){nn.x, NGHOST, nn.z},   //
-            (int3){NGHOST, nn.y, nn.z},   //
-            (int3){nn.x, nn.y, nn.z},
-        };
-        const int3 b0s[] = {
-            (int3){0, 0, 0},
-            (int3){NGHOST + nn.x, 0, 0},
-            (int3){0, NGHOST + nn.y, 0},
-            (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
-
-            (int3){0, 0, NGHOST + nn.z},
-            (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
-            (int3){0, NGHOST + nn.y, NGHOST + nn.z},
-            (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
-        };
-        const int3 dims = (int3){NGHOST, NGHOST, NGHOST};
-
-        const size_t mapping_count = ARRAY_SIZE(a0s);
-        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
-    }
-    { // Edges X
-        const int3 a0s[] = {
-            (int3){NGHOST, NGHOST, NGHOST}, //
-            (int3){NGHOST, nn.y, NGHOST},   //
-
-            (int3){NGHOST, NGHOST, nn.z}, //
-            (int3){NGHOST, nn.y, nn.z},   //
-        };
-        const int3 b0s[] = {
-            (int3){NGHOST, 0, 0},
-            (int3){NGHOST, NGHOST + nn.y, 0},
-
-            (int3){NGHOST, 0, NGHOST + nn.z},
-            (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
-        };
-        const int3 dims = (int3){nn.x, NGHOST, NGHOST};
-
-        const size_t mapping_count = ARRAY_SIZE(a0s);
-        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
-    }
-    { // Edges Y
-        const int3 a0s[] = {
-            (int3){NGHOST, NGHOST, NGHOST}, //
-            (int3){nn.x, NGHOST, NGHOST},   //
-
-            (int3){NGHOST, NGHOST, nn.z}, //
-            (int3){nn.x, NGHOST, nn.z},   //
-        };
-        const int3 b0s[] = {
-            (int3){0, NGHOST, 0},
-            (int3){NGHOST + nn.x, NGHOST, 0},
-
-            (int3){0, NGHOST, NGHOST + nn.z},
-            (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
-        };
-        const int3 dims = (int3){NGHOST, nn.y, NGHOST};
-
-        const size_t mapping_count = ARRAY_SIZE(a0s);
-        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
-    }
-    { // Edges Z
-        const int3 a0s[] = {
-            (int3){NGHOST, NGHOST, NGHOST}, //
-            (int3){nn.x, NGHOST, NGHOST},   //
-
-            (int3){NGHOST, nn.y, NGHOST}, //
-            (int3){nn.x, nn.y, NGHOST},   //
-        };
-        const int3 b0s[] = {
-            (int3){0, 0, NGHOST},
-            (int3){NGHOST + nn.x, 0, NGHOST},
-
-            (int3){0, NGHOST + nn.y, NGHOST},
-            (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
-        };
-
-        const int3 dims = (int3){NGHOST, NGHOST, nn.z};
-
-        const size_t mapping_count = ARRAY_SIZE(a0s);
-        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
-    }
-
-    { // Sides XY
-        const int3 a0s[] = {
-            (int3){NGHOST, NGHOST, NGHOST}, //
-            (int3){NGHOST, NGHOST, nn.z},   //
-        };
-        const int3 b0s[] = {
-            (int3){NGHOST, NGHOST, 0},             //
-            (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
-        };
-        const int3 dims = (int3){nn.x, nn.y, NGHOST};
-
-        const size_t mapping_count = ARRAY_SIZE(a0s);
-        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
-    }
-    { // Sides XZ
-        const int3 a0s[] = {
-            (int3){NGHOST, NGHOST, NGHOST}, //
-            (int3){NGHOST, nn.y, NGHOST},   //
-        };
-        const int3 b0s[] = {
-            (int3){NGHOST, 0, NGHOST},             //
-            (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
-        };
-        const int3 dims = (int3){nn.x, NGHOST, nn.z};
-
-        const size_t mapping_count = ARRAY_SIZE(a0s);
-        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
-    }
-    { // Sides YZ
-        const int3 a0s[] = {
-            (int3){NGHOST, NGHOST, NGHOST}, //
-            (int3){nn.x, NGHOST, NGHOST},   //
-        };
-        const int3 b0s[] = {
-            (int3){0, NGHOST, NGHOST},             //
-            (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
-        };
-        const int3 dims = (int3){NGHOST, nn.y, nn.z};
-
-        const size_t mapping_count = ARRAY_SIZE(a0s);
-        acDeviceCommunicateBlocksMPI(device, a0s, b0s, mapping_count, dims);
-    }
     return AC_SUCCESS;
 }
 
@@ -1342,7 +1199,7 @@ acTransferCommDataWait(const CommData data)
 }
 
 static AcResult
-acDeviceCommunicateHalosMPIAlt(const Device device)
+acDeviceCommunicateHalosMPI(const Device device)
 {
     // Configure
     const int3 nn = (int3){
@@ -1737,8 +1594,7 @@ acDeviceRunMPITest(void)
     //////////////////////////////////////////////////////////////
 
     // INTEGRATION & BOUNDCONDS////////////////////////////////////
-    // acDeviceCommunicateHalosMPI(device);
-    acDeviceCommunicateHalosMPIAlt(device);
+    acDeviceCommunicateHalosMPI(device);
     ///////////////////////////////////////////////////////////////
 
     // TIMING END //////////////////////////////////////////////
