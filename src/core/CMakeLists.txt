@@ -11,7 +11,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Require CUDA
 find_package(CUDA REQUIRED)
-set(CMAKE_CUDA_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_70,code=sm_70 --restrict")
+set(CMAKE_CUDA_FLAGS "-gencode arch=compute_60,code=sm_60 -gencode arch=compute_70,code=sm_70")
 
 # Compile kernels
 add_library(astaroth_kernels STATIC kernels/boundconds.cu kernels/integration.cu kernels/reductions.cu kernels/packing.cu)
@@ -22,7 +22,7 @@ add_dependencies(astaroth_kernels dsl_headers)
 
 # Compile core
 add_library(astaroth_core STATIC astaroth.cc node.cc device.cc)
-target_include_directories(astaroth_core PRIVATE . "${CUDA_INCLUDE_DIRS}")
+target_include_directories(astaroth_core PRIVATE . ${CUDA_INCLUDE_DIRS})
 target_link_libraries(astaroth_core m astaroth_kernels ${CUDA_LIBRARIES})
 target_compile_definitions(astaroth_core PRIVATE AC_USE_CUDA_RUNTIME_API)
 set_target_properties(astaroth_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
