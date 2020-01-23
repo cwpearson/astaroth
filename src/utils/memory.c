@@ -16,12 +16,9 @@
     You should have received a copy of the GNU General Public License
     along with Astaroth.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "memory.h"
+#include "astaroth_utils.h"
 
-#include <math.h>
-#include <string.h>
-
-#include "src/core/errchk.h"
+#include "errchk.h"
 
 AcResult
 acMeshCreate(const AcMeshInfo info, AcMesh* mesh)
@@ -96,7 +93,7 @@ acMeshApplyPeriodicBounds(AcMesh* mesh)
         const int ny_max = info.int_params[AC_ny_max];
         const int nz_max = info.int_params[AC_nz_max];
 
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int k_dst = start.z; k_dst < end.z; ++k_dst) {
             for (int j_dst = start.y; j_dst < end.y; ++j_dst) {
                 for (int i_dst = start.x; i_dst < end.x; ++i_dst) {

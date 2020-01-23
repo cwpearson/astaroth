@@ -1,9 +1,7 @@
-#include "verification.h"
+#include "astaroth_utils.h"
 
 #include <math.h>
-#include <stdio.h>
-
-#include "astaroth.h"
+#include <stdbool.h>
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -171,7 +169,7 @@ print_error_to_screen(const Error error)
 }
 
 /** Returns true when successful, false if errors were found. */
-bool
+AcResult
 acVerifyMesh(const AcMesh model, const AcMesh candidate)
 {
     printf("Errors at the point of the maximum absolute error:\n");
@@ -185,5 +183,8 @@ acVerifyMesh(const AcMesh model, const AcMesh candidate)
     printf("%s\n", errors_found ? "Failure. Found errors in one or more vertex buffers"
                                 : "Success. No errors found.");
 
-    return !errors_found;
+    if (errors_found)
+        return AC_FAILURE;
+    else
+        return AC_SUCCESS;
 }

@@ -24,15 +24,12 @@
  * Detailed info.
  *
  */
-#include "config_loader.h"
+#include "astaroth_utils.h"
 
-#include <assert.h>
-#include <limits.h> // UINT_MAX
-#include <math.h>
 #include <stdint.h> // uint8_t, uint32_t
-#include <stdio.h>  // print
-#include <string.h> // memset
-//#include "src/core/math_utils.h"
+#include <string.h>
+
+#include "errchk.h"
 
 /**
  \brief Find the index of the keyword in names
@@ -56,7 +53,7 @@ parse_config(const char* path, AcMeshInfo* config)
     fp = fopen(path, "r");
     // For knowing which .conf file will be used
     printf("Config file path: \n %s \n ", path);
-    assert(fp != NULL);
+    ERRCHK_ALWAYS(fp != NULL);
 
     const size_t BUF_SIZE = 128;
     char keyword[BUF_SIZE];
@@ -78,7 +75,7 @@ parse_config(const char* path, AcMeshInfo* config)
 }
 
 AcResult
-acUpdateConfig(AcMeshInfo* config)
+acUpdateBuiltinParams(AcMeshInfo* config)
 {
     config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER;
     ///////////// PAD TEST
@@ -96,7 +93,7 @@ acUpdateConfig(AcMeshInfo* config)
     config->int_params[AC_nz_max] = config->int_params[AC_nz] + STENCIL_ORDER / 2;
 
     /*
-    // DEPRECATED: Spacing
+    // DEPRECATED: Spacing TODO
     // These do not have to be defined by empty projects any more.
     // These should be set only if stdderiv.h is included
     config->real_params[AC_inv_dsx] = (AcReal)(1.) / config->real_params[AC_dsx];
@@ -121,14 +118,14 @@ AcResult
 acLoadConfig(const char* config_path, AcMeshInfo* config)
 {
     int retval = AC_SUCCESS;
-    assert(config_path);
+    ERRCHK_ALWAYS(config_path);
 
     // memset reads the second parameter as a byte even though it says int in
     // the function declaration
     memset(config, (uint8_t)0xFF, sizeof(*config));
 
     parse_config(config_path, config);
-    acUpdateConfig(config);
+    acUpdateBuiltinParams(config);
 #if VERBOSE_PRINTING // Defined in astaroth.h
     printf("###############################################################\n");
     printf("Config dimensions loaded:\n");
@@ -137,7 +134,7 @@ acLoadConfig(const char* config_path, AcMeshInfo* config)
 #endif
 
     // sizeof(config) must be a multiple of 4 bytes for this to work
-    assert(sizeof(*config) % sizeof(uint32_t) == 0);
+    ERRCHK_ALWAYS(sizeof(*config) % sizeof(uint32_t) == 0);
     for (size_t i = 0; i < sizeof(*config) / sizeof(uint32_t); ++i) {
         if (((uint32_t*)config)[i] == (uint32_t)0xFFFFFFFF) {
             fprintf(stderr, "Some config values may be uninitialized. "
