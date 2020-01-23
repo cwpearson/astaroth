@@ -179,7 +179,7 @@ add_symbol(const SymbolType type, const int tqualifier, const int tspecifier, co
 }
 
 static void
-print_symbol2(const Symbol* symbol)
+print_symbol(const Symbol* symbol)
 {
     const char* fields[] = {
         translate(symbol->type_qualifier),
@@ -191,23 +191,6 @@ print_symbol2(const Symbol* symbol)
     for (size_t i = 0; i < num_fields; ++i)
         if (fields[i])
             fprintf(CUDAHEADER, "%s ", fields[i]);
-}
-
-static void
-print_symbol(const size_t handle)
-{
-    assert(handle < SYMBOL_TABLE_SIZE);
-
-    const char* fields[] = {
-        translate(symbol_table[handle].type_qualifier),
-        translate(symbol_table[handle].type_specifier),
-        symbol_table[handle].identifier,
-    };
-
-    const size_t num_fields = sizeof(fields) / sizeof(fields[0]);
-    for (size_t i = 0; i < num_fields; ++i)
-        if (fields[i])
-            printf("%s ", fields[i]);
 }
 
 static inline void
@@ -291,7 +274,7 @@ traverse(const ASTNode* node)
             const Symbol* symbol = symboltable_lookup(node->parent->lhs->lhs->rhs->buffer);
             if (symbol && symbol->type_qualifier == KERNEL) {
                 fprintf(CUDAHEADER, "GEN_KERNEL_BUILTIN_VARIABLES_BOILERPLATE();");
-                for (int i = 0; i < num_symbols[current_nest]; ++i) {
+                for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
                     if (symbol_table[i].type_qualifier == IN) {
                         fprintf(CUDAHEADER, "const %sData %s = READ(handle_%s);\n",
                                 translate(symbol_table[i].type_specifier),
@@ -388,7 +371,7 @@ traverse(const ASTNode* node)
                 }
             }
             else {
-                print_symbol2(&symbol_table[num_symbols[current_nest] - 1]);
+                print_symbol(&symbol_table[num_symbols[current_nest] - 1]);
             }
         }
         else if (tqualifier == IN || tqualifier == OUT) { // Global in/out declarator
@@ -399,7 +382,7 @@ traverse(const ASTNode* node)
         }
         else {
             // Do a regular translation
-            print_symbol2(&symbol_table[num_symbols[current_nest] - 1]);
+            print_symbol(&symbol_table[num_symbols[current_nest] - 1]);
         }
 
         if (node->rhs->type == NODE_ARRAY_DECLARATION) {
@@ -468,7 +451,7 @@ traverse(const ASTNode* node)
         if (node->parent->type == NODE_FUNCTION_DEFINITION) {
             const Symbol* symbol = symboltable_lookup(node->parent->lhs->lhs->rhs->buffer);
             if (symbol && symbol->type_qualifier == KERNEL) {
-                for (int i = 0; i < num_symbols[current_nest]; ++i) {
+                for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
                     if (symbol_table[i].type_qualifier == OUT) {
                         fprintf(CUDAHEADER, "WRITE_OUT(handle_%s, %s);\n",
                                 symbol_table[i].identifier, symbol_table[i].identifier);
@@ -639,7 +622,7 @@ generate_header(void)
 static void
 generate_library_hooks(void)
 {
-    for (int i = 0; i < num_symbols[current_nest]; ++i) {
+    for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_qualifier == KERNEL) {
             fprintf(CUDAHEADER, "GEN_DEVICE_FUNC_HOOK(%s)\n", symbol_table[i].identifier);
         }
@@ -647,7 +630,7 @@ generate_library_hooks(void)
 }
 
 int
-main(int argc, char** argv)
+main(void)
 {
     root = astnode_create(NODE_UNKNOWN, NULL, NULL);
 
