@@ -1,53 +1,44 @@
-###################################
-##  CMakeLists.txt for Astaroth  ##
-###################################
-#
-#   Usage: mkdir build && cd build && cmake <options> .. && make
-#
-#   If you want to see the exact flags used during compilation, compile with
-#   "make VERBOSE=1"
-#
-#   Print all options: cmake -LAH ..
-#
-
 ## CMake settings
-cmake_minimum_required (VERSION 3.9) # Need >= 3.8 for first-class CUDA support and >= 3.9 for MPI
+cmake_minimum_required(VERSION 3.9) # Required for first-class CUDA support
 find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
 find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
 
 ## Project settings
 project(astaroth C CXX CUDA)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+## Project-wide compilation flags
+set(COMMON_WARNING_FLAGS "-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion -Wshadow")
+set(COMMON_WARNING_FLAGS_CUDA "-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_WARNING_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_WARNING_FLAGS}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode arch=compute_60,code=sm_60 -gencode arch=compute_70,code=sm_70 --compiler-options=${COMMON_WARNING_FLAGS_CUDA}")
+
+## Build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release") # Default
+endif()
+message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
-option(BUILD_DEBUG              "Builds the program with extensive error checking"          OFF)
-option(BUILD_STANDALONE         "Builds the standalone Astaroth"                            ON)
-option(BUILD_UTILS              "Builds the utility library"                                ON)
-option(BUILD_RT_VISUALIZATION   "Builds the module for real-time visualization using SDL2"  OFF)
-option(BUILD_SAMPLES            "Builds projects in samples subdirectory"                   OFF)
-option(DOUBLE_PRECISION         "Generates double precision code"                           OFF)
-option(MULTIGPU_ENABLED         "If enabled, uses all the available GPUs"                   ON)
-option(MPI_ENABLED              "Enables additional functions for MPI communciation"        OFF)
+option(DOUBLE_PRECISION "Generates double precision code."        OFF)
+option(BUILD_SAMPLES    "Builds projects in samples subdirectory" ON)
+option(BUILD_STANDALONE "Builds standalone Astaroth"              ON)
 
-## Compile the Astaroth Code Compiler
+## Compile ACC
 add_subdirectory(acc)
 
-# NOTE: Manually defined DSL_MODULE_DIR must be set relative to the project root, not the actual
-# build directory!
-# NO! ../acc/mhd_solver
-# YES! acc/mhd_solver
-
+## Compile AC headers
 if (NOT DEFINED DSL_MODULE_DIR)
-    set(DSL_MODULE_DIR ${CMAKE_SOURCE_DIR}/acc/mhd_solver)
+    set(DSL_MODULE_DIR ${CMAKE_SOURCE_DIR}/acc/mhd_solver) # Default
 endif ()
 get_filename_component(DSL_MODULE_DIR ${DSL_MODULE_DIR} REALPATH)
-message(STATUS "DSL module dir: ${DSL_MODULE_DIR}")
-set(DSL_SOURCES "${DSL_MODULE_DIR}/*"
-                "acc/src/*"
-                "${PROJECT_BINARY_DIR}/acc")
+message(STATUS "AC module dir: ${DSL_MODULE_DIR}")
+
+set(DSL_SOURCES "${DSL_MODULE_DIR}/*")
 set(DSL_HEADERS "${PROJECT_BINARY_DIR}/user_kernels.h"
                 "${PROJECT_BINARY_DIR}/user_defines.h")
+
 add_custom_command (
     COMMENT "Building ACC objects ${DSL_MODULE_DIR}"
     COMMAND ${CMAKE_SOURCE_DIR}/acc/compile_acc_module.sh ${DSL_MODULE_DIR}
@@ -57,51 +48,29 @@ add_custom_command (
 add_custom_target(dsl_headers ALL DEPENDS ${DSL_HEADERS})
 add_dependencies(dsl_headers acc)
 
-## Build types
-# Available types (case-sensitive):
-# RELEASE         (best performance)
-# DEBUG           (w/ debug information, non-concurrent kernels)
-if (BUILD_DEBUG)
-    set(CMAKE_BUILD_TYPE DEBUG)
-else ()
-    set(CMAKE_BUILD_TYPE RELEASE)
-endif()
-message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
-
-if (BUILD_RT_VISUALIZATION)
-## SDL2
-execute_process (
-    COMMAND ./setup_dependencies.sh
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rdparty
-)
-add_subdirectory(3rdparty/SDL2)
-endif ()
-
-## Defines
+## Global flags
 if (DOUBLE_PRECISION)
     add_definitions(-DAC_DOUBLE_PRECISION=1)
-else ()
-    add_definitions(-DAC_DOUBLE_PRECISION=0)
 endif ()
 
 add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")
 
-## Include directories
-include_directories(.)
-include_directories(include)
-include_directories(${CMAKE_BINARY_DIR})
+## Includes
+include_directories(include)             # Library headers
+include_directories(src/common)          # Common headers
+include_directories(${CMAKE_BINARY_DIR}) # DSL headers
 
 ## Subdirectories
-add_subdirectory(src/core)      # The core library
+add_subdirectory(src/utils)
+add_subdirectory(src/core/kernels)
+add_subdirectory(src/core)
 
-if (BUILD_UTILS)
-    add_subdirectory(src/utils) # The utility library
-endif ()
+if (BUILD_SAMPLES)
+    add_subdirectory(samples/ctest)
+    add_subdirectory(samples/cpptest)
+    add_subdirectory(samples/mpitest)
+endif()
 
 if (BUILD_STANDALONE)
     add_subdirectory(src/standalone)
-endif ()
-
-if (BUILD_SAMPLES)
-    add_subdirectory(samples)
-endif ()
+endif()
