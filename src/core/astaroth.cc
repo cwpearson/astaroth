@@ -19,40 +19,11 @@
 #include "astaroth.h"
 
 #include "errchk.h"
-#include "math_utils.h" // int3 + int3
-
-#define AC_GEN_STR(X) #X
-const char* intparam_names[]    = {AC_FOR_BUILTIN_INT_PARAM_TYPES(AC_GEN_STR) //
-                                AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
-const char* int3param_names[]   = {AC_FOR_BUILTIN_INT3_PARAM_TYPES(AC_GEN_STR) //
-                                 AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR)};
-const char* realparam_names[]   = {AC_FOR_BUILTIN_REAL_PARAM_TYPES(AC_GEN_STR) //
-                                 AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR)};
-const char* real3param_names[]  = {AC_FOR_BUILTIN_REAL3_PARAM_TYPES(AC_GEN_STR) //
-                                  AC_FOR_USER_REAL3_PARAM_TYPES(AC_GEN_STR)};
-const char* scalararray_names[] = {AC_FOR_SCALARARRAY_HANDLES(AC_GEN_STR)};
-const char* vtxbuf_names[]      = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR)};
-#undef AC_GEN_STR
+#include "math_utils.h"
 
 static const int max_num_nodes   = 1;
 static Node nodes[max_num_nodes] = {0};
-
-static int num_nodes = 0;
-
-void
-acPrintMeshInfo(const AcMeshInfo config)
-{
-    for (int i = 0; i < NUM_INT_PARAMS; ++i)
-        printf("[%s]: %d\n", intparam_names[i], config.int_params[i]);
-    for (int i = 0; i < NUM_INT3_PARAMS; ++i)
-        printf("[%s]: (%d, %d, %d)\n", int3param_names[i], config.int3_params[i].x,
-               config.int3_params[i].y, config.int3_params[i].z);
-    for (int i = 0; i < NUM_REAL_PARAMS; ++i)
-        printf("[%s]: %g\n", realparam_names[i], double(config.real_params[i]));
-    for (int i = 0; i < NUM_REAL3_PARAMS; ++i)
-        printf("[%s]: (%g, %g, %g)\n", real3param_names[i], double(config.real3_params[i].x),
-               double(config.real3_params[i].y), double(config.real3_params[i].z));
-}
+static int num_nodes             = 0;
 
 AcResult
 acInit(const AcMeshInfo mesh_info)

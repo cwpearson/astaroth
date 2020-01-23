@@ -123,12 +123,10 @@
                                  db  da
  *
  */
-#include "astaroth_node.h"
+#include "astaroth.h"
 
-#include "astaroth_device.h"
 #include "errchk.h"
-#include "kernels/common.cuh"
-#include "math_utils.h" // sum for reductions
+#include "math_utils.h"
 
 static const int MAX_NUM_DEVICES = 32;
 
