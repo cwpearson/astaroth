@@ -29,7 +29,7 @@
 #include <string.h>
 
 #include "run.h"
-#include "src/core/errchk.h"
+#include "errchk.h"
 
 // Write all errors from stderr to an <errorlog_name> in the current working
 // directory

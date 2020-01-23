@@ -26,7 +26,7 @@
  */
 #include "model_boundconds.h"
 
-#include "src/core/errchk.h"
+#include "errchk.h"
 
 void
 boundconds(const AcMeshInfo& mesh_info, ModelMesh* mesh)

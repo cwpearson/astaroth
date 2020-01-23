@@ -26,7 +26,7 @@
  */
 #include "host_timestep.h"
 
-#include "src/core/math_utils.h"
+#include "math_utils.h"
 
 static AcReal timescale = AcReal(1.0);
 

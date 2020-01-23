@@ -32,13 +32,13 @@
 #include <string.h> // memcpy
 
 #include "config_loader.h"
+#include "errchk.h"
+#include "math_utils.h"
 #include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
-#include "src/core/errchk.h"
-#include "src/core/math_utils.h"
 #include "timer_hires.h"
 
 // NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
@@ -453,7 +453,7 @@ run_renderer(const char* config_path)
     return 0;
 }
 #else // BUILD_RT_VISUALIZATION == 0
-#include "src/core/errchk.h"
+#include "errchk.h"
 int
 run_renderer(const char* /*config_path*/)
 {

@@ -29,15 +29,15 @@
 #include <stdio.h>
 
 #include "config_loader.h"
+#include "math_utils.h"
 #include "model/host_forcing.h"
 #include "model/host_memory.h"
 #include "model/host_timestep.h"
 #include "model/model_boundconds.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
-#include "src/core/math_utils.h"
 
-#include "src/core/errchk.h"
+#include "errchk.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -74,6 +74,10 @@ typedef struct {
 static const InitType test_cases[] = {INIT_TYPE_RANDOM, INIT_TYPE_XWAVE,
                                       INIT_TYPE_GAUSSIAN_RADIAL_EXPL, INIT_TYPE_ABC_FLOW};
 // #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
+#ifndef AC_DOUBLE_PRECISION
+#define AC_DOUBLE_PRECISION (0)
+#endif
 
 static inline bool
 is_valid(const ModelScalar a)

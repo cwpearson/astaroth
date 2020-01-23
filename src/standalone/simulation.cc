@@ -32,8 +32,8 @@
 #include "model/host_timestep.h"
 #include "model/model_reduce.h"
 #include "model/model_rk3.h"
-#include "src/core/errchk.h"
-#include "src/core/math_utils.h"
+#include "errchk.h"
+#include "math_utils.h"
 #include "timer_hires.h"
 
 #include <string.h>

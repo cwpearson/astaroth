@@ -31,8 +31,8 @@
 #include <stdio.h>  // print
 #include <string.h> // memset
 
-#include "src/core/errchk.h"
-#include "src/core/math_utils.h"
+#include "errchk.h"
+#include "math_utils.h"
 
 /**
  \brief Find the index of the keyword in names
