@@ -1,6 +1,5 @@
 #include "astaroth.h"
 
-#include <mpi.h>
 #include <string.h>
 
 #include "astaroth_utils.h"
@@ -457,6 +456,9 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
                                 device->reduce_scratchpad, device->reduce_result);
     return AC_SUCCESS;
 }
+
+#if AC_MPI_ENABLED
+#include <mpi.h>
 
 static int
 mod(const int a, const int b)
@@ -1488,3 +1490,11 @@ acDeviceRunMPITest(void)
     //////////////////////////////////////////////////////////////
     return AC_SUCCESS;
 }
+#else
+AcResult
+acDeviceRunMPITest(void)
+{
+    WARNING("MPI was not enabled but acDeviceRunMPITest() was called");
+    return AC_FAILURE;
+}
+#endif // AC_MPI_ENABLED

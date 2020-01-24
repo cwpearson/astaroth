@@ -8,11 +8,16 @@ project(astaroth C CXX CUDA)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 ## Project-wide compilation flags
-set(COMMON_WARNING_FLAGS "-Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion -Wshadow")
-set(COMMON_WARNING_FLAGS_CUDA "-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_WARNING_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_WARNING_FLAGS}")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode arch=compute_60,code=sm_60 -gencode arch=compute_70,code=sm_70 --compiler-options=${COMMON_WARNING_FLAGS_CUDA}")
+set(COMMON_FLAGS "-mavx -Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion -Wshadow")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
+
+find_package(CUDA) # Still required for various macros, such as cuda_select_nvcc_...
+cuda_select_nvcc_arch_flags(ARCHLIST Maxwell Pascal Volta Turing)
+string(REPLACE ";" " " CUDA_ARCH_FLAGS "${ARCHLIST}")
+set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow ")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_ARCH_FLAGS} -ccbin=${CMAKE_CXX_COMPILER} --compiler-options=${COMMON_FLAGS_CUDA}")
+
 
 ## Build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -21,9 +26,16 @@ endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
-option(DOUBLE_PRECISION "Generates double precision code."        OFF)
-option(BUILD_SAMPLES    "Builds projects in samples subdirectory" ON)
-option(BUILD_STANDALONE "Builds standalone Astaroth"              ON)
+option(DOUBLE_PRECISION "Generates double precision code."                   OFF)
+option(BUILD_SAMPLES    "Builds projects in samples subdirectory"            OFF)
+option(BUILD_STANDALONE "Builds standalone Astaroth"                         ON)
+option(MPI_ENABLED      "Enables additional functions for MPI communciation" OFF)
+
+## Options (DEPRECATED)
+# option(BUILD_DEBUG              "Builds the program with extensive error checking"          OFF)
+# option(BUILD_UTILS              "Builds the utility library"                                ON)
+# option(BUILD_RT_VISUALIZATION   "Builds the module for real-time visualization using SDL2"  OFF)
+option(MULTIGPU_ENABLED "If enabled, uses all the available GPUs (Affects Legacy & Node layers only)" OFF)
 
 ## Compile ACC
 add_subdirectory(acc)
@@ -55,10 +67,19 @@ endif ()
 
 add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")
 
+if (MULTIGPU_ENABLED) # Deprecated
+    add_definitions(-DAC_MULTIGPU_ENABLED=1)
+endif ()
+
+if (MPI_ENABLED)
+    add_definitions(-DAC_MPI_ENABLED=1)
+endif()
+
 ## Includes
-include_directories(include)             # Library headers
-include_directories(src/common)          # Common headers
-include_directories(${CMAKE_BINARY_DIR}) # DSL headers
+include_directories(include)                                   # Library headers
+include_directories(src/common)                                # Common headers
+include_directories(${CMAKE_BINARY_DIR})                       # DSL headers
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) # CUDA headers
 
 ## Subdirectories
 add_subdirectory(src/utils)
