@@ -27,15 +27,16 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
 option(DOUBLE_PRECISION "Generates double precision code."                   OFF)
-option(BUILD_SAMPLES    "Builds projects in samples subdirectory"            OFF)
-option(BUILD_STANDALONE "Builds standalone Astaroth"                         ON)
-option(MPI_ENABLED      "Enables additional functions for MPI communciation" OFF)
+option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            OFF)
+option(BUILD_STANDALONE "Builds standalone Astaroth."                         ON)
+option(MPI_ENABLED      "Enables additional functions for MPI communciation." OFF)
+option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." ON)
 
 ## Options (DEPRECATED)
 # option(BUILD_DEBUG              "Builds the program with extensive error checking"          OFF)
 # option(BUILD_UTILS              "Builds the utility library"                                ON)
 # option(BUILD_RT_VISUALIZATION   "Builds the module for real-time visualization using SDL2"  OFF)
-option(MULTIGPU_ENABLED "If enabled, uses all the available GPUs (Affects Legacy & Node layers only)" ON)
+
 
 ## Compile ACC
 add_subdirectory(acc)
