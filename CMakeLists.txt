@@ -15,7 +15,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 find_package(CUDA) # Still required for various macros, such as cuda_select_nvcc_...
 cuda_select_nvcc_arch_flags(ARCHLIST Common) # Common architectures depend on the available CUDA version. Listed here: https://github.com/Kitware/CMake/blob/master/Modules/FindCUDA/select_compute_arch.cmake
 string(REPLACE ";" " " CUDA_ARCH_FLAGS "${ARCHLIST}")
-set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow ")
+set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_ARCH_FLAGS} -ccbin=${CMAKE_CXX_COMPILER} --compiler-options=${COMMON_FLAGS_CUDA}")
 
 
@@ -35,7 +35,7 @@ option(MPI_ENABLED      "Enables additional functions for MPI communciation" OFF
 # option(BUILD_DEBUG              "Builds the program with extensive error checking"          OFF)
 # option(BUILD_UTILS              "Builds the utility library"                                ON)
 # option(BUILD_RT_VISUALIZATION   "Builds the module for real-time visualization using SDL2"  OFF)
-option(MULTIGPU_ENABLED "If enabled, uses all the available GPUs (Affects Legacy & Node layers only)" OFF)
+option(MULTIGPU_ENABLED "If enabled, uses all the available GPUs (Affects Legacy & Node layers only)" ON)
 
 ## Compile ACC
 add_subdirectory(acc)
