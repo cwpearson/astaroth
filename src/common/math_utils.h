@@ -25,7 +25,7 @@
  *
  */
 #pragma once
-#include <math.h> // isnan, isinf
+#include <math.h>   // isnan, isinf
 #include <stdlib.h> // rand
 
 #if AC_DOUBLE_PRECISION != 1

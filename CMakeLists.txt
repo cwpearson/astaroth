@@ -28,7 +28,7 @@ endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
-option(DOUBLE_PRECISION "Generates double precision code."                   OFF)
+option(DOUBLE_PRECISION "Generates double precision code."                    OFF)
 option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            OFF)
 option(BUILD_STANDALONE "Builds standalone Astaroth."                         ON)
 option(MPI_ENABLED      "Enables additional functions for MPI communciation." OFF)
