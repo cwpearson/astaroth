@@ -68,10 +68,6 @@ typedef cuDoubleComplex acComplex;
 #else
 typedef cuFloatComplex acComplex;
 #define acComplex(x, y) make_cuFloatComplex(x, y)
-#define exp(x) expf(x)
-#define sin(x) sinf(x)
-#define cos(x) cosf(x)
-#define sqrt(x) sqrtf(x)
 #endif
 
 static __device__ inline acComplex

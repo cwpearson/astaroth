@@ -25,11 +25,15 @@
  *
  */
 #pragma once
-//#include <cmath>
-// using namespace std; // Potentially bad practice to declare namespace std here
-#include <math.h> // isnan, isinf // Overloads incorrect/bugged with GCC <= 6.0
-//#include <tgmath.h> // Even this does not work
+#include <math.h> // isnan, isinf
 #include <stdlib.h> // rand
+
+#if AC_DOUBLE_PRECISION != 1
+#define exp(x) expf(x)
+#define sin(x) sinf(x)
+#define cos(x) cosf(x)
+#define sqrt(x) sqrtf(x)
+#endif
 
 template <class T>
 static inline const T
