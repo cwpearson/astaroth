@@ -66,6 +66,11 @@
         if (!(retval))                                                                             \
             WARNING(#retval " was false");                                                         \
     }
+#define WARNCHK_ALWAYS(retval)                                                                     \
+    {                                                                                              \
+        if (!(retval))                                                                             \
+            WARNING(#retval " was false");                                                         \
+    }
 #define ERRCHK_ALWAYS(retval)                                                                      \
     {                                                                                              \
         if (!(retval))                                                                             \

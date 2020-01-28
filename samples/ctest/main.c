@@ -27,11 +27,6 @@ main(void)
 {
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
-    // Some real params must be calculated (for the MHD case) // TODO DANGEROUS
-    info.real_params[AC_inv_dsx]   = (AcReal)(1.0) / info.real_params[AC_dsx];
-    info.real_params[AC_inv_dsy]   = (AcReal)(1.0) / info.real_params[AC_dsy];
-    info.real_params[AC_inv_dsz]   = (AcReal)(1.0) / info.real_params[AC_dsz];
-    info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
 
     // Alloc
     AcMesh model, candidate;

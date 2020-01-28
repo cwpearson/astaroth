@@ -82,7 +82,7 @@ typedef enum {
 } Stream;
 #define STREAM_ALL (NUM_STREAMS)
 
-#define AC_GEN_ID(X) X
+#define AC_GEN_ID(X) X,
 typedef enum {
     AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_ID) //
     NUM_INT_PARAMS
@@ -115,7 +115,7 @@ typedef enum {
 #undef AC_GEN_ID
 
 #define _UNUSED __attribute__((unused)) // Does not give a warning if unused
-#define AC_GEN_STR(X) #X
+#define AC_GEN_STR(X) #X,
 static const char* intparam_names[] _UNUSED    = {AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR)};
 static const char* int3param_names[] _UNUSED   = {AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR)};
 static const char* realparam_names[] _UNUSED   = {AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR)};
@@ -451,8 +451,10 @@ AcResult acDeviceLoadScalarArray(const Device device, const Stream stream,
                                  const AcReal* data, const size_t num);
 
 /** */
-AcResult acDeviceLoadMeshInfo(const Device device, const Stream stream,
-                              const AcMeshInfo device_config);
+AcResult acDeviceLoadMeshInfo(const Device device, const AcMeshInfo device_config);
+
+/** */
+AcResult acDeviceLoadDefaultUniforms(const Device device);
 
 /** */
 AcResult acDeviceLoadVertexBufferWithOffset(const Device device, const Stream stream,

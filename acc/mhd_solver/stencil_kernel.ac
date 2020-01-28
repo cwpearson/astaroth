@@ -56,7 +56,7 @@ uniform Scalar AC_cdt;
 uniform Scalar AC_cdtv;
 uniform Scalar AC_cdts;
 uniform Scalar AC_nu_visc;
-uniform Scalar AC_cs_sound;
+uniform Scalar AC_cs_sound = 1.0;
 uniform Scalar AC_eta;
 uniform Scalar AC_mu0;
 uniform Scalar AC_cp_sound;
@@ -96,7 +96,7 @@ uniform Scalar AC_G_const;
 uniform Scalar AC_GM_star;
 uniform Scalar AC_unit_mass;
 uniform Scalar AC_sq2GM_star;
-uniform Scalar AC_cs2_sound;
+uniform Scalar AC_cs2_sound = AC_cs_sound * AC_cs_sound;
 
 /*
  * =============================================================================

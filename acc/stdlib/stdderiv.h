@@ -3,12 +3,12 @@
 #define STENCIL_ORDER (6)
 #endif
 
-uniform Scalar AC_dsx;
-uniform Scalar AC_dsy;
-uniform Scalar AC_dsz;
-uniform Scalar AC_inv_dsx;
-uniform Scalar AC_inv_dsy;
-uniform Scalar AC_inv_dsz;
+uniform Scalar AC_dsx     = 0.04908738521;
+uniform Scalar AC_dsy     = 0.04908738521;
+uniform Scalar AC_dsz     = 0.04908738521;
+uniform Scalar AC_inv_dsx = 1.0 / AC_dsx;
+uniform Scalar AC_inv_dsy = 1.0 / AC_dsy;
+uniform Scalar AC_inv_dsz = 1.0 / AC_dsz;
 
 Scalar
 first_derivative(Scalar pencil[], Scalar inv_ds)

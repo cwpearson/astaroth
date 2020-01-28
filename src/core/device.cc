@@ -150,7 +150,8 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&device->reduce_result, sizeof(AcReal)));
 
     // Device constants
-    acDeviceLoadMeshInfo(device, STREAM_DEFAULT, device_config);
+    acDeviceLoadDefaultUniforms(device);
+    acDeviceLoadMeshInfo(device, device_config);
 
     printf("Created device %d (%p)\n", device->id, device);
     *device_handle = device;

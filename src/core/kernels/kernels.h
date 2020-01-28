@@ -62,21 +62,6 @@ AcReal acKernelReduceVec(const cudaStream_t stream, const ReductionType rtype, c
                          const int3 end, const AcReal* vtxbuf0, const AcReal* vtxbuf1,
                          const AcReal* vtxbuf2, AcReal* scratchpad, AcReal* reduce_result);
 
-AcResult acDeviceLoadMeshInfo(const Device device, const Stream stream,
-                              const AcMeshInfo device_config);
-
-AcResult acDeviceLoadScalarUniform(const Device device, const Stream stream,
-                                   const AcRealParam param, const AcReal value);
-
-AcResult acDeviceLoadVectorUniform(const Device device, const Stream stream,
-                                   const AcReal3Param param, const AcReal3 value);
-
-AcResult acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntParam param,
-                                const int value);
-
-AcResult acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Param param,
-                                 const int3 value);
-
 #ifdef __cplusplus
 } // extern "C"
 #endif
