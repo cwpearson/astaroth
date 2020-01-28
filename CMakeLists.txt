@@ -70,14 +70,6 @@ endif ()
 
 add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")
 
-if (MULTIGPU_ENABLED) # Deprecated
-    add_definitions(-DAC_MULTIGPU_ENABLED=1)
-endif ()
-
-if (MPI_ENABLED)
-    add_definitions(-DAC_MPI_ENABLED=1)
-endif()
-
 ## Includes
 include_directories(include)                                   # Library headers
 include_directories(src/common)                                # Common headers
