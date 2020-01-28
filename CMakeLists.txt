@@ -50,18 +50,18 @@ endif ()
 get_filename_component(DSL_MODULE_DIR ${DSL_MODULE_DIR} REALPATH)
 message(STATUS "AC module dir: ${DSL_MODULE_DIR}")
 
-set(DSL_SOURCES "${DSL_MODULE_DIR}/*")
+set(DSL_SOURCES "${DSL_MODULE_DIR}/*"
+                "${CMAKE_SOURCE_DIR}/acc/stdlib/*")
 set(DSL_HEADERS "${PROJECT_BINARY_DIR}/user_kernels.h"
                 "${PROJECT_BINARY_DIR}/user_defines.h")
 
 add_custom_command (
     COMMENT "Building ACC objects ${DSL_MODULE_DIR}"
     COMMAND ${CMAKE_SOURCE_DIR}/acc/compile_acc_module.sh ${DSL_MODULE_DIR}
-    DEPENDS ${DSL_SOURCES}
+    DEPENDS ${DSL_SOURCES} acc
     OUTPUT ${DSL_HEADERS}
 )
 add_custom_target(dsl_headers ALL DEPENDS ${DSL_HEADERS})
-add_dependencies(dsl_headers acc)
 
 ## Global flags
 if (DOUBLE_PRECISION)
