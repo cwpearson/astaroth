@@ -100,14 +100,12 @@ Finally, a third layer is provided for convenience and backwards compatibility.
     > Essentially a wrapper for the Node layer.
     > All functions are guaranteed to be synchronous.
 
-There are also several helper functions defined in `include/astaroth_defines.h`, which can be used for, say, determining the size or performing index calculations within the simulation domain.
+There are also several helper functions defined in `include/astaroth.h`, which can be used for, say, determining the size or performing index calculations within the simulation domain.
 
 
 ## List of Astaroth API Functions
 
-Here's a non-exhaustive list of astaroth API functions. For more info and an up-to-date list, see
-the corresponding header files in `include/astaroth_defines.h`, `include/astaroth.h`, `include/
-astaroth_node.h`, `include/astaroth_device.h`.
+Here's a non-exhaustive list of astaroth API functions. For more info and an up-to-date list, see headers `include/astaroth.h` and `include/astaroth_utils.h`.
 
 ### Initialization, Quitting and Helper Functions
 
@@ -531,6 +529,7 @@ AcResult acDeviceKernel_##identifier(const Device device, const Stream stream,
 , where ##identifier is the name of the kernel function.
 
 The following built-in variables are available in `Kernel`s.
+
 | Built-in variable | Description                                                                                                                                                                               |
 |-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | vertexIdx         | Holds the local index of the currently processed vertex.                                                                                                                                  |

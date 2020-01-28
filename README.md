@@ -39,15 +39,13 @@ In the base directory, run
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| BUILD_DEBUG | Builds Astaroth with extensive error checking | OFF |
-| BUILD_STANDALONE | Builds a standalone library for testing, benchmarking and simulation | ON |
-| BUILD_UTILS | Builds a generic utility library (WIP replacement for BUILD_STANDALONE) | ON |
-| BUILD_RT_VISUALIZATION | Builds the real-time visualization module | OFF |
-| BUILD_SAMPLES | Builds projects in samples subdirectory | OFF |
-| DOUBLE_PRECISION | Generates double precision code | OFF |
-| MULTIGPU_ENABLED | Enables Astaroth to use multiple GPUs on a single node | ON |
-| MPI_ENABLED | Enables additional functions for MPI communciation | OFF |
-| DSL_MODULE_DIR | Defines the directory to be scanned when looking for DSL files | `astaroth/acc/mhd_solver` |
+| CMAKE_BUILD_TYPE | Selects the build type. Possible values: Debug, Release, RelWithDebInfo, MinSizeRel. See (CMake documentation)[https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html] for more details. | Release |
+| DOUBLE_PRECISION | Generates double precision code. | OFF |
+| BUILD_SAMPLES | Builds projects in samples subdirectory. | OFF |
+| BUILD_STANDALONE | Builds a standalone library for testing, benchmarking and simulation. | ON |
+| MPI_ENABLED | Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only. | OFF |
+| MULTIGPU_ENABLED | Enables Astaroth to use multiple GPUs on a single node. | ON |
+| DSL_MODULE_DIR | Defines the directory to be scanned when looking for DSL files. | `astaroth/acc/mhd_solver` |
 
 
 ## Standalone Module
@@ -67,10 +65,8 @@ See `analysis/python/` directory of existing data visualization and analysis scr
 
 ## Interface
 
-* `astaroth/include/astaroth.h`: Legacy interface for backwards compatibility and quick testing.
-* `astaroth/include/astaroth_node.h`: Multi-GPU interface (single node).
-* `astaroth/include/astaroth_device.h`: Single-GPU interface.
-* `astaroth/src/utils/`: Utility library for host-side memory allocations, verification and other tasks.
+* `astaroth/include/astaroth.h`: Astaroth main header. Contains the interface for accessing single- and multi-GPU layers.
+* `astaroth/include/astaroth_utils.h`: Utility library header. Provides functions for performing common tasks on host, such as allocating and verifying meshes.
 
 ## FAQ
 
