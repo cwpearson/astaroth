@@ -560,13 +560,11 @@ discussed in Section 'Loading and storing'.
 `Uniform`s are declared in stencil definition headers. The header must be included in all files
 which use those uniforms.
 
-`Uniform`s can be of type `Scalar`, `Vector`, `int`, `int3`, `ScalarField` and `ScalarArray`.
+`Uniform`s can be of type `Scalar`, `Vector`, `int`, `int3`, `ScalarField` and `ScalarArray`. `Uniforms` of type `Scalar`, `Vector`, `int`, or `int3`, can be set to a default value like any other variable, f.ex. `uniform Scalar a = 1.0; uniform Scalar b = 2.0 * a;`. Default values can be overwritted at runtime with the uniform loader functions discussed above.
 
 > **Note:** As of 2019-10-01, the types `ScalarField` (DSL) and `VertexBuffer` (CUDA) are aliases of the same type. This naming may be changed in the future.
 
 > **Note:** As of 2019-10-01, `VectorField`s cannot be declared as uniforms. Instead, one should declare each component as a `ScalarField` and use them to construct a `VectorField` during the stencil processing stage. For example, `in VectorField(A, B, C);`, where `A`, `B` and `C` are `uniform ScalarField`s.
-
-> **Note:** As of 2019-10-01, `uniform`s cannot be assigned values in the stencil definition headers. Instead, one should load the appropriate values during runtime using the `acLoadScalarUniform` and related functions.
 
 
 ## Standard Libraries
