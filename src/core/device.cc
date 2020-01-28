@@ -1381,11 +1381,6 @@ acDeviceRunMPITest(void)
     // Create model and candidate meshes
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
-    // Some real params must be calculated (for the MHD case) // TODO DANGEROUS
-    info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
-    info.real_params[AC_inv_dsy]   = AcReal(1.0) / info.real_params[AC_dsy];
-    info.real_params[AC_inv_dsz]   = AcReal(1.0) / info.real_params[AC_dsz];
-    info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
 
     AcMesh model, candidate;
 
@@ -1420,8 +1415,6 @@ acDeviceRunMPITest(void)
     submesh_info.int3_params[AC_multigpu_offset] = (int3){-1, -1, -1}; // TODO
     WARNING("AC_multigpu_offset not yet implemented");
     acUpdateBuiltinParams(&submesh_info);
-    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_inv_dsx]));
-    ERRCHK_ALWAYS(is_valid(submesh_info.real_params[AC_cs2_sound]));
 
     AcMesh submesh;
     acMeshCreate(submesh_info, &submesh);
