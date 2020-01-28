@@ -101,6 +101,10 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
                           const AcReal value)
 {
     cudaSetDevice(device->id);
+    if (param < 0 || param >= NUM_REAL_PARAMS) {
+        fprintf(stderr, "WARNING: invalid AcRealParam %d\n", param);
+    }
+
     if (!is_valid(value)) {
         fprintf(stderr, "WARNING: Passed an invalid value %g to device constant %s. Skipping.\n",
                 (double)value, realparam_names[param]);
@@ -121,6 +125,10 @@ acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal
                           const AcReal3 value)
 {
     cudaSetDevice(device->id);
+    if (param < 0 || param >= NUM_REAL3_PARAMS) {
+        fprintf(stderr, "WARNING: invalid AcReal3Param %d\n", param);
+    }
+
     if (!is_valid(value)) {
         fprintf(stderr,
                 "WARNING: Passed an invalid value (%g, %g, %g) to device constant %s. Skipping.\n",
@@ -142,6 +150,10 @@ acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntPara
                        const int value)
 {
     cudaSetDevice(device->id);
+    if (param < 0 || param >= NUM_INT_PARAMS) {
+        fprintf(stderr, "WARNING: invalid AcIntParam %d\n", param);
+    }
+
     if (!is_valid(value)) {
         fprintf(stderr, "WARNING: Passed an invalid value %d to device constant %s. Skipping.\n",
                 value, intparam_names[param]);
@@ -162,6 +174,10 @@ acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Pa
                         const int3 value)
 {
     cudaSetDevice(device->id);
+    if (param < 0 || param >= NUM_INT3_PARAMS) {
+        fprintf(stderr, "WARNING: invalid AcInt3Param %d\n", param);
+    }
+
     if (!is_valid(value.x) || !is_valid(value.y) || !is_valid(value.z)) {
         fprintf(
             stderr,
