@@ -10,6 +10,7 @@
 #include "kernels/kernels.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#define MPI_GPUDIRECT_DISABLED (0)
 
 AcResult
 acDevicePrintInfo(const Device device)
@@ -533,6 +534,7 @@ acDestroyPackedData(PackedData* data)
     return AC_SUCCESS;
 }
 
+#if MPI_GPUDIRECT_DISABLED
 static PackedData
 acCreatePackedDataHost(const int3 dims)
 {
@@ -578,6 +580,7 @@ acDestroyPackedDataHost(PackedData* data)
 
     return AC_SUCCESS;
 }
+#endif // MPI_GPUDIRECT_DISABLED
 
 // TODO: do with packed data
 static AcResult
@@ -739,111 +742,13 @@ acDeviceGatherMeshMPI(const AcMesh src, const int3 decomposition, AcMesh* dst)
     return AC_SUCCESS;
 }
 
-/*
-// Deprecated
-static AcResult
-acDeviceCommunicateBlocksMPI(const Device device,        //
-                             const int3* a0s,            // Src idx inside comp. domain
-                             const int3* b0s,            // Dst idx inside bound zone
-                             const size_t mapping_count, // Num a0s and b0s
-                             const int3 dims)            // Block size
-{
-    cudaSetDevice(device->id);
-    acDeviceSynchronizeStream(device, STREAM_ALL);
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    MPI_Datatype datatype = MPI_FLOAT;
-    if (sizeof(AcReal) == 8)
-        datatype = MPI_DOUBLE;
-
-    int nprocs, pid;
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    const int3 decomp = decompose(nprocs);
-
-    const int3 nn = (int3){
-        device->local_config.int_params[AC_nx],
-        device->local_config.int_params[AC_ny],
-        device->local_config.int_params[AC_nz],
-    };
-
-    for (int k = -1; k <= 1; ++k) {
-        for (int j = -1; j <= 1; ++j) {
-            for (int i = -1; i <= 1; ++i) {
-                if (i == 0 && j == 0 && k == 0)
-                    continue;
-
-                for (size_t a_idx = 0; a_idx < mapping_count; ++a_idx) {
-                    for (size_t b_idx = 0; b_idx < mapping_count; ++b_idx) {
-                        const int3 neighbor = (int3){i, j, k};
-
-                        const int3 a0 = a0s[a_idx];
-                        // const int3 a1 = a0 + dims;
-
-                        const int3 b0 = a0 - neighbor * nn;
-                        // const int3 b1 = a1 - neighbor * nn;
-
-                        if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
-
-                            const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
-
-                            PackedData src = acCreatePackedData(dims);
-                            PackedData dst = acCreatePackedData(dims);
-
-                            const cudaStream_t stream = device->streams[STREAM_DEFAULT];
-                            acKernelPackData(stream, device->vba, a0, src);
-                            acDeviceSynchronizeStream(device, STREAM_DEFAULT);
-
-                            // Host ////////////////////////////////////////////////
-                            PackedData src_host = acCreatePackedDataHost(dims);
-                            PackedData dst_host = acCreatePackedDataHost(dims);
-                            acTransferPackedDataToHost(device, device->streams[STREAM_DEFAULT], src,
-                                                       &src_host);
-                            acDeviceSynchronizeStream(device, STREAM_ALL);
-                            MPI_Barrier(MPI_COMM_WORLD);
-                            ////////////////////////////////////////////////////////
-
-                            const int3 pid3d = getPid3D(pid, decomp);
-                            MPI_Request send_req, recv_req;
-                            MPI_Isend(src_host.data, count, datatype,
-                                      getPid(pid3d + neighbor, decomp), b_idx, MPI_COMM_WORLD,
-                                      &send_req);
-                            MPI_Irecv(dst_host.data, count, datatype,
-                                      getPid(pid3d - neighbor, decomp), b_idx, MPI_COMM_WORLD,
-                                      &recv_req);
-
-                            MPI_Wait(&send_req, MPI_STATUS_IGNORE);
-                            MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
-
-                            // Host ////////////////////////////////////////////////
-                            acTransferPackedDataToDevice(device, device->streams[STREAM_DEFAULT],
-                                                         dst_host, &dst);
-                            acDeviceSynchronizeStream(device, STREAM_ALL);
-                            acDestroyPackedDataHost(&src_host);
-                            acDestroyPackedDataHost(&dst_host);
-                            ////////////////////////////////////////////////////////
-
-                            acKernelUnpackData(stream, dst, b0, device->vba);
-                            acDeviceSynchronizeStream(device, STREAM_DEFAULT);
-
-                            acDestroyPackedData(&src);
-                            acDestroyPackedData(&dst);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return AC_SUCCESS;
-}
-*/
-
 typedef struct {
     PackedData* srcs;
     PackedData* dsts;
+#if MPI_GPUDIRECT_DISABLED
     PackedData* srcs_host;
     PackedData* dsts_host;
+#endif
     int3 dims;
     size_t count;
 
@@ -859,12 +764,10 @@ acCreateCommData(const Device device, const int3 dims, const size_t count)
 
     CommData data = {};
 
-    data.srcs      = (PackedData*)malloc(count * sizeof(PackedData));
-    data.dsts      = (PackedData*)malloc(count * sizeof(PackedData));
-    data.srcs_host = (PackedData*)malloc(count * sizeof(PackedData));
-    data.dsts_host = (PackedData*)malloc(count * sizeof(PackedData));
-    data.dims      = dims;
-    data.count     = count;
+    data.srcs  = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dsts  = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dims  = dims;
+    data.count = count;
 
     data.streams   = (cudaStream_t*)malloc(count * sizeof(cudaStream_t));
     data.send_reqs = (MPI_Request*)malloc(count * sizeof(MPI_Request));
@@ -872,16 +775,24 @@ acCreateCommData(const Device device, const int3 dims, const size_t count)
 
     ERRCHK_ALWAYS(data.srcs);
     ERRCHK_ALWAYS(data.dsts);
-    ERRCHK_ALWAYS(data.srcs_host);
-    ERRCHK_ALWAYS(data.dsts_host);
     ERRCHK_ALWAYS(data.send_reqs);
     ERRCHK_ALWAYS(data.recv_reqs);
 
+#if MPI_GPUDIRECT_DISABLED
+    data.srcs_host = (PackedData*)malloc(count * sizeof(PackedData));
+    data.dsts_host = (PackedData*)malloc(count * sizeof(PackedData));
+    ERRCHK_ALWAYS(data.srcs_host);
+    ERRCHK_ALWAYS(data.dsts_host);
+#endif
+
     for (size_t i = 0; i < count; ++i) {
-        data.srcs[i]      = acCreatePackedData(dims);
-        data.dsts[i]      = acCreatePackedData(dims);
+        data.srcs[i] = acCreatePackedData(dims);
+        data.dsts[i] = acCreatePackedData(dims);
+
+#if MPI_GPUDIRECT_DISABLED
         data.srcs_host[i] = acCreatePackedDataHost(dims);
         data.dsts_host[i] = acCreatePackedDataHost(dims);
+#endif
 
         cudaStreamCreate(&data.streams[i]);
     }
@@ -897,16 +808,22 @@ acDestroyCommData(const Device device, CommData* data)
     for (size_t i = 0; i < data->count; ++i) {
         acDestroyPackedData(&data->srcs[i]);
         acDestroyPackedData(&data->dsts[i]);
+
+#if MPI_GPUDIRECT_DISABLED
         acDestroyPackedDataHost(&data->srcs_host[i]);
         acDestroyPackedDataHost(&data->dsts_host[i]);
+#endif
 
         cudaStreamDestroy(data->streams[i]);
     }
 
     free(data->srcs);
     free(data->dsts);
+
+#if MPI_GPUDIRECT_DISABLED
     free(data->srcs_host);
     free(data->dsts_host);
+#endif
 
     free(data->streams);
     free(data->send_reqs);
@@ -925,20 +842,21 @@ acPackCommData(const Device device, const int3* a0s, CommData* data)
 }
 
 static void
-acTransferCommDataToHost(const Device device, CommData* data)
-{
-    cudaSetDevice(device->id);
-    for (size_t i = 0; i < data->count; ++i)
-        acTransferPackedDataToHost(device, data->streams[i], data->srcs[i], &data->srcs_host[i]);
-}
-
-static void
 acUnpackCommData(const Device device, const int3* b0s, CommData* data)
 {
     cudaSetDevice(device->id);
 
     for (size_t i = 0; i < data->count; ++i)
         acKernelUnpackData(data->streams[i], data->dsts[i], b0s[i], device->vba);
+}
+
+#if MPI_GPUDIRECT_DISABLED
+static void
+acTransferCommDataToHost(const Device device, CommData* data)
+{
+    cudaSetDevice(device->id);
+    for (size_t i = 0; i < data->count; ++i)
+        acTransferPackedDataToHost(device, data->streams[i], data->srcs[i], &data->srcs_host[i]);
 }
 
 static void
@@ -948,6 +866,7 @@ acTransferCommDataToDevice(const Device device, CommData* data)
     for (size_t i = 0; i < data->count; ++i)
         acTransferPackedDataToDevice(device, data->streams[i], data->dsts_host[i], &data->dsts[i]);
 }
+#endif
 
 static AcResult
 acTransferCommData(const Device device, //
@@ -995,10 +914,11 @@ acTransferCommData(const Device device, //
 
                             const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
-                            // PackedData src = data->srcs[a_idx];
-                            // PackedData dst = data->dsts[b_idx];
-                            // PackedData src = data->srcs_host[a_idx];
+#if MPI_GPUDIRECT_DISABLED
                             PackedData dst = data->dsts_host[b_idx];
+#else
+                            PackedData dst = data->dsts[b_idx];
+#endif
 
                             const int3 pid3d = getPid3D(pid, decomp);
                             MPI_Irecv(dst.data, count, datatype, getPid(pid3d - neighbor, decomp),
@@ -1030,10 +950,11 @@ acTransferCommData(const Device device, //
 
                             const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
-                            // PackedData src = data->srcs[a_idx];
-                            // PackedData dst = data->dsts[b_idx];
+#if MPI_GPUDIRECT_DISABLED
                             PackedData src = data->srcs_host[a_idx];
-                            // PackedData dst = data->dsts_host[b_idx];
+#else
+                            PackedData src = data->srcs[a_idx];
+#endif
 
                             const int3 pid3d = getPid3D(pid, decomp);
 
@@ -1198,6 +1119,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         acPackCommData(device, sidexz_a0s, &sidexz_data);
         acPackCommData(device, sideyz_a0s, &sideyz_data);
 
+#if MPI_GPUDIRECT_DISABLED
         acTransferCommDataToHost(device, &corner_data);
         acTransferCommDataToHost(device, &edgex_data);
         acTransferCommDataToHost(device, &edgey_data);
@@ -1205,6 +1127,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         acTransferCommDataToHost(device, &sidexy_data);
         acTransferCommDataToHost(device, &sidexz_data);
         acTransferCommDataToHost(device, &sideyz_data);
+#endif
 
         acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
         acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
@@ -1222,6 +1145,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         acTransferCommDataWait(sidexz_data);
         acTransferCommDataWait(sideyz_data);
 
+#if MPI_GPUDIRECT_DISABLED
         acTransferCommDataToDevice(device, &corner_data);
         acTransferCommDataToDevice(device, &edgex_data);
         acTransferCommDataToDevice(device, &edgey_data);
@@ -1229,6 +1153,7 @@ acDeviceCommunicateHalosMPI(const Device device)
         acTransferCommDataToDevice(device, &sidexy_data);
         acTransferCommDataToDevice(device, &sidexz_data);
         acTransferCommDataToDevice(device, &sideyz_data);
+#endif
 
         acUnpackCommData(device, corner_b0s, &corner_data);
         acUnpackCommData(device, edgex_b0s, &edgex_data);
@@ -1244,6 +1169,7 @@ acDeviceCommunicateHalosMPI(const Device device)
     cudaDeviceSynchronize();
     MPI_Barrier(MPI_COMM_WORLD);
     timer_reset(&ttot);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     acPackCommData(device, corner_a0s, &corner_data);
     acPackCommData(device, edgex_a0s, &edgex_data);
@@ -1253,6 +1179,7 @@ acDeviceCommunicateHalosMPI(const Device device)
     acPackCommData(device, sidexz_a0s, &sidexz_data);
     acPackCommData(device, sideyz_a0s, &sideyz_data);
 
+#if MPI_GPUDIRECT_DISABLED
     acTransferCommDataToHost(device, &corner_data);
     acTransferCommDataToHost(device, &edgex_data);
     acTransferCommDataToHost(device, &edgey_data);
@@ -1260,6 +1187,7 @@ acDeviceCommunicateHalosMPI(const Device device)
     acTransferCommDataToHost(device, &sidexy_data);
     acTransferCommDataToHost(device, &sidexz_data);
     acTransferCommDataToHost(device, &sideyz_data);
+#endif
 
     acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
     acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
@@ -1277,6 +1205,7 @@ acDeviceCommunicateHalosMPI(const Device device)
     acTransferCommDataWait(sidexz_data);
     acTransferCommDataWait(sideyz_data);
 
+#if MPI_GPUDIRECT_DISABLED
     acTransferCommDataToDevice(device, &corner_data);
     acTransferCommDataToDevice(device, &edgex_data);
     acTransferCommDataToDevice(device, &edgey_data);
@@ -1284,6 +1213,7 @@ acDeviceCommunicateHalosMPI(const Device device)
     acTransferCommDataToDevice(device, &sidexy_data);
     acTransferCommDataToDevice(device, &sidexz_data);
     acTransferCommDataToDevice(device, &sideyz_data);
+#endif
 
     acUnpackCommData(device, corner_b0s, &corner_data);
     acUnpackCommData(device, edgex_b0s, &edgex_data);
@@ -1292,64 +1222,22 @@ acDeviceCommunicateHalosMPI(const Device device)
     acUnpackCommData(device, sidexy_b0s, &sidexy_data);
     acUnpackCommData(device, sidexz_b0s, &sidexz_data);
     acUnpackCommData(device, sideyz_b0s, &sideyz_data);
-
-    /*
-    acPackCommData(device, corner_a0s, &corner_data);
-    acPackCommData(device, edgex_a0s, &edgex_data);
-    acPackCommData(device, edgey_a0s, &edgey_data);
-    acPackCommData(device, edgez_a0s, &edgez_data);
-    acPackCommData(device, sidexy_a0s, &sidexy_data);
-    acPackCommData(device, sidexz_a0s, &sidexz_data);
-    acPackCommData(device, sideyz_a0s, &sideyz_data);
-
-    acTransferCommDataToHost(device, &corner_data);
-    acTransferCommDataToHost(device, &edgex_data);
-    acTransferCommDataToHost(device, &edgey_data);
-    acTransferCommDataToHost(device, &edgez_data);
-    acTransferCommDataToHost(device, &sidexy_data);
-    acTransferCommDataToHost(device, &sidexz_data);
-    acTransferCommDataToHost(device, &sideyz_data);
-
-    acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
-    acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
-    acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
-    acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
-    acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
-    acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
-    acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
-
-    acTransferCommDataWait(corner_data);
-    acTransferCommDataWait(edgex_data);
-    acTransferCommDataWait(edgey_data);
-    acTransferCommDataWait(edgez_data);
-    acTransferCommDataWait(sidexy_data);
-    acTransferCommDataWait(sidexz_data);
-    acTransferCommDataWait(sideyz_data);
-
-    acTransferCommDataToDevice(device, &corner_data);
-    acTransferCommDataToDevice(device, &edgex_data);
-    acTransferCommDataToDevice(device, &edgey_data);
-    acTransferCommDataToDevice(device, &edgez_data);
-    acTransferCommDataToDevice(device, &sidexy_data);
-    acTransferCommDataToDevice(device, &sidexz_data);
-    acTransferCommDataToDevice(device, &sideyz_data);
-
-    acUnpackCommData(device, corner_b0s, &corner_data);
-    acUnpackCommData(device, edgex_b0s, &edgex_data);
-    acUnpackCommData(device, edgey_b0s, &edgey_data);
-    acUnpackCommData(device, edgez_b0s, &edgez_data);
-    acUnpackCommData(device, sidexy_b0s, &sidexy_data);
-    acUnpackCommData(device, sidexz_b0s, &sidexz_data);
-    acUnpackCommData(device, sideyz_b0s, &sideyz_data);
-    */
 
     cudaDeviceSynchronize();
     MPI_Barrier(MPI_COMM_WORLD);
-    int pid;
+    const double msec = timer_diff_nsec(ttot) / 1e6;
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    int pid, nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     if (!pid) {
-        printf("---------------------------Total: ");
-        timer_diff_print(ttot);
+        printf("--- Total communication time per step: %f ms\n", msec);
+
+        // Write out to file
+        FILE* fp = fopen("benchmark.result", "a+");
+        fprintf(fp, "%d, %f\n", nprocs, msec);
+        fclose(fp);
     }
 
     // Dealloc
