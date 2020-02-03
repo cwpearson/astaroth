@@ -1292,16 +1292,20 @@ acDeviceRunMPITest(void)
     ERRCHK_ALWAYS(info.int_params[AC_ny] % decomposition.y == 0);
     ERRCHK_ALWAYS(info.int_params[AC_nz] % decomposition.z == 0);
 
-    submesh_info.int_params[AC_nx]             = info.int_params[AC_nx] / decomposition.x;
-    submesh_info.int_params[AC_ny]             = info.int_params[AC_ny] / decomposition.y;
-    submesh_info.int_params[AC_nz]             = info.int_params[AC_nz] / decomposition.z;
+    const int submesh_nx                       = info.int_params[AC_nx] / decomposition.x;
+    const int submesh_ny                       = info.int_params[AC_ny] / decomposition.y;
+    const int submesh_nz                       = info.int_params[AC_nz] / decomposition.z;
+    submesh_info.int_params[AC_nx]             = submesh_nx;
+    submesh_info.int_params[AC_ny]             = submesh_ny;
+    submesh_info.int_params[AC_nz]             = submesh_nz;
     submesh_info.int3_params[AC_global_grid_n] = (int3){
         info.int_params[AC_nx],
         info.int_params[AC_ny],
         info.int_params[AC_nz],
     };
-    submesh_info.int3_params[AC_multigpu_offset] = (int3){-1, -1, -1}; // TODO
-    WARNING("AC_multigpu_offset not yet implemented");
+    submesh_info.int3_params[AC_multigpu_offset] = pid3d *
+                                                   (int3){submesh_nx, submesh_ny, submesh_nz};
+    WARNING("AC_multigpu_offset not yet tested");
     acUpdateBuiltinParams(&submesh_info);
 
     AcMesh submesh;
