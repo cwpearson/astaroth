@@ -50,8 +50,8 @@ endif ()
 get_filename_component(DSL_MODULE_DIR ${DSL_MODULE_DIR} REALPATH)
 message(STATUS "AC module dir: ${DSL_MODULE_DIR}")
 
-set(DSL_SOURCES "${DSL_MODULE_DIR}/*"
-                "${CMAKE_SOURCE_DIR}/acc/stdlib/*")
+file(GLOB DSL_SOURCES ${DSL_MODULE_DIR}/*
+                      ${CMAKE_SOURCE_DIR}/acc/stdlib/*)
 set(DSL_HEADERS "${PROJECT_BINARY_DIR}/user_kernels.h"
                 "${PROJECT_BINARY_DIR}/user_defines.h")
 
