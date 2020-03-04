@@ -82,23 +82,23 @@ The API is divided into layers which differ in the level of control provided ove
 There are two primary layers:
 
 * Device layer
-    > Functions start with acDevice*.
-    > Provides control over a single GPU.
-    > All functions are asynchronous.
+    * Functions start with acDevice.
+    * Provides control over a single GPU.
+    * All functions are asynchronous.
 
 * Node layer
-    > Functions start with acNode*.
-    > Provides control over multiple devices in a single node.
-    > All functions are asynchronous and executed concurrently on all devices in the node.
-    > Subsequent functions called in the same stream (see Section #Streams and synchronization) are guaranteed to be synchronous.
+    * Functions start with acNode.
+    * Provides control over multiple devices in a single node.
+    * All functions are asynchronous and executed concurrently on all devices in the node.
+    * Subsequent functions called in the same stream (see Section #Streams and synchronization) are guaranteed to be synchronous.
 
 Finally, a third layer is provided for convenience and backwards compatibility.
 
 * Astaroth layer (deprecated)
-    > Functions start with ac* without Node or Device, f.ex. acInit().
-    > Provided for backwards compatibility.
-    > Essentially a wrapper for the Node layer.
-    > All functions are guaranteed to be synchronous.
+    * Functions start with `ac` only, f.ex. acInit().
+    * Provided for backwards compatibility.
+    * Essentially a wrapper for the Node layer.
+    * All functions are guaranteed to be synchronous.
 
 There are also several helper functions defined in `include/astaroth.h`, which can be used for, say, determining the size or performing index calculations within the simulation domain.
 
@@ -452,7 +452,7 @@ it for performing three-dimensional stencil computations cache efficiently. The 
 comprises of three closely related languages, which correspond to distinct stages in the stencil
 pipeline shown in the following figure.
 
-![Figure: Stencil pipeline.](./doc/Astaroth_API_specification_and_user_manual/stencil_pipeline.svg "Stencil Pipeline")
+![Figure: Stencil pipeline.](../../Astaroth_API_specification_and_user_manual/stencilpipeline.svg "Stencil Pipeline")
 
 | Stage              | File ending | Description                                                                                                                                                                     |
 |--------------------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
