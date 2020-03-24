@@ -1171,101 +1171,104 @@ acDeviceIntegrateMPI(const Device device, const AcReal dt)
     timer_reset(&ttot);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    for (int isubstep = 0; isubstep < 3; ++isubstep) {
-        acPackCommData(device, corner_a0s, &corner_data);
-        acPackCommData(device, edgex_a0s, &edgex_data);
-        acPackCommData(device, edgey_a0s, &edgey_data);
-        acPackCommData(device, edgez_a0s, &edgez_data);
-        acPackCommData(device, sidexy_a0s, &sidexy_data);
-        acPackCommData(device, sidexz_a0s, &sidexz_data);
-        acPackCommData(device, sideyz_a0s, &sideyz_data);
+    const int num_iterations = 1;
+    for (int i = 0; i < num_iterations; ++i) {
+        for (int isubstep = 0; isubstep < 3; ++isubstep) {
+            acPackCommData(device, corner_a0s, &corner_data);
+            acPackCommData(device, edgex_a0s, &edgex_data);
+            acPackCommData(device, edgey_a0s, &edgey_data);
+            acPackCommData(device, edgez_a0s, &edgez_data);
+            acPackCommData(device, sidexy_a0s, &sidexy_data);
+            acPackCommData(device, sidexz_a0s, &sidexz_data);
+            acPackCommData(device, sideyz_a0s, &sideyz_data);
 
 #if MPI_GPUDIRECT_DISABLED
-        acTransferCommDataToHost(device, &corner_data);
-        acTransferCommDataToHost(device, &edgex_data);
-        acTransferCommDataToHost(device, &edgey_data);
-        acTransferCommDataToHost(device, &edgez_data);
-        acTransferCommDataToHost(device, &sidexy_data);
-        acTransferCommDataToHost(device, &sidexz_data);
-        acTransferCommDataToHost(device, &sideyz_data);
+            acTransferCommDataToHost(device, &corner_data);
+            acTransferCommDataToHost(device, &edgex_data);
+            acTransferCommDataToHost(device, &edgey_data);
+            acTransferCommDataToHost(device, &edgez_data);
+            acTransferCommDataToHost(device, &sidexy_data);
+            acTransferCommDataToHost(device, &sidexz_data);
+            acTransferCommDataToHost(device, &sideyz_data);
 #endif
 
-        //////////// INNER INTEGRATION //////////////
-        {
-            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = nn;
-            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
-        }
-        ////////////////////////////////////////////
+            //////////// INNER INTEGRATION //////////////
+            {
+                const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+                const int3 m2 = nn;
+                acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+            }
+            ////////////////////////////////////////////
 
-        acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
-        acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
-        acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
-        acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
-        acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
-        acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
-        acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+            acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+            acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+            acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+            acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+            acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+            acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+            acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
 
-        acTransferCommDataWait(corner_data);
-        acTransferCommDataWait(edgex_data);
-        acTransferCommDataWait(edgey_data);
-        acTransferCommDataWait(edgez_data);
-        acTransferCommDataWait(sidexy_data);
-        acTransferCommDataWait(sidexz_data);
-        acTransferCommDataWait(sideyz_data);
+            acTransferCommDataWait(corner_data);
+            acTransferCommDataWait(edgex_data);
+            acTransferCommDataWait(edgey_data);
+            acTransferCommDataWait(edgez_data);
+            acTransferCommDataWait(sidexy_data);
+            acTransferCommDataWait(sidexz_data);
+            acTransferCommDataWait(sideyz_data);
 
 #if MPI_GPUDIRECT_DISABLED
-        acTransferCommDataToDevice(device, &corner_data);
-        acTransferCommDataToDevice(device, &edgex_data);
-        acTransferCommDataToDevice(device, &edgey_data);
-        acTransferCommDataToDevice(device, &edgez_data);
-        acTransferCommDataToDevice(device, &sidexy_data);
-        acTransferCommDataToDevice(device, &sidexz_data);
-        acTransferCommDataToDevice(device, &sideyz_data);
+            acTransferCommDataToDevice(device, &corner_data);
+            acTransferCommDataToDevice(device, &edgex_data);
+            acTransferCommDataToDevice(device, &edgey_data);
+            acTransferCommDataToDevice(device, &edgez_data);
+            acTransferCommDataToDevice(device, &sidexy_data);
+            acTransferCommDataToDevice(device, &sidexz_data);
+            acTransferCommDataToDevice(device, &sideyz_data);
 #endif
 
-        acUnpackCommData(device, corner_b0s, &corner_data);
-        acUnpackCommData(device, edgex_b0s, &edgex_data);
-        acUnpackCommData(device, edgey_b0s, &edgey_data);
-        acUnpackCommData(device, edgez_b0s, &edgez_data);
-        acUnpackCommData(device, sidexy_b0s, &sidexy_data);
-        acUnpackCommData(device, sidexz_b0s, &sidexz_data);
-        acUnpackCommData(device, sideyz_b0s, &sideyz_data);
-        //////////// OUTER INTEGRATION //////////////
-        acDeviceSynchronizeStream(device, STREAM_ALL); // Wait for unpacking
-        {                                              // Front
-            const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
-            const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
+            acUnpackCommData(device, corner_b0s, &corner_data);
+            acUnpackCommData(device, edgex_b0s, &edgex_data);
+            acUnpackCommData(device, edgey_b0s, &edgey_data);
+            acUnpackCommData(device, edgez_b0s, &edgez_data);
+            acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+            acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+            acUnpackCommData(device, sideyz_b0s, &sideyz_data);
+            //////////// OUTER INTEGRATION //////////////
+            acDeviceSynchronizeStream(device, STREAM_ALL); // Wait for unpacking
+            {                                              // Front
+                const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
+                const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
+                acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
+            }
+            { // Back
+                const int3 m1 = (int3){NGHOST, NGHOST, nn.z};
+                const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
+                acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
+            }
+            { // Bottom
+                const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
+                const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
+                acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
+            }
+            { // Top
+                const int3 m1 = (int3){NGHOST, nn.y, 2 * NGHOST};
+                const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
+                acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
+            }
+            { // Left
+                const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
+                const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
+                acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
+            }
+            { // Right
+                const int3 m1 = (int3){nn.x, 2 * NGHOST, 2 * NGHOST};
+                const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
+                acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
+            }
+            acDeviceSwapBuffers(device);
+            acDeviceSynchronizeStream(device, STREAM_ALL); // Wait until inner and outer done
+            ////////////////////////////////////////////
         }
-        { // Back
-            const int3 m1 = (int3){NGHOST, NGHOST, nn.z};
-            const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
-        }
-        { // Bottom
-            const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
-        }
-        { // Top
-            const int3 m1 = (int3){NGHOST, nn.y, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
-        }
-        { // Left
-            const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
-        }
-        { // Right
-            const int3 m1 = (int3){nn.x, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
-        }
-        acDeviceSwapBuffers(device);
-        acDeviceSynchronizeStream(device, STREAM_ALL); // Wait until inner and outer done
-        ////////////////////////////////////////////
     }
 
     cudaDeviceSynchronize();
@@ -1277,7 +1280,8 @@ acDeviceIntegrateMPI(const Device device, const AcReal dt)
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     if (!pid) {
-        printf("--- Total communication time per step: %f ms\n", msec);
+        printf("--- Total communication time per step w/ integration: %f ms\n",
+               msec / num_iterations);
 
         // Write out to file
         FILE* fp = fopen("benchmark.result", "a+");
@@ -1434,59 +1438,57 @@ acDeviceCommunicateHalosMPI(const Device device)
     timer_reset(&ttot);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    for (int isubstep = 0; isubstep < 3; ++isubstep) {
-        acPackCommData(device, corner_a0s, &corner_data);
-        acPackCommData(device, edgex_a0s, &edgex_data);
-        acPackCommData(device, edgey_a0s, &edgey_data);
-        acPackCommData(device, edgez_a0s, &edgez_data);
-        acPackCommData(device, sidexy_a0s, &sidexy_data);
-        acPackCommData(device, sidexz_a0s, &sidexz_data);
-        acPackCommData(device, sideyz_a0s, &sideyz_data);
+    acPackCommData(device, corner_a0s, &corner_data);
+    acPackCommData(device, edgex_a0s, &edgex_data);
+    acPackCommData(device, edgey_a0s, &edgey_data);
+    acPackCommData(device, edgez_a0s, &edgez_data);
+    acPackCommData(device, sidexy_a0s, &sidexy_data);
+    acPackCommData(device, sidexz_a0s, &sidexz_data);
+    acPackCommData(device, sideyz_a0s, &sideyz_data);
 
 #if MPI_GPUDIRECT_DISABLED
-        acTransferCommDataToHost(device, &corner_data);
-        acTransferCommDataToHost(device, &edgex_data);
-        acTransferCommDataToHost(device, &edgey_data);
-        acTransferCommDataToHost(device, &edgez_data);
-        acTransferCommDataToHost(device, &sidexy_data);
-        acTransferCommDataToHost(device, &sidexz_data);
-        acTransferCommDataToHost(device, &sideyz_data);
+    acTransferCommDataToHost(device, &corner_data);
+    acTransferCommDataToHost(device, &edgex_data);
+    acTransferCommDataToHost(device, &edgey_data);
+    acTransferCommDataToHost(device, &edgez_data);
+    acTransferCommDataToHost(device, &sidexy_data);
+    acTransferCommDataToHost(device, &sidexz_data);
+    acTransferCommDataToHost(device, &sideyz_data);
 #endif
 
-        acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
-        acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
-        acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
-        acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
-        acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
-        acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
-        acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+    acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+    acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+    acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+    acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+    acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+    acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+    acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
 
-        acTransferCommDataWait(corner_data);
-        acTransferCommDataWait(edgex_data);
-        acTransferCommDataWait(edgey_data);
-        acTransferCommDataWait(edgez_data);
-        acTransferCommDataWait(sidexy_data);
-        acTransferCommDataWait(sidexz_data);
-        acTransferCommDataWait(sideyz_data);
+    acTransferCommDataWait(corner_data);
+    acTransferCommDataWait(edgex_data);
+    acTransferCommDataWait(edgey_data);
+    acTransferCommDataWait(edgez_data);
+    acTransferCommDataWait(sidexy_data);
+    acTransferCommDataWait(sidexz_data);
+    acTransferCommDataWait(sideyz_data);
 
 #if MPI_GPUDIRECT_DISABLED
-        acTransferCommDataToDevice(device, &corner_data);
-        acTransferCommDataToDevice(device, &edgex_data);
-        acTransferCommDataToDevice(device, &edgey_data);
-        acTransferCommDataToDevice(device, &edgez_data);
-        acTransferCommDataToDevice(device, &sidexy_data);
-        acTransferCommDataToDevice(device, &sidexz_data);
-        acTransferCommDataToDevice(device, &sideyz_data);
+    acTransferCommDataToDevice(device, &corner_data);
+    acTransferCommDataToDevice(device, &edgex_data);
+    acTransferCommDataToDevice(device, &edgey_data);
+    acTransferCommDataToDevice(device, &edgez_data);
+    acTransferCommDataToDevice(device, &sidexy_data);
+    acTransferCommDataToDevice(device, &sidexz_data);
+    acTransferCommDataToDevice(device, &sideyz_data);
 #endif
 
-        acUnpackCommData(device, corner_b0s, &corner_data);
-        acUnpackCommData(device, edgex_b0s, &edgex_data);
-        acUnpackCommData(device, edgey_b0s, &edgey_data);
-        acUnpackCommData(device, edgez_b0s, &edgez_data);
-        acUnpackCommData(device, sidexy_b0s, &sidexy_data);
-        acUnpackCommData(device, sidexz_b0s, &sidexz_data);
-        acUnpackCommData(device, sideyz_b0s, &sideyz_data);
-    }
+    acUnpackCommData(device, corner_b0s, &corner_data);
+    acUnpackCommData(device, edgex_b0s, &edgex_data);
+    acUnpackCommData(device, edgey_b0s, &edgey_data);
+    acUnpackCommData(device, edgez_b0s, &edgez_data);
+    acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+    acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+    acUnpackCommData(device, sideyz_b0s, &sideyz_data);
 
     cudaDeviceSynchronize();
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1497,7 +1499,7 @@ acDeviceCommunicateHalosMPI(const Device device)
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     if (!pid) {
-        printf("--- Total communication time per step: %f ms\n", msec);
+        printf("--- Total communication time per substep (comm): %f ms\n", msec);
 
         // Write out to file
         FILE* fp = fopen("benchmark.result", "a+");
@@ -1516,6 +1518,13 @@ acDeviceCommunicateHalosMPI(const Device device)
 
     return AC_SUCCESS;
 }
+
+/*
+static int3
+findOptimalDecomposition(const int3 nn)
+{
+  int3 decomposition = (int3){1, 1, 1};
+}*/
 
 AcResult
 acDeviceRunMPITest(void)
@@ -1632,7 +1641,6 @@ acDeviceRunMPITest(void)
 
     // VERIFY ////////////////////////////////////////////////////
     if (pid == 0) {
-        // acMeshApplyPeriodicBounds(&model);
         acModelIntegrateStep(model, FLT_EPSILON);
         acMeshApplyPeriodicBounds(&model);
 
@@ -1657,3 +1665,41 @@ acDeviceRunMPITest(void)
     return AC_FAILURE;
 }
 #endif // AC_MPI_ENABLED
+
+/*
+struct grid_s {
+    Device device;
+};
+
+typedef grid_s* Grid;
+
+AcResult
+acGridInit(void)
+{
+    MPI_Init(NULL, NULL);
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
+    printf("Processor %s. Process %d of %d.\n", processor_name, pid, nprocs);
+}
+
+AcResult
+acGridLoad(const AcMesh mesh, Grid* grid)
+{
+}
+
+AcResult
+acGridStore(const Grid grid, AcMesh* mesh)
+{
+}
+
+AcResult
+acGridQuit(AcGrid& grid)
+{
+}
+*/
