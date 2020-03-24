@@ -29,6 +29,7 @@
 #include <math.h>
 #include <stdbool.h>
 
+#include "errchk.h"
 #include "memory.h" // acMeshCreate, acMeshDestroy, acMeshApplyPeriodicBounds
 
 // Standalone flags
@@ -915,10 +916,41 @@ solve_beta_step(const AcMesh in, const int step_number, const Scalar dt, const i
 #endif
 }
 
+// Checks whether the parameters passed in an AcMeshInfo are valid
+static void
+checkConfiguration(const AcMeshInfo info)
+{
+    for (int i = 0; i < NUM_REAL_PARAMS; ++i) {
+        if (!is_valid(info.real_params[i])) {
+            fprintf(stderr, "WARNING: Passed an invalid value %g to model solver (%s). Skipping.\n",
+                    (double)info.real_params[i], realparam_names[i]);
+        }
+    }
+
+    for (int i = 0; i < NUM_REAL3_PARAMS; ++i) {
+        if (!is_valid(info.real3_params[i].x)) {
+            fprintf(stderr,
+                    "WARNING: Passed an invalid value %g to model solver (%s.x). Skipping.\n",
+                    (double)info.real3_params[i].x, realparam_names[i]);
+        }
+        if (!is_valid(info.real3_params[i].y)) {
+            fprintf(stderr,
+                    "WARNING: Passed an invalid value %g to model solver (%s.y). Skipping.\n",
+                    (double)info.real3_params[i].y, realparam_names[i]);
+        }
+        if (!is_valid(info.real3_params[i].z)) {
+            fprintf(stderr,
+                    "WARNING: Passed an invalid value %g to model solver (%s.z). Skipping.\n",
+                    (double)info.real3_params[i].z, realparam_names[i]);
+        }
+    }
+}
+
 AcResult
 acModelIntegrateStep(AcMesh mesh, const AcReal dt)
 {
     mesh_info = &(mesh.info);
+    checkConfiguration(*mesh_info);
 
     AcMesh intermediate_mesh;
     acMeshCreate(mesh.info, &intermediate_mesh);
