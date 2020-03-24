@@ -944,6 +944,11 @@ checkConfiguration(const AcMeshInfo info)
                     (double)info.real3_params[i].z, realparam_names[i]);
         }
     }
+
+    ERRCHK_ALWAYS(is_valid(info.real_params[AC_inv_dsx]));
+    ERRCHK_ALWAYS(is_valid(info.real_params[AC_inv_dsy]));
+    ERRCHK_ALWAYS(is_valid(info.real_params[AC_inv_dsz]));
+    ERRCHK_ALWAYS(is_valid(info.real_params[AC_cs2_sound]));
 }
 
 AcResult
