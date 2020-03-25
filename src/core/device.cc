@@ -1310,7 +1310,6 @@ acDeviceCommunicateHalosMPI(const Device device)
         device->local_config.int_params[AC_ny],
         device->local_config.int_params[AC_nz],
     };
-    const AcReal dt = FLT_EPSILON; // TODO replace with the real one
 
     // Corners
     const int3 corner_a0s[] = {
