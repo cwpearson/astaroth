@@ -1583,7 +1583,6 @@ acDeviceRunMPITest(void)
     };
     submesh_info.int3_params[AC_multigpu_offset] = pid3d *
                                                    (int3){submesh_nx, submesh_ny, submesh_nz};
-    WARNING("AC_multigpu_offset not yet tested");
     acUpdateBuiltinParams(&submesh_info);
 
     AcMesh submesh;
