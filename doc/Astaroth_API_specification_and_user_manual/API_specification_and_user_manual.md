@@ -492,6 +492,8 @@ All real number literals are converted automatically to the correct precision. I
 (1.0f * 1.0d) // 1.0f is implicitly cast to double and the multiplication is done in double precision.
 ```
 
+> **Note:** Only C++-style casting is currently supported. For example, `float(1.0)` is valid but `(float) 1.0` gives a syntax error.
+
 ## Control Flow
 
 Conditional statements are expressed with the `if-else` construct. Unlike in C and C++, we require
