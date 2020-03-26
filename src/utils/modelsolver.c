@@ -955,6 +955,13 @@ AcResult
 acModelIntegrateStep(AcMesh mesh, const AcReal dt)
 {
     mesh_info = &(mesh.info);
+
+    // Setup built-in parameters
+    mesh_info->real_params[AC_inv_dsx]   = (AcReal)(1.0) / mesh_info->real_params[AC_dsx];
+    mesh_info->real_params[AC_inv_dsy]   = (AcReal)(1.0) / mesh_info->real_params[AC_dsy];
+    mesh_info->real_params[AC_inv_dsz]   = (AcReal)(1.0) / mesh_info->real_params[AC_dsz];
+    mesh_info->real_params[AC_cs2_sound] = mesh_info->real_params[AC_cs_sound] *
+                                           mesh_info->real_params[AC_cs_sound];
     checkConfiguration(*mesh_info);
 
     AcMesh intermediate_mesh;
