@@ -10,7 +10,7 @@
 #include "kernels/kernels.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#define MPI_GPUDIRECT_DISABLED (0)
+#define MPI_GPUDIRECT_DISABLED (1)
 
 AcResult
 acDevicePrintInfo(const Device device)
@@ -491,6 +491,11 @@ getPid3D(const int pid, const int3 decomposition)
 static int3
 decompose(const int target)
 {
+    if (target == 16)
+        return (int3){4, 2, 2};
+    if (target == 32)
+        return (int3){4, 4, 2};
+
     int decomposition[] = {1, 1, 1};
 
     int axis = 0;
@@ -1334,6 +1339,14 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acPackCommData(device, sidexz_a0s, &sidexz_data);
         acPackCommData(device, sideyz_a0s, &sideyz_data);
 
+        //////////// INNER INTEGRATION //////////////
+        {
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = nn;
+            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+        }
+        ////////////////////////////////////////////
+
 #if MPI_GPUDIRECT_DISABLED
         acTransferCommDataToHost(device, &corner_data);
         acTransferCommDataToHost(device, &edgex_data);
@@ -1343,14 +1356,6 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommDataToHost(device, &sidexz_data);
         acTransferCommDataToHost(device, &sideyz_data);
 #endif
-
-        //////////// INNER INTEGRATION //////////////
-        {
-            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = nn;
-            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
-        }
-        ////////////////////////////////////////////
 
         acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
         acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
