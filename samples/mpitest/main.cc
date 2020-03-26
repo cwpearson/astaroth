@@ -20,10 +20,50 @@
     Running: mpirun -np <num processes> <executable>
 */
 #include "astaroth.h"
+#include "astaroth_utils.h"
+
+#include <mpi.h>
 
 int
 main(void)
 {
-    acDeviceRunMPITest();
+    MPI_Init(NULL, NULL);
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    // CPU alloc
+    AcMeshInfo info;
+    acLoadConfig(AC_DEFAULT_CONFIG, &info);
+
+    AcMesh model, candidate;
+    if (pid == 0) {
+        acMeshCreate(info, &model);
+        acMeshCreate(info, &candidate);
+        acMeshRandomize(&model);
+        acMeshRandomize(&candidate);
+    }
+
+    // GPU alloc & compute
+    acGridInit(info);
+    acGridLoadMesh(model, STREAM_DEFAULT);
+
+    acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
+    acGridPeriodicBoundconds(STREAM_DEFAULT);
+
+    acGridStoreMesh(STREAM_DEFAULT, &candidate);
+    acGridQuit();
+
+    // Verify
+    if (pid == 0) {
+        acModelIntegrateStep(model, FLT_EPSILON);
+        acMeshApplyPeriodicBounds(&model);
+
+        acVerifyMesh(model, candidate);
+        acMeshDestroy(&model);
+        acMeshDestroy(&candidate);
+    }
+
+    MPI_Finalize();
     return EXIT_SUCCESS;
 }
