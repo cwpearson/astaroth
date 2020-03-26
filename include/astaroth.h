@@ -116,10 +116,10 @@ typedef enum {
 
 #define _UNUSED __attribute__((unused)) // Does not give a warning if unused
 #define AC_GEN_STR(X) #X,
-static const char* intparam_names[] _UNUSED    = {AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR) "-end-"};
-static const char* int3param_names[] _UNUSED   = {AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR) "-end-"};
-static const char* realparam_names[] _UNUSED   = {AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR) "-end-"};
-static const char* real3param_names[] _UNUSED  = {AC_FOR_USER_REAL3_PARAM_TYPES(AC_GEN_STR) "-end-"};
+static const char* intparam_names[] _UNUSED   = {AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR) "-end-"};
+static const char* int3param_names[] _UNUSED  = {AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR) "-end-"};
+static const char* realparam_names[] _UNUSED  = {AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR) "-end-"};
+static const char* real3param_names[] _UNUSED = {AC_FOR_USER_REAL3_PARAM_TYPES(AC_GEN_STR) "-end-"};
 static const char* scalararray_names[] _UNUSED = {AC_FOR_SCALARARRAY_HANDLES(AC_GEN_STR) "-end-"};
 static const char* vtxbuf_names[] _UNUSED      = {AC_FOR_VTXBUF_HANDLES(AC_GEN_STR) "-end-"};
 #undef AC_GEN_STR
@@ -144,17 +144,20 @@ typedef struct device_s* Device; // Opaque pointer to device_s. Analogous to dis
 // Node
 typedef struct node_s* Node; // Opaque pointer to node_s.
 
+// Grid
+// typedef struct grid_s* Grid; // Opaque pointer to grid_s
+
 typedef struct {
     int3 m;
     int3 n;
-} Grid; // WARNING: Grid structure may be deprecated in future versions (TODO)
+} GridDims;
 
 typedef struct {
     int num_devices;
     Device* devices;
 
-    Grid grid;
-    Grid subgrid;
+    GridDims grid;
+    GridDims subgrid;
 } DeviceConfiguration;
 
 #ifdef __cplusplus
@@ -279,6 +282,45 @@ int acGetNumDevicesPerNode(void);
 
 /** */
 Node acGetNode(void);
+
+/*
+ * =============================================================================
+ * Grid interface
+ * =============================================================================
+ */
+#if AC_MPI_ENABLED
+/**
+Initializes all available devices.
+
+Must compile and run the code with MPI.
+
+Must allocate exactly one process per GPU. And the same number of processes
+per node as there are GPUs on that node.
+
+Devices in the grid are configured based on the contents of AcMesh.
+ */
+AcResult acGridInit(const AcMeshInfo info);
+
+/**
+Resets all devices on the current grid.
+ */
+AcResult acGridQuit(void);
+
+/** */
+AcResult acGridSynchronizeStream(const Stream stream);
+
+/** */
+AcResult acGridLoadMesh(const AcMesh host_mesh, const Stream stream);
+
+/** */
+AcResult acGridStoreMesh(const Stream stream, AcMesh* host_mesh);
+
+/** */
+AcResult acGridIntegrate(const Stream stream, const AcReal dt);
+
+/** */
+AcResult acGridPeriodicBoundconds(const Stream stream);
+#endif // AC_MPI_ENABLED
 
 /*
  * =============================================================================

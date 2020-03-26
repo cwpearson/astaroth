@@ -834,6 +834,13 @@ acDestroyCommData(const Device device, CommData* data)
 }
 
 static void
+acSyncCommData(const CommData data)
+{
+    for (size_t i = 0; i < data.count; ++i)
+        cudaStreamSynchronize(data.streams[i]);
+}
+
+static void
 acPackCommData(const Device device, const int3* a0s, CommData* data)
 {
     cudaSetDevice(device->id);
@@ -978,6 +985,226 @@ acTransferCommDataWait(const CommData data)
         MPI_Wait(&data.send_reqs[i], MPI_STATUS_IGNORE);
         MPI_Wait(&data.recv_reqs[i], MPI_STATUS_IGNORE);
     }
+}
+
+typedef struct {
+    Device device;
+    AcMesh submesh;
+    int3 decomposition;
+    bool initialized;
+
+    int3 nn;
+    CommData corner_data;
+    CommData edgex_data;
+    CommData edgey_data;
+    CommData edgez_data;
+    CommData sidexy_data;
+    CommData sidexz_data;
+    CommData sideyz_data;
+} Grid;
+
+static Grid grid = {};
+
+AcResult
+acGridSynchronizeStream(const Stream stream)
+{
+    ERRCHK(grid.initialized);
+
+    acDeviceSynchronizeStream(grid.device, stream);
+    MPI_Barrier(MPI_COMM_WORLD);
+    return AC_SUCCESS;
+}
+
+AcResult
+acGridInit(const AcMeshInfo info)
+{
+    ERRCHK(!grid.initialized);
+
+    // Check that MPI is initialized
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
+    printf("Processor %s. Process %d of %d.\n", processor_name, pid, nprocs);
+
+    // Decompose
+    AcMeshInfo submesh_info  = info;
+    const int3 decomposition = decompose(nprocs);
+    const int3 pid3d         = getPid3D(pid, decomposition);
+
+    printf("Decomposition: %d, %d, %d\n", decomposition.x, decomposition.y, decomposition.z);
+    printf("Process %d: (%d, %d, %d)\n", pid, pid3d.x, pid3d.y, pid3d.z);
+    ERRCHK_ALWAYS(info.int_params[AC_nx] % decomposition.x == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_ny] % decomposition.y == 0);
+    ERRCHK_ALWAYS(info.int_params[AC_nz] % decomposition.z == 0);
+
+    const int submesh_nx                       = info.int_params[AC_nx] / decomposition.x;
+    const int submesh_ny                       = info.int_params[AC_ny] / decomposition.y;
+    const int submesh_nz                       = info.int_params[AC_nz] / decomposition.z;
+    submesh_info.int_params[AC_nx]             = submesh_nx;
+    submesh_info.int_params[AC_ny]             = submesh_ny;
+    submesh_info.int_params[AC_nz]             = submesh_nz;
+    submesh_info.int3_params[AC_global_grid_n] = (int3){
+        info.int_params[AC_nx],
+        info.int_params[AC_ny],
+        info.int_params[AC_nz],
+    };
+    submesh_info.int3_params[AC_multigpu_offset] = pid3d *
+                                                   (int3){submesh_nx, submesh_ny, submesh_nz};
+    acUpdateBuiltinParams(&submesh_info);
+
+    // GPU alloc
+    int devices_per_node = -1;
+    cudaGetDeviceCount(&devices_per_node);
+
+    Device device;
+    acDeviceCreate(pid % devices_per_node, submesh_info, &device);
+
+    // CPU alloc
+    AcMesh submesh;
+    acMeshCreate(submesh_info, &submesh);
+
+    // Setup the global grid structure
+    grid.device        = device;
+    grid.submesh       = submesh;
+    grid.decomposition = decomposition;
+    grid.initialized   = true;
+
+    // Configure
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    // Corners
+    const int3 corner_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+        (int3){NGHOST, nn.y, NGHOST},   //
+        (int3){nn.x, nn.y, NGHOST},     //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+        (int3){NGHOST, nn.y, nn.z},   //
+        (int3){nn.x, nn.y, nn.z},
+    };
+
+    // Edges X
+    const int3 edgex_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){NGHOST, nn.y, nn.z},   //
+    };
+
+    // Edges Y
+    const int3 edgey_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+    };
+
+    // Edges Z
+    const int3 edgez_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, nn.y, NGHOST}, //
+        (int3){nn.x, nn.y, NGHOST},   //
+    };
+
+    // Sides XY
+    const int3 sidexy_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, NGHOST, nn.z},   //
+    };
+
+    // Sides XZ
+    const int3 sidexz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+    };
+
+    // Sides YZ
+    const int3 sideyz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+    };
+
+    const int3 corner_dims = (int3){NGHOST, NGHOST, NGHOST};
+    const int3 edgex_dims  = (int3){nn.x, NGHOST, NGHOST};
+    const int3 edgey_dims  = (int3){NGHOST, nn.y, NGHOST};
+    const int3 edgez_dims  = (int3){NGHOST, NGHOST, nn.z};
+    const int3 sidexy_dims = (int3){nn.x, nn.y, NGHOST};
+    const int3 sidexz_dims = (int3){nn.x, NGHOST, nn.z};
+    const int3 sideyz_dims = (int3){NGHOST, nn.y, nn.z};
+    grid.nn                = nn;
+    grid.corner_data       = acCreateCommData(device, corner_dims, ARRAY_SIZE(corner_a0s));
+    grid.edgex_data        = acCreateCommData(device, edgex_dims, ARRAY_SIZE(edgex_a0s));
+    grid.edgey_data        = acCreateCommData(device, edgey_dims, ARRAY_SIZE(edgey_a0s));
+    grid.edgez_data        = acCreateCommData(device, edgez_dims, ARRAY_SIZE(edgez_a0s));
+    grid.sidexy_data       = acCreateCommData(device, sidexy_dims, ARRAY_SIZE(sidexy_a0s));
+    grid.sidexz_data       = acCreateCommData(device, sidexz_dims, ARRAY_SIZE(sidexz_a0s));
+    grid.sideyz_data       = acCreateCommData(device, sideyz_dims, ARRAY_SIZE(sideyz_a0s));
+
+    acGridSynchronizeStream(STREAM_ALL);
+    return AC_SUCCESS;
+}
+
+AcResult
+acGridQuit(void)
+{
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(STREAM_ALL);
+
+    acDestroyCommData(grid.device, &grid.corner_data);
+    acDestroyCommData(grid.device, &grid.edgex_data);
+    acDestroyCommData(grid.device, &grid.edgey_data);
+    acDestroyCommData(grid.device, &grid.edgez_data);
+    acDestroyCommData(grid.device, &grid.sidexy_data);
+    acDestroyCommData(grid.device, &grid.sidexz_data);
+    acDestroyCommData(grid.device, &grid.sideyz_data);
+
+    grid.initialized   = false;
+    grid.decomposition = (int3){-1, -1, -1};
+    acMeshDestroy(&grid.submesh);
+    acDeviceDestroy(grid.device);
+
+    acGridSynchronizeStream(STREAM_ALL);
+    return AC_SUCCESS;
+}
+
+AcResult
+acGridLoadMesh(const AcMesh host_mesh, const Stream stream)
+{
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(stream);
+
+    acDeviceDistributeMeshMPI(host_mesh, grid.decomposition, &grid.submesh);
+    acDeviceLoadMesh(grid.device, stream, grid.submesh);
+
+    return AC_SUCCESS;
+}
+
+AcResult
+acGridStoreMesh(const Stream stream, AcMesh* host_mesh)
+{
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(stream);
+
+    acDeviceStoreMesh(grid.device, stream, &grid.submesh);
+    acGridSynchronizeStream(stream);
+
+    acDeviceGatherMeshMPI(grid.submesh, grid.decomposition, host_mesh);
+
+    return AC_SUCCESS;
 }
 
 static AcResult
@@ -1518,186 +1745,410 @@ acDeviceCommunicateHalosMPI(const Device device)
     return AC_SUCCESS;
 }
 
-/*
-static int3
-findOptimalDecomposition(const int3 nn)
-{
-  int3 decomposition = (int3){1, 1, 1};
-}*/
-
 AcResult
-acDeviceRunMPITest(void)
+acGridIntegrate(const Stream stream, const AcReal dt)
 {
-    MPI_Init(NULL, NULL);
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(stream);
 
-    int nprocs, pid;
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const Device device  = grid.device;
+    const int3 nn        = grid.nn;
+    CommData corner_data = grid.corner_data;
+    CommData edgex_data  = grid.edgex_data;
+    CommData edgey_data  = grid.edgey_data;
+    CommData edgez_data  = grid.edgez_data;
+    CommData sidexy_data = grid.sidexy_data;
+    CommData sidexz_data = grid.sidexz_data;
+    CommData sideyz_data = grid.sideyz_data;
 
-    char processor_name[MPI_MAX_PROCESSOR_NAME];
-    int name_len;
-    MPI_Get_processor_name(processor_name, &name_len);
-    printf("Processor %s. Process %d of %d.\n", processor_name, pid, nprocs);
+    // Corners
+    const int3 corner_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+        (int3){NGHOST, nn.y, NGHOST},   //
+        (int3){nn.x, nn.y, NGHOST},     //
 
-    // Create model and candidate meshes
-    AcMeshInfo info;
-    acLoadConfig(AC_DEFAULT_CONFIG, &info);
-    info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
-    info.real_params[AC_inv_dsy]   = AcReal(1.0) / info.real_params[AC_dsy];
-    info.real_params[AC_inv_dsz]   = AcReal(1.0) / info.real_params[AC_dsz];
-    info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
-
-    AcMesh model, candidate;
-
-    // Master CPU
-    if (pid == 0) {
-        acMeshCreate(info, &model);
-        acMeshCreate(info, &candidate);
-
-        acMeshRandomize(&model);
-        acMeshRandomize(&candidate);
-    }
-
-    /// DECOMPOSITION & SUBMESH ///////////////////////////////////
-    AcMeshInfo submesh_info  = info;
-    const int3 decomposition = decompose(nprocs);
-    const int3 pid3d         = getPid3D(pid, decomposition);
-
-    printf("Decomposition: %d, %d, %d\n", decomposition.x, decomposition.y, decomposition.z);
-    printf("Process %d: (%d, %d, %d)\n", pid, pid3d.x, pid3d.y, pid3d.z);
-    ERRCHK_ALWAYS(info.int_params[AC_nx] % decomposition.x == 0);
-    ERRCHK_ALWAYS(info.int_params[AC_ny] % decomposition.y == 0);
-    ERRCHK_ALWAYS(info.int_params[AC_nz] % decomposition.z == 0);
-
-    const int submesh_nx                       = info.int_params[AC_nx] / decomposition.x;
-    const int submesh_ny                       = info.int_params[AC_ny] / decomposition.y;
-    const int submesh_nz                       = info.int_params[AC_nz] / decomposition.z;
-    submesh_info.int_params[AC_nx]             = submesh_nx;
-    submesh_info.int_params[AC_ny]             = submesh_ny;
-    submesh_info.int_params[AC_nz]             = submesh_nz;
-    submesh_info.int3_params[AC_global_grid_n] = (int3){
-        info.int_params[AC_nx],
-        info.int_params[AC_ny],
-        info.int_params[AC_nz],
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+        (int3){NGHOST, nn.y, nn.z},   //
+        (int3){nn.x, nn.y, nn.z},
     };
-    submesh_info.int3_params[AC_multigpu_offset] = pid3d *
-                                                   (int3){submesh_nx, submesh_ny, submesh_nz};
-    acUpdateBuiltinParams(&submesh_info);
+    const int3 corner_b0s[] = {
+        (int3){0, 0, 0},
+        (int3){NGHOST + nn.x, 0, 0},
+        (int3){0, NGHOST + nn.y, 0},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
 
-    AcMesh submesh;
-    acMeshCreate(submesh_info, &submesh);
-    acMeshRandomize(&submesh);
-    ////////////////////////////////////////////////////////////////
+        (int3){0, 0, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
+        (int3){0, NGHOST + nn.y, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
+    };
 
-    // GPU INIT ////////////////////////////////////////////////////
-    int devices_per_node = -1;
-    cudaGetDeviceCount(&devices_per_node);
+    // Edges X
+    const int3 edgex_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
 
-    Device device;
-    acDeviceCreate(pid % devices_per_node, submesh_info, &device);
-    // TODO enable peer access
-    ////////////////////////////////////////////////////////////////
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){NGHOST, nn.y, nn.z},   //
+    };
+    const int3 edgex_b0s[] = {
+        (int3){NGHOST, 0, 0},
+        (int3){NGHOST, NGHOST + nn.y, 0},
 
-    // DISTRIBUTE & LOAD //////////////////////////////////////////
-    acDeviceDistributeMeshMPI(model, decomposition, &submesh);
-    acDeviceLoadMesh(device, STREAM_DEFAULT, submesh);
-    ///////////////////////////////////////////////////////////////
+        (int3){NGHOST, 0, NGHOST + nn.z},
+        (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
+    };
 
-    // SYNC //////////////////////////////////////////////////////
-    acDeviceSynchronizeStream(device, STREAM_ALL);
-    MPI_Barrier(MPI_COMM_WORLD);
-    //////////////////////////////////////////////////////////////
+    // Edges Y
+    const int3 edgey_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
 
-    // TIMING START //////////////////////////////////////////////
-    acDeviceSynchronizeStream(device, STREAM_ALL);
-    MPI_Barrier(MPI_COMM_WORLD);
-    Timer t;
-    timer_reset(&t);
-    //////////////////////////////////////////////////////////////
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+    };
+    const int3 edgey_b0s[] = {
+        (int3){0, NGHOST, 0},
+        (int3){NGHOST + nn.x, NGHOST, 0},
 
-    // INTEGRATION & BOUNDCONDS////////////////////////////////////
-    // acDeviceCommunicateHalosMPI(device);
-    acDeviceIntegrateMPI(device, FLT_EPSILON);
-    acDeviceCommunicateHalosMPI(device);
-    ///////////////////////////////////////////////////////////////
+        (int3){0, NGHOST, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
+    };
 
-    // TIMING END //////////////////////////////////////////////
-    acDeviceSynchronizeStream(device, STREAM_ALL);
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (!pid) {
-        timer_diff_print(t);
+    // Edges Z
+    const int3 edgez_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, nn.y, NGHOST}, //
+        (int3){nn.x, nn.y, NGHOST},   //
+    };
+    const int3 edgez_b0s[] = {
+        (int3){0, 0, NGHOST},
+        (int3){NGHOST + nn.x, 0, NGHOST},
+
+        (int3){0, NGHOST + nn.y, NGHOST},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
+    };
+
+    // Sides XY
+    const int3 sidexy_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, NGHOST, nn.z},   //
+    };
+    const int3 sidexy_b0s[] = {
+        (int3){NGHOST, NGHOST, 0},             //
+        (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
+    };
+
+    // Sides XZ
+    const int3 sidexz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+    };
+    const int3 sidexz_b0s[] = {
+        (int3){NGHOST, 0, NGHOST},             //
+        (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
+    };
+
+    // Sides YZ
+    const int3 sideyz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+    };
+    const int3 sideyz_b0s[] = {
+        (int3){0, NGHOST, NGHOST},             //
+        (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
+    };
+
+    for (int isubstep = 0; isubstep < 3; ++isubstep) {
+        acPackCommData(device, corner_a0s, &corner_data);
+        acPackCommData(device, edgex_a0s, &edgex_data);
+        acPackCommData(device, edgey_a0s, &edgey_data);
+        acPackCommData(device, edgez_a0s, &edgez_data);
+        acPackCommData(device, sidexy_a0s, &sidexy_data);
+        acPackCommData(device, sidexz_a0s, &sidexz_data);
+        acPackCommData(device, sideyz_a0s, &sideyz_data);
+
+#if MPI_GPUDIRECT_DISABLED
+        acTransferCommDataToHost(device, &corner_data);
+        acTransferCommDataToHost(device, &edgex_data);
+        acTransferCommDataToHost(device, &edgey_data);
+        acTransferCommDataToHost(device, &edgez_data);
+        acTransferCommDataToHost(device, &sidexy_data);
+        acTransferCommDataToHost(device, &sidexz_data);
+        acTransferCommDataToHost(device, &sideyz_data);
+#endif
+
+        //////////// INNER INTEGRATION //////////////
+        {
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = nn;
+            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+        }
+        ////////////////////////////////////////////
+
+        acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+        acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+        acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+        acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+        acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+        acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+        acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+
+        acTransferCommDataWait(corner_data);
+        acTransferCommDataWait(edgex_data);
+        acTransferCommDataWait(edgey_data);
+        acTransferCommDataWait(edgez_data);
+        acTransferCommDataWait(sidexy_data);
+        acTransferCommDataWait(sidexz_data);
+        acTransferCommDataWait(sideyz_data);
+
+#if MPI_GPUDIRECT_DISABLED
+        acTransferCommDataToDevice(device, &corner_data);
+        acTransferCommDataToDevice(device, &edgex_data);
+        acTransferCommDataToDevice(device, &edgey_data);
+        acTransferCommDataToDevice(device, &edgez_data);
+        acTransferCommDataToDevice(device, &sidexy_data);
+        acTransferCommDataToDevice(device, &sidexz_data);
+        acTransferCommDataToDevice(device, &sideyz_data);
+#endif
+
+        acUnpackCommData(device, corner_b0s, &corner_data);
+        acUnpackCommData(device, edgex_b0s, &edgex_data);
+        acUnpackCommData(device, edgey_b0s, &edgey_data);
+        acUnpackCommData(device, edgez_b0s, &edgez_data);
+        acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+        acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+        acUnpackCommData(device, sideyz_b0s, &sideyz_data);
+        //////////// OUTER INTEGRATION //////////////
+
+        // Wait for unpacking
+        acSyncCommData(corner_data);
+        acSyncCommData(edgex_data);
+        acSyncCommData(edgey_data);
+        acSyncCommData(edgez_data);
+        acSyncCommData(sidexy_data);
+        acSyncCommData(sidexz_data);
+        acSyncCommData(sideyz_data);
+        { // Front
+            const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
+            const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
+        }
+        { // Back
+            const int3 m1 = (int3){NGHOST, NGHOST, nn.z};
+            const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
+        }
+        { // Bottom
+            const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
+        }
+        { // Top
+            const int3 m1 = (int3){NGHOST, nn.y, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
+        }
+        { // Left
+            const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
+        }
+        { // Right
+            const int3 m1 = (int3){nn.x, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
+        }
+        acDeviceSwapBuffers(device);
+        acDeviceSynchronizeStream(device, STREAM_ALL); // Wait until inner and outer done
+        ////////////////////////////////////////////
     }
-    MPI_Barrier(MPI_COMM_WORLD);
-    //////////////////////////////////////////////////////////////
 
-    // STORE & GATHER /////////////////////////////////////////////
-    MPI_Barrier(MPI_COMM_WORLD);
-    acDeviceStoreMesh(device, STREAM_DEFAULT, &submesh);
-    acDeviceSynchronizeStream(device, STREAM_DEFAULT);
-    acDeviceGatherMeshMPI(submesh, decomposition, &candidate);
-    //////////////////////////////////////////////////////////////
-
-    // VERIFY ////////////////////////////////////////////////////
-    if (pid == 0) {
-        acModelIntegrateStep(model, FLT_EPSILON);
-        acMeshApplyPeriodicBounds(&model);
-
-        acVerifyMesh(model, candidate);
-        acMeshDestroy(&model);
-        acMeshDestroy(&candidate);
-    }
-    //////////////////////////////////////////////////////////////
-
-    // DESTROY ///////////////////////////////////////////////////
-    acDeviceDestroy(device);
-    acMeshDestroy(&submesh);
-    MPI_Finalize();
-    //////////////////////////////////////////////////////////////
     return AC_SUCCESS;
 }
-#else
+
 AcResult
-acDeviceRunMPITest(void)
+acGridPeriodicBoundconds(const Stream stream)
 {
-    WARNING("MPI was not enabled but acDeviceRunMPITest() was called");
-    return AC_FAILURE;
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(stream);
+
+    const Device device  = grid.device;
+    const int3 nn        = grid.nn;
+    CommData corner_data = grid.corner_data;
+    CommData edgex_data  = grid.edgex_data;
+    CommData edgey_data  = grid.edgey_data;
+    CommData edgez_data  = grid.edgez_data;
+    CommData sidexy_data = grid.sidexy_data;
+    CommData sidexz_data = grid.sidexz_data;
+    CommData sideyz_data = grid.sideyz_data;
+
+    // Corners
+    const int3 corner_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+        (int3){NGHOST, nn.y, NGHOST},   //
+        (int3){nn.x, nn.y, NGHOST},     //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+        (int3){NGHOST, nn.y, nn.z},   //
+        (int3){nn.x, nn.y, nn.z},
+    };
+    const int3 corner_b0s[] = {
+        (int3){0, 0, 0},
+        (int3){NGHOST + nn.x, 0, 0},
+        (int3){0, NGHOST + nn.y, 0},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
+
+        (int3){0, 0, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
+        (int3){0, NGHOST + nn.y, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
+    };
+
+    // Edges X
+    const int3 edgex_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){NGHOST, nn.y, nn.z},   //
+    };
+    const int3 edgex_b0s[] = {
+        (int3){NGHOST, 0, 0},
+        (int3){NGHOST, NGHOST + nn.y, 0},
+
+        (int3){NGHOST, 0, NGHOST + nn.z},
+        (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
+    };
+
+    // Edges Y
+    const int3 edgey_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, NGHOST, nn.z}, //
+        (int3){nn.x, NGHOST, nn.z},   //
+    };
+    const int3 edgey_b0s[] = {
+        (int3){0, NGHOST, 0},
+        (int3){NGHOST + nn.x, NGHOST, 0},
+
+        (int3){0, NGHOST, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
+    };
+
+    // Edges Z
+    const int3 edgez_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+
+        (int3){NGHOST, nn.y, NGHOST}, //
+        (int3){nn.x, nn.y, NGHOST},   //
+    };
+    const int3 edgez_b0s[] = {
+        (int3){0, 0, NGHOST},
+        (int3){NGHOST + nn.x, 0, NGHOST},
+
+        (int3){0, NGHOST + nn.y, NGHOST},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
+    };
+
+    // Sides XY
+    const int3 sidexy_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, NGHOST, nn.z},   //
+    };
+    const int3 sidexy_b0s[] = {
+        (int3){NGHOST, NGHOST, 0},             //
+        (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
+    };
+
+    // Sides XZ
+    const int3 sidexz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){NGHOST, nn.y, NGHOST},   //
+    };
+    const int3 sidexz_b0s[] = {
+        (int3){NGHOST, 0, NGHOST},             //
+        (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
+    };
+
+    // Sides YZ
+    const int3 sideyz_a0s[] = {
+        (int3){NGHOST, NGHOST, NGHOST}, //
+        (int3){nn.x, NGHOST, NGHOST},   //
+    };
+    const int3 sideyz_b0s[] = {
+        (int3){0, NGHOST, NGHOST},             //
+        (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
+    };
+
+    acPackCommData(device, corner_a0s, &corner_data);
+    acPackCommData(device, edgex_a0s, &edgex_data);
+    acPackCommData(device, edgey_a0s, &edgey_data);
+    acPackCommData(device, edgez_a0s, &edgez_data);
+    acPackCommData(device, sidexy_a0s, &sidexy_data);
+    acPackCommData(device, sidexz_a0s, &sidexz_data);
+    acPackCommData(device, sideyz_a0s, &sideyz_data);
+
+#if MPI_GPUDIRECT_DISABLED
+    acTransferCommDataToHost(device, &corner_data);
+    acTransferCommDataToHost(device, &edgex_data);
+    acTransferCommDataToHost(device, &edgey_data);
+    acTransferCommDataToHost(device, &edgez_data);
+    acTransferCommDataToHost(device, &sidexy_data);
+    acTransferCommDataToHost(device, &sidexz_data);
+    acTransferCommDataToHost(device, &sideyz_data);
+#endif
+
+    acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+    acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
+    acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
+    acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
+    acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
+    acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
+    acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+
+    acTransferCommDataWait(corner_data);
+    acTransferCommDataWait(edgex_data);
+    acTransferCommDataWait(edgey_data);
+    acTransferCommDataWait(edgez_data);
+    acTransferCommDataWait(sidexy_data);
+    acTransferCommDataWait(sidexz_data);
+    acTransferCommDataWait(sideyz_data);
+
+#if MPI_GPUDIRECT_DISABLED
+    acTransferCommDataToDevice(device, &corner_data);
+    acTransferCommDataToDevice(device, &edgex_data);
+    acTransferCommDataToDevice(device, &edgey_data);
+    acTransferCommDataToDevice(device, &edgez_data);
+    acTransferCommDataToDevice(device, &sidexy_data);
+    acTransferCommDataToDevice(device, &sidexz_data);
+    acTransferCommDataToDevice(device, &sideyz_data);
+#endif
+
+    acUnpackCommData(device, corner_b0s, &corner_data);
+    acUnpackCommData(device, edgex_b0s, &edgex_data);
+    acUnpackCommData(device, edgey_b0s, &edgey_data);
+    acUnpackCommData(device, edgez_b0s, &edgez_data);
+    acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+    acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+    acUnpackCommData(device, sideyz_b0s, &sideyz_data);
+
+    // Wait for unpacking
+    acSyncCommData(corner_data);
+    acSyncCommData(edgex_data);
+    acSyncCommData(edgey_data);
+    acSyncCommData(edgez_data);
+    acSyncCommData(sidexy_data);
+    acSyncCommData(sidexz_data);
+    acSyncCommData(sideyz_data);
+    return AC_SUCCESS;
 }
 #endif // AC_MPI_ENABLED
-
-/*
-struct grid_s {
-    Device device;
-};
-
-typedef grid_s* Grid;
-
-AcResult
-acGridInit(void)
-{
-    MPI_Init(NULL, NULL);
-
-    int nprocs, pid;
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-
-    char processor_name[MPI_MAX_PROCESSOR_NAME];
-    int name_len;
-    MPI_Get_processor_name(processor_name, &name_len);
-    printf("Processor %s. Process %d of %d.\n", processor_name, pid, nprocs);
-}
-
-AcResult
-acGridLoad(const AcMesh mesh, Grid* grid)
-{
-}
-
-AcResult
-acGridStore(const Grid grid, AcMesh* mesh)
-{
-}
-
-AcResult
-acGridQuit(AcGrid& grid)
-{
-}
-*/
