@@ -22,6 +22,8 @@
 #include "astaroth.h"
 #include "astaroth_utils.h"
 
+#if AC_MPI_ENABLED
+
 #include <mpi.h>
 
 int
@@ -67,3 +69,12 @@ main(void)
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
+
+#else
+int
+main(void)
+{
+    printf("The library was built without MPI support, cannot run mpitest. Rebuild Astaroth with cmake -DMPI_ENABLED=ON .. to enable.\n");
+    return EXIT_FAILURE;
+}
+#endif // AC_MPI_ENABLES
