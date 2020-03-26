@@ -115,7 +115,7 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
         return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
-    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+    ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
                                                cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
 }
@@ -140,7 +140,7 @@ acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal
         return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.real3_params[param] - (size_t)&d_mesh_info;
-    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+    ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
                                                cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
 }
@@ -164,7 +164,7 @@ acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntPara
         return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.int_params[param] - (size_t)&d_mesh_info;
-    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+    ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
                                                cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
 }
@@ -190,8 +190,8 @@ acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Pa
         return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.int3_params[param] - (size_t)&d_mesh_info;
-    ERRCHK_CUDA_ALWAYS(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
-                                               cudaMemcpyHostToDevice, device->streams[stream]));
+    ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
+                                        cudaMemcpyHostToDevice, device->streams[stream]));
     return AC_SUCCESS;
 }
 
