@@ -10,7 +10,7 @@
 #include "kernels/kernels.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#define MPI_GPUDIRECT_DISABLED (1)
+#define MPI_GPUDIRECT_DISABLED (0)
 
 AcResult
 acDevicePrintInfo(const Device device)
