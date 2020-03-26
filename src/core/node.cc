@@ -32,7 +32,7 @@
 
  In this new approach, I have simplified the multi- and single-GPU layers significantly.
  Quick rundown:
-         New struct: Grid. There are two global variables, "grid" and "subgrid", which
+         New struct: GridDims. There are two global variables, "grid" and "subgrid", which
          contain the extents of the whole simulation domain and the decomposed grids,
  respectively. To simplify thing, we require that each GPU is assigned the same amount of
  work, therefore each GPU in the node is assigned and "subgrid.m" -sized block of data to
@@ -81,7 +81,7 @@
 
 ### Throughout this file we use the following notation and names for various index offsets
 
-    Global coordinates: coordinates with respect to the global grid (static Grid grid)
+    Global coordinates: coordinates with respect to the global grid (static GridDims grid)
     Local coordinates: coordinates with respect to the local subgrid (static Subgrid subgrid)
 
     s0, s1: source indices in global coordinates
@@ -107,7 +107,7 @@
      hopefully helps make sense out of all this.
 
 
-     Grid
+     GridDims
                                       |----num_vertices---|
      xxx|....................................................|xxx
               ^                   ^   ^                   ^
@@ -136,20 +136,20 @@ struct node_s {
     int num_devices;
     Device devices[MAX_NUM_DEVICES];
 
-    Grid grid;
-    Grid subgrid;
+    GridDims grid;
+    GridDims subgrid;
 
     AcMeshInfo config;
 };
 
 static int
-gridIdx(const Grid grid, const int3 idx)
+gridIdx(const GridDims grid, const int3 idx)
 {
     return idx.x + idx.y * grid.m.x + idx.z * grid.m.x * grid.m.y;
 }
 
 static int3
-gridIdx3d(const Grid grid, const int idx)
+gridIdx3d(const GridDims grid, const int idx)
 {
     return (int3){idx % grid.m.x, (idx % (grid.m.x * grid.m.y)) / grid.m.x,
                   idx / (grid.m.x * grid.m.y)};
@@ -195,10 +195,10 @@ update_builtin_params(AcMeshInfo* config)
     config->int_params[AC_nxyz] = config->int_params[AC_nxy] * config->int_params[AC_nz];
 }
 
-static Grid
-createGrid(const AcMeshInfo config)
+static GridDims
+createGridDims(const AcMeshInfo config)
 {
-    Grid grid;
+    GridDims grid;
 
     grid.m = (int3){config.int_params[AC_mx], config.int_params[AC_my], config.int_params[AC_mz]};
     grid.n = (int3){config.int_params[AC_nx], config.int_params[AC_ny], config.int_params[AC_nz]};
@@ -234,7 +234,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
 
     // Decompose the problem domain
     // The main grid
-    node->grid = createGrid(node->config);
+    node->grid = createGridDims(node->config);
 
     // Subgrids
     AcMeshInfo subgrid_config = node->config;
@@ -246,7 +246,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
     print(subgrid_config);
     printf("###############################################################\n");
 #endif
-    node->subgrid = createGrid(subgrid_config);
+    node->subgrid = createGridDims(subgrid_config);
 
     // Periodic boundary conditions become weird if the system can "fold unto itself".
     ERRCHK_ALWAYS(node->subgrid.n.x >= STENCIL_ORDER);
@@ -255,8 +255,8 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
 
 #if VERBOSE_PRINTING
     // clang-format off
-    printf("Grid m ");   printInt3(node->grid.m);    printf("\n");
-    printf("Grid n ");   printInt3(node->grid.n);    printf("\n");
+    printf("GridDims m ");   printInt3(node->grid.m);    printf("\n");
+    printf("GridDims n ");   printInt3(node->grid.n);    printf("\n");
     printf("Subrid m "); printInt3(node->subgrid.m); printf("\n");
     printf("Subrid n "); printInt3(node->subgrid.n); printf("\n");
     // clang-format on
