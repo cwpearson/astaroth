@@ -67,6 +67,9 @@ add_custom_target(dsl_headers ALL DEPENDS ${DSL_HEADERS})
 if (DOUBLE_PRECISION)
     add_definitions(-DAC_DOUBLE_PRECISION=1)
 endif ()
+if (MPI_ENABLED)
+    add_definitions(-DAC_MPI_ENABLED=1)
+endif ()
 
 add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")
 
