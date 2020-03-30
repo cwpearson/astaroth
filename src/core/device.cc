@@ -495,6 +495,10 @@ decompose(const int target)
         return (int3){4, 2, 2};
     if (target == 32)
         return (int3){4, 4, 2};
+    if (target == 128)
+        return (int3){8, 4, 4};
+    if (target == 256)
+        return (int3){8, 8, 4};
 
     int decomposition[] = {1, 1, 1};
 
