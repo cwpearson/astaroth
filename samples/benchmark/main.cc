@@ -30,7 +30,14 @@
 #include <mpi.h>
 
 #include <algorithm>
+#include <string.h>
 #include <vector>
+
+typedef enum {
+    TEST_STRONG_SCALING,
+    TEST_WEAK_SCALING,
+    NUM_TESTS,
+} TestType;
 
 int
 main(void)
@@ -43,6 +50,10 @@ main(void)
     // CPU alloc
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
+
+    const TestType test = TEST_STRONG_SCALING;
+    if (test == TEST_WEAK_SCALING)
+        info.int_params[AC_nz] *= nprocs;
 
     /*
     AcMesh model, candidate;
@@ -109,8 +120,15 @@ main(void)
                 "percentile)--------------------------------------\n",
                 results[nth_percentile * num_iters], 100 * nth_percentile);
 
-        const char* path = "strong_scaling.csv";
-        FILE* fp         = fopen(path, "a");
+        char path[4096] = "";
+        if (test == TEST_STRONG_SCALING)
+            strncpy(path, "strong_scaling.csv", sizeof(path));
+        else if (test == TEST_WEAK_SCALING)
+            strncpy(path, "weak_scaling.csv", sizeof(path));
+        else
+            ERROR("Invalid test type");
+
+        FILE* fp = fopen(path, "a");
         ERRCHK_ALWAYS(fp);
         // Format
         // nprocs, measured (ms)
