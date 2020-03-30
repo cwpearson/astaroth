@@ -88,6 +88,7 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/ctest)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
+    add_subdirectory(samples/benchmark)
 endif()
 
 if (BUILD_STANDALONE)
