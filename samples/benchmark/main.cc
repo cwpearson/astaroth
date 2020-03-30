@@ -22,6 +22,7 @@
 #include "astaroth.h"
 #include "astaroth_utils.h"
 
+#include "errchk.h"
 #include "timer_hires.h"
 
 #if AC_MPI_ENABLED
@@ -99,12 +100,24 @@ main(void)
         results.push_back(timer_diff_nsec(t) / 1e6);
     }
 
-    std::sort(results.begin(), results.end(),
-              [](const double& a, const double& b) { return a < b; });
-    fprintf(stdout,
-            "Integration step time %g ms (%gth percentile)--------------------------------------\n",
-            results[nth_percentile * num_iters], 100 * nth_percentile);
-    acGridSynchronizeStream(STREAM_ALL);
+    // Write benchmark to file
+    if (!pid) {
+        std::sort(results.begin(), results.end(),
+                  [](const double& a, const double& b) { return a < b; });
+        fprintf(stdout,
+                "Integration step time %g ms (%gth "
+                "percentile)--------------------------------------\n",
+                results[nth_percentile * num_iters], 100 * nth_percentile);
+
+        const char* path = "strong_scaling.csv";
+        FILE* fp         = fopen(path, "a");
+        ERRCHK_ALWAYS(fp);
+        // Format
+        // nprocs, measured (ms)
+        fprintf(fp, "%d, %g\n", nprocs, results[nth_percentile * num_iters]);
+
+        fclose(fp);
+    }
 
     acGridQuit();
     MPI_Finalize();
