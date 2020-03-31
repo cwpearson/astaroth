@@ -96,6 +96,20 @@ main(void)
     // Benchmark
     Timer t;
     const AcReal dt             = FLT_EPSILON;
+
+	acGridSynchronizeStream(STREAM_ALL);
+	timer_reset(&t);
+	acGridSynchronizeStream(STREAM_ALL);
+
+	const size_t num_iters = 50;
+	for (size_t i = 0; i < num_iters; ++i)
+		acGridIntegrate(STREAM_DEFAULT, dt);
+
+	acGridSynchronizeStream(STREAM_ALL);
+	if (!pid)
+		timer_diff_print(t);
+	acGridSynchronizeStream(STREAM_ALL);
+	/*
     const size_t num_iters      = 100;
     const double nth_percentile = 0.90;
 
@@ -135,7 +149,7 @@ main(void)
         fprintf(fp, "%d, %g\n", nprocs, results[nth_percentile * num_iters]);
 
         fclose(fp);
-    }
+    }*/
 
     acGridQuit();
     MPI_Finalize();
