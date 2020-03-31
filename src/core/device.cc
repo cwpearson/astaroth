@@ -1220,7 +1220,7 @@ AcResult
 acGridIntegrate(const Stream stream, const AcReal dt)
 {
     ERRCHK(grid.initialized);
-    acGridSynchronizeStream(stream);
+    //acGridSynchronizeStream(stream);
 
     const Device device  = grid.device;
     const int3 nn        = grid.nn;
@@ -1231,6 +1231,8 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     CommData sidexy_data = grid.sidexy_data;
     CommData sidexz_data = grid.sidexz_data;
     CommData sideyz_data = grid.sideyz_data;
+	
+	acDeviceSynchronizeStream(device, stream);
 
     // Corners
     const int3 corner_a0s[] = {
@@ -1343,13 +1345,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acPackCommData(device, sidexz_a0s, &sidexz_data);
         acPackCommData(device, sideyz_a0s, &sideyz_data);
 
-        //////////// INNER INTEGRATION //////////////
-        {
-            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = nn;
-            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
-        }
-        ////////////////////////////////////////////
+	MPI_Barrier(MPI_COMM_WORLD);
 
 #if MPI_GPUDIRECT_DISABLED
         acTransferCommDataToHost(device, &corner_data);
@@ -1368,6 +1364,14 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommData(device, sidexy_a0s, sidexy_b0s, &sidexy_data);
         acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
         acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
+	
+        //////////// INNER INTEGRATION //////////////
+        {
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = nn;
+            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+        }
+        ////////////////////////////////////////////
 
         acTransferCommDataWait(corner_data);
         acTransferCommDataWait(edgex_data);
