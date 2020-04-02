@@ -1,9 +1,19 @@
 #pragma once
 #include "astaroth.h"
 
+#if AC_MPI_ENABLED
+#include <mpi.h>
+
+#define AC_MPI_UNIDIRECTIONAL_COMM (0)
+#endif // AC_MPI_ENABLED
+
 typedef struct {
     int3 dims;
     AcReal* data;
+
+#if (AC_MPI_ENABLED && AC_MPI_UNIDIRECTIONAL_COMM)
+    MPI_Win win; // MPI window for RMA
+#endif           // (AC_MPI_ENABLED && AC_MPI_UNIDIRECTIONAL_COMM)
 } PackedData;
 
 typedef struct {
