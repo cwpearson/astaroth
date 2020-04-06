@@ -635,25 +635,32 @@ acTransferPackedDataToDevice(const Device device, const cudaStream_t stream, con
 
 #if AC_MPI_RT_PINNING
 static void
-acPinPackedData(const Device device, const cudaStream_t stream, PackedData* packed)
+acPinPackedData(const Device device, const cudaStream_t stream, PackedData* ddata)
 {
     cudaSetDevice(device->id);
+    // TODO sync stream
+    ddata->pinned = true;
 
-    const size_t bytes = packed->dims.x * packed->dims.y * packed->dims.z * sizeof(AcReal) *
+    const size_t bytes = ddata->dims.x * ddata->dims.y * ddata->dims.z * sizeof(ddata->data[0]) *
                          NUM_VTXBUF_HANDLES;
-    ERRCHK_CUDA(cudaMemcpyAsync(packed->data_pinned, packed->data, bytes, cudaMemcpyDeviceToDevice,
-                                stream));
+    ERRCHK_CUDA(
+        cudaMemcpyAsync(ddata->data_pinned, ddata->data, bytes, cudaMemcpyDeviceToHost, stream));
 }
 
 static void
-acUnpinPackedData(const Device device, const cudaStream_t stream, PackedData* packed)
+acUnpinPackedData(const Device device, const cudaStream_t stream, PackedData* ddata)
 {
-    cudaSetDevice(device->id);
+    if (!ddata->pinned)
+        return;
 
-    const size_t bytes = packed->dims.x * packed->dims.y * packed->dims.z * sizeof(AcReal) *
+    cudaSetDevice(device->id);
+    // TODO sync stream
+    ddata->pinned = false;
+
+    const size_t bytes = ddata->dims.x * ddata->dims.y * ddata->dims.z * sizeof(ddata->data[0]) *
                          NUM_VTXBUF_HANDLES;
-    ERRCHK_CUDA(cudaMemcpyAsync(packed->data, packed->data_pinned, bytes, cudaMemcpyDeviceToDevice,
-                                stream));
+    ERRCHK_CUDA(
+        cudaMemcpyAsync(ddata->data, ddata->data_pinned, bytes, cudaMemcpyHostToDevice, stream));
 }
 #endif // AC_MPI_RT_PINNING
 
@@ -963,6 +970,12 @@ static void
 acUnpinCommData(const Device device, CommData* data)
 {
     cudaSetDevice(device->id);
+
+    // Clear pin flags from src
+    for (size_t i = 0; i < data->count; ++i)
+        data->srcs[i].pinned = false;
+
+    // Transfer from pinned to gmem
     for (size_t i = 0; i < data->count; ++i)
         acUnpinPackedData(device, data->streams[i], &data->dsts[i]);
 }
@@ -1169,27 +1182,23 @@ acTransferCommData(const Device device, //
                             const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
 #if MPI_GPUDIRECT_DISABLED
-                            PackedData src     = data->srcs_host[a_idx];
+                            PackedData* dst    = &data->dsts_host[b_idx];
 #else
-                            PackedData src = data->srcs[a_idx];
-#endif
-#if MPI_GPUDIRECT_DISABLED
-                            PackedData dst     = data->dsts_host[b_idx];
-#else
-                            PackedData dst = data->dsts[b_idx];
+                            PackedData* dst = &data->dsts[b_idx];
 #endif
 
-                            const int3 pid3d    = getPid3D(pid, decomp);
-                            const int npid_recv = getPid(pid3d - neighbor, decomp);
-                            const int npid_send = getPid(pid3d + neighbor, decomp);
+                            const int3 pid3d = getPid3D(pid, decomp);
+                            const int npid   = getPid(pid3d - neighbor, decomp);
 
-                            if (onTheSameNode(pid, npid_recv)) {
-                                MPI_Irecv(dst.data, count, datatype, npid_recv, b_idx,
-                                          MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                            if (onTheSameNode(pid, npid)) {
+                                MPI_Irecv(dst->data, count, datatype, npid, b_idx, MPI_COMM_WORLD,
+                                          &data->recv_reqs[b_idx]);
+                                dst->pinned = false;
                             }
                             else {
-                                MPI_Irecv(dst.data_pinned, count, datatype, npid_recv, b_idx,
+                                MPI_Irecv(dst->data_pinned, count, datatype, npid, b_idx,
                                           MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                                dst->pinned = true;
                             }
                         }
                     }
@@ -1219,27 +1228,25 @@ acTransferCommData(const Device device, //
                             const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
 #if MPI_GPUDIRECT_DISABLED
-                            PackedData src     = data->srcs_host[a_idx];
+                            PackedData* src    = &data->srcs_host[a_idx];
 #else
-                            PackedData src = data->srcs[a_idx];
-#endif
-#if MPI_GPUDIRECT_DISABLED
-                            PackedData dst     = data->dsts_host[b_idx];
-#else
-                            PackedData dst = data->dsts[b_idx];
+                            PackedData* src = &data->srcs[a_idx];
 #endif
 
-                            const int3 pid3d    = getPid3D(pid, decomp);
-                            const int npid_recv = getPid(pid3d - neighbor, decomp);
-                            const int npid_send = getPid(pid3d + neighbor, decomp);
+                            const int3 pid3d = getPid3D(pid, decomp);
+                            const int npid   = getPid(pid3d + neighbor, decomp);
 
                             cudaStreamSynchronize(data->streams[a_idx]);
-                            if (onTheSameNode(pid, npid_send)) {
-                                MPI_Isend(src.data, count, datatype, npid_send, b_idx,
-                                          MPI_COMM_WORLD, &data->send_reqs[b_idx]);
+                            if (onTheSameNode(pid, npid)) {
+                                MPI_Isend(src->data, count, datatype, npid, b_idx, MPI_COMM_WORLD,
+                                          &data->send_reqs[b_idx]);
                             }
                             else {
-                                MPI_Isend(src.data_pinned, count, datatype, npid_send, b_idx,
+                                if (!src->pinned) {
+                                    acPinPackedData(device, data->streams[a_idx], src);
+                                    cudaStreamSynchronize(data->streams[a_idx]);
+                                }
+                                MPI_Isend(src->data_pinned, count, datatype, npid, b_idx,
                                           MPI_COMM_WORLD, &data->send_reqs[b_idx]);
                             }
                         }
@@ -1260,7 +1267,6 @@ acTransferCommDataWait(const CommData data)
         MPI_Wait(&data.recv_reqs[i], MPI_STATUS_IGNORE);
     }
 }
-
 #else
 static AcResult
 acTransferCommData(const Device device, //
@@ -1309,14 +1315,16 @@ acTransferCommData(const Device device, //
                             const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
 #if MPI_GPUDIRECT_DISABLED
-                            PackedData dst     = data->dsts_host[b_idx];
+                            PackedData* dst    = &data->dsts_host[b_idx];
 #else
-                            PackedData dst = data->dsts[b_idx];
+                            PackedData* dst = &data->dsts[b_idx];
 #endif
 
                             const int3 pid3d = getPid3D(pid, decomp);
-                            MPI_Irecv(dst.data, count, datatype, getPid(pid3d - neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                            const int npid   = getPid(pid3d - neighbor, decomp);
+
+                            MPI_Irecv(dst->data, count, datatype, npid, b_idx, MPI_COMM_WORLD,
+                                      &data->recv_reqs[b_idx]);
                         }
                     }
                 }
@@ -1345,16 +1353,16 @@ acTransferCommData(const Device device, //
                             const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
 #if MPI_GPUDIRECT_DISABLED
-                            PackedData src     = data->srcs_host[a_idx];
+                            PackedData* src    = &data->srcs_host[a_idx];
 #else
-                            PackedData src = data->srcs[a_idx];
+                            PackedData* src = &data->srcs[a_idx];
 #endif
 
                             const int3 pid3d = getPid3D(pid, decomp);
+                            const int npid   = getPid(pid3d + neighbor, decomp);
 
                             cudaStreamSynchronize(data->streams[a_idx]);
-                            MPI_Isend(src.data, count, datatype, getPid(pid3d + neighbor, decomp),
-                                      b_idx, MPI_COMM_WORLD, &data->send_reqs[b_idx]);
+                                MPI_Isend(src->data, count, datatype, npid, b_idx, MPI_COMM_WORLD,
                         }
                     }
                 }
@@ -1724,15 +1732,17 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acPackCommData(device, sidexz_a0s, &sidexz_data);
         acPackCommData(device, sideyz_a0s, &sideyz_data);
 
-#if AC_MPI_RT_PINNING
-        acPinCommData(device, &corner_data);
-        acPinCommData(device, &edgex_data);
-        acPinCommData(device, &edgey_data);
-        acPinCommData(device, &edgez_data);
-        acPinCommData(device, &sidexy_data);
-        acPinCommData(device, &sidexz_data);
-        acPinCommData(device, &sideyz_data);
-#endif // AC_MPI_RT_PINNING
+        /*
+        #if AC_MPI_RT_PINNING
+                acPinCommData(device, &corner_data);
+                acPinCommData(device, &edgex_data);
+                acPinCommData(device, &edgey_data);
+                acPinCommData(device, &edgez_data);
+                acPinCommData(device, &sidexy_data);
+                acPinCommData(device, &sidexz_data);
+                acPinCommData(device, &sideyz_data);
+        #endif
+        */
 
         //////////// INNER INTEGRATION //////////////
         {
@@ -1788,7 +1798,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acUnpinCommData(device, &sidexy_data);
         acUnpinCommData(device, &sidexz_data);
         acUnpinCommData(device, &sideyz_data);
-#endif // AC_MPI_RT_PINNING
+#endif
 
         acUnpackCommData(device, corner_b0s, &corner_data);
         acUnpackCommData(device, edgex_b0s, &edgex_data);
@@ -1971,6 +1981,20 @@ acGridPeriodicBoundconds(const Stream stream)
     acPackCommData(device, sidexz_a0s, &sidexz_data);
     acPackCommData(device, sideyz_a0s, &sideyz_data);
 
+    /*
+    #if AC_MPI_RT_PINNING
+        acPinCommData(device, &corner_data);
+        acPinCommData(device, &edgex_data);
+        acPinCommData(device, &edgey_data);
+        acPinCommData(device, &edgez_data);
+        acPinCommData(device, &sidexy_data);
+        acPinCommData(device, &sidexz_data);
+        acPinCommData(device, &sideyz_data);
+    #endif
+    */
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
 #if MPI_GPUDIRECT_DISABLED
     acTransferCommDataToHost(device, &corner_data);
     acTransferCommDataToHost(device, &edgex_data);
@@ -2005,6 +2029,16 @@ acGridPeriodicBoundconds(const Stream stream)
     acTransferCommDataToDevice(device, &sidexy_data);
     acTransferCommDataToDevice(device, &sidexz_data);
     acTransferCommDataToDevice(device, &sideyz_data);
+#endif
+
+#if AC_MPI_RT_PINNING
+    acUnpinCommData(device, &corner_data);
+    acUnpinCommData(device, &edgex_data);
+    acUnpinCommData(device, &edgey_data);
+    acUnpinCommData(device, &edgez_data);
+    acUnpinCommData(device, &sidexy_data);
+    acUnpinCommData(device, &sidexz_data);
+    acUnpinCommData(device, &sideyz_data);
 #endif
 
     acUnpackCommData(device, corner_b0s, &corner_data);

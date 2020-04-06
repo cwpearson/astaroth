@@ -3,6 +3,7 @@
 
 #if AC_MPI_ENABLED
 #include <mpi.h>
+#include <stdbool.h>
 
 #define AC_MPI_UNIDIRECTIONAL_COMM (0)
 #define AC_MPI_RT_PINNING (1)
@@ -14,7 +15,8 @@ typedef struct {
 
 #if (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
     AcReal* data_pinned;
-#endif // (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
+    bool pinned; // Set if data was received to pinned memory
+#endif           // (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
 
 #if (AC_MPI_ENABLED && AC_MPI_UNIDIRECTIONAL_COMM)
     MPI_Win win; // MPI window for RMA
