@@ -15,8 +15,8 @@ typedef struct {
 
 #if (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
     AcReal* data_pinned;
-    bool pinned; // Set if data was received to pinned memory
-#endif           // (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
+    bool pinned = false; // Set if data was received to pinned memory
+#endif                   // (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
 
 #if (AC_MPI_ENABLED && AC_MPI_UNIDIRECTIONAL_COMM)
     MPI_Win win; // MPI window for RMA

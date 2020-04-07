@@ -650,7 +650,7 @@ acPinPackedData(const Device device, const cudaStream_t stream, PackedData* ddat
 static void
 acUnpinPackedData(const Device device, const cudaStream_t stream, PackedData* ddata)
 {
-    if (!ddata->pinned)
+    if (!ddata->pinned) // Unpin iff the data was pinned previously
         return;
 
     cudaSetDevice(device->id);
@@ -1362,7 +1362,8 @@ acTransferCommData(const Device device, //
                             const int npid   = getPid(pid3d + neighbor, decomp);
 
                             cudaStreamSynchronize(data->streams[a_idx]);
-                                MPI_Isend(src->data, count, datatype, npid, b_idx, MPI_COMM_WORLD,
+                            MPI_Isend(src->data, count, datatype, npid, b_idx, MPI_COMM_WORLD,
+                                      &data->send_reqs[b_idx]);
                         }
                     }
                 }

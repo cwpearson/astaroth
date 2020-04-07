@@ -303,6 +303,7 @@ main(void)
 
     PRINT("Block size: %u MiB\n", BLOCK_SIZE / (1024 * 1024));
 
+#if 0
     {
         uint8_t* src = allocHost(BLOCK_SIZE);
         uint8_t* dst = allocHost(BLOCK_SIZE);
@@ -362,7 +363,7 @@ main(void)
         freeDevice(dst);
     }
     PRINT("\n------------------------\n");
-    /*
+#else
     { // Final run for easy identification with the profiler
         uint8_t* src = allocDevice(BLOCK_SIZE);
         uint8_t* dst = allocDevice(BLOCK_SIZE);
@@ -373,7 +374,7 @@ main(void)
         freeDevice(src);
         freeDevice(dst);
     }
-    */
+#endif
 
     MPI_Finalize();
     return EXIT_SUCCESS;
