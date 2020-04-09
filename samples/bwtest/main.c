@@ -384,9 +384,9 @@ main(void)
         measurebw("Bidirectional bandwidth, twoway (Host)", //
                   2 * BLOCK_SIZE, sendrecv_twoway, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Host)", //
-                  2 * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
-        measurebw("Bidirectional bandwidth, async multiple parallel (Host)", //
-                  2 * BLOCK_SIZE, sendrecv_nonblocking_multiple_parallel, src, dst);
+                  2 * (nprocs-1) * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
+        //measurebw("Bidirectional bandwidth, async multiple parallel (Host)", //
+        //          2 * (nprocs-1) * BLOCK_SIZE, sendrecv_nonblocking_multiple_parallel, src, dst);
 
         freeHost(src);
         freeHost(dst);
@@ -404,11 +404,11 @@ main(void)
         measurebw("Bidirectional bandwidth, twoway (Device)", //
                   2 * BLOCK_SIZE, sendrecv_twoway, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Device)", //
-                  2 * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
-        measurebw("Bidirectional bandwidth, async multiple parallel (Device)", //
-                  2 * BLOCK_SIZE, sendrecv_nonblocking_multiple_parallel, src, dst);
+                  2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
+        //measurebw("Bidirectional bandwidth, async multiple parallel (Device)", //
+        //          2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple_parallel, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Device, rt pinning)", //
-                  2 * BLOCK_SIZE, sendrecv_nonblocking_multiple_rt_pinning, src, dst);
+                  2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple_rt_pinning, src, dst);
 
         freeDevice(src);
         freeDevice(dst);
@@ -426,7 +426,7 @@ main(void)
         measurebw("Bidirectional bandwidth, twoway (Device, pinned)", //
                   2 * BLOCK_SIZE, sendrecv_twoway, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Device, pinned)", //
-                  2 * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
+                  2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
 
         freeDevice(src);
         freeDevice(dst);
