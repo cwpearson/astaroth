@@ -1,11 +1,14 @@
+find_package(CUDAToolkit)
+
 ## Astaroth Core
 add_library(astaroth_core STATIC device.cc node.cc astaroth.cc)
-target_link_libraries(astaroth_core astaroth_utils astaroth_kernels cudart)
+target_link_libraries(astaroth_core astaroth_utils astaroth_kernels CUDA::cudart_static)
 
 ## Options
 if (MPI_ENABLED)
     find_package(MPI)
-    target_link_libraries(astaroth_core MPI::MPI_CXX)
+    find_package(OpenMP)
+    target_link_libraries(astaroth_core MPI::MPI_CXX OpenMP::OpenMP_CXX)
 endif()
 
 if (MULTIGPU_ENABLED)
