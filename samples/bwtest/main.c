@@ -225,6 +225,36 @@ sendrecv_nonblocking_multiple_rt_pinning(uint8_t* src, uint8_t* dst)
     }
 }
 
+static void
+send_d2h(const uint8_t* src, uint8_t* dst)
+{
+    cudaMemcpy(dst, src, BLOCK_SIZE, cudaMemcpyDeviceToHost);
+}
+
+static void
+send_h2d(const uint8_t* src, uint8_t* dst)
+{
+    cudaMemcpy(dst, src, BLOCK_SIZE, cudaMemcpyHostToDevice);
+}
+
+
+static void
+sendrecv_d2h2d(const uint8_t* dsrc, uint8_t* hdst, const uint8_t* hsrc, uint8_t* ddst)
+{
+    cudaStream_t d2h, h2d;
+    cudaStreamCreate(&d2h);
+    cudaStreamCreate(&h2d);
+
+    cudaMemcpyAsync(hdst, dsrc, BLOCK_SIZE, cudaMemcpyDeviceToHost, d2h);
+    cudaMemcpyAsync(ddst, hsrc, BLOCK_SIZE, cudaMemcpyHostToDevice, h2d);
+
+    cudaStreamSynchronize(d2h);
+    cudaStreamSynchronize(h2d);
+
+    cudaStreamDestroy(d2h);
+    cudaStreamDestroy(h2d);
+}
+
 #define PRINT                                                                                      \
     if (!pid)                                                                                      \
     printf
@@ -259,6 +289,45 @@ measurebw(const char* msg, const size_t bytes, void (*sendrecv)(uint8_t*, uint8_
 
     for (size_t i = 0; i < num_samples; ++i)
         sendrecv(src, dst);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    const long double time_elapsed = timer_diff_nsec(t) / 1e9l; // seconds
+    PRINT("%Lg GiB/s\n", num_samples * bytes / time_elapsed / (1024 * 1024 * 1024));
+    PRINT("\tTransfer time: %Lg ms\n", time_elapsed * 1000 / num_samples);
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+
+static void
+measurebw2(const char* msg, const size_t bytes, void (*sendrecv)(const uint8_t*, uint8_t*, const uint8_t*, uint8_t*), const uint8_t* dsrc, uint8_t* hdst,
+                                                                                                            const uint8_t* hsrc, uint8_t* ddst)
+{
+    const size_t num_samples = 100;
+
+    int pid, nprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+    PRINT("%s\n", msg);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    PRINT("\tWarming up... ");
+    for (size_t i = 0; i < num_samples / 10; ++i)
+        sendrecv(dsrc, hdst, hsrc, ddst);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    PRINT("Done\n");
+
+    PRINT("\tBandwidth... ");
+    fflush(stdout);
+
+    Timer t;
+    MPI_Barrier(MPI_COMM_WORLD);
+    timer_reset(&t);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    for (size_t i = 0; i < num_samples; ++i)
+        sendrecv(dsrc, hdst, hsrc, ddst);
 
     MPI_Barrier(MPI_COMM_WORLD);
     const long double time_elapsed = timer_diff_nsec(t) / 1e9l; // seconds
@@ -303,7 +372,7 @@ main(void)
 
     PRINT("Block size: %u MiB\n", BLOCK_SIZE / (1024 * 1024));
 
-#if 0
+#if 1
     {
         uint8_t* src = allocHost(BLOCK_SIZE);
         uint8_t* dst = allocHost(BLOCK_SIZE);
@@ -361,6 +430,42 @@ main(void)
 
         freeDevice(src);
         freeDevice(dst);
+    }
+    PRINT("\n------------------------\n");
+    
+    {
+        uint8_t* hsrc = allocHost(BLOCK_SIZE);
+        uint8_t* hdst = allocHost(BLOCK_SIZE);
+        uint8_t* dsrc = allocDevice(BLOCK_SIZE);
+        uint8_t* ddst = allocDevice(BLOCK_SIZE);
+
+        measurebw("Unidirectional D2H", BLOCK_SIZE, send_d2h, dsrc, hdst);
+        measurebw("Unidirectional H2D", BLOCK_SIZE, send_h2d, hsrc, ddst);
+
+        measurebw2("Bidirectional D2H & H2D", 2 * BLOCK_SIZE, sendrecv_d2h2d, dsrc, hdst, hsrc, ddst);
+
+        freeDevice(dsrc);
+        freeDevice(ddst);
+        freeHost(hsrc);
+        freeHost(hdst);
+    }
+    PRINT("\n------------------------\n");
+    
+    {
+        uint8_t* hsrc = allocHost(BLOCK_SIZE);
+        uint8_t* hdst = allocHost(BLOCK_SIZE);
+        uint8_t* dsrc = allocDevicePinned(BLOCK_SIZE);
+        uint8_t* ddst = allocDevicePinned(BLOCK_SIZE);
+
+        measurebw("Unidirectional D2H (pinned)", BLOCK_SIZE, send_d2h, dsrc, hdst);
+        measurebw("Unidirectional H2D (pinned)", BLOCK_SIZE, send_h2d, hsrc, ddst);
+
+        measurebw2("Bidirectional D2H & H2D (pinned)", 2 * BLOCK_SIZE, sendrecv_d2h2d, dsrc, hdst, hsrc, ddst);
+
+        freeDevice(dsrc);
+        freeDevice(ddst);
+        freeHost(hsrc);
+        freeHost(hdst);
     }
     PRINT("\n------------------------\n");
 #else
