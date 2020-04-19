@@ -470,6 +470,38 @@ mod(const int a, const int b)
 }
 #include <stdint.h>
 
+typedef struct {
+    uint64_t x, y, z;
+} uint3_64;
+
+static uint3_64
+morton3D(const uint64_t pid)
+{
+    uint64_t i, j, k;
+    i = j = k = 0;
+    for (int bit = 0; bit <= 21; ++bit) {
+        const uint64_t mask = 0x1l << 3 * bit;
+        i |= ((pid & (mask << 0)) >> 2 * bit) >> 0;
+        j |= ((pid & (mask << 1)) >> 2 * bit) >> 1;
+        k |= ((pid & (mask << 2)) >> 2 * bit) >> 2;
+    }
+
+    return (uint3_64){i, j, k};
+}
+
+static uint64_t
+morton1D(const uint3_64 pid)
+{
+    uint64_t i = 0;
+    for (int bit = 0; bit <= 21; ++bit) {
+        const uint64_t mask = 0x1l << bit;
+        i |= ((pid.x & mask) << 0) << 2 * bit;
+        i |= ((pid.y & mask) << 1) << 2 * bit;
+        i |= ((pid.z & mask) << 2) << 2 * bit;
+    }
+    return i;
+}
+
 int
 getPid(int3 pid, const int3 decomposition)
 {
@@ -538,6 +570,20 @@ onTheSameNode(const int pid_a, const int pid_b)
 static int3
 decompose(const int target)
 {
+  // This is just so beautifully elegant. Complex and efficient decomposition
+  // in just one line of code.
+  uint3_64 p = morton3D(target - 1);
+  p = (uint3_64){p.x + 1, p.y + 1, p.z + 1};
+  
+  if (p.x * p.y * p.z != target) {
+        fprintf(stderr, "Invalid number of processes! Cannot decompose the problem domain!\n");
+        fprintf(stderr, "Target nprocs: %d. Found: %d\n", target, p.x * p.y * p.z);
+        ERROR("Invalid nprocs");
+        return (int3){-1, -1, -1};
+  }
+
+  return (int3){p.x, p.y, p.z};
+  /*
     if (target == 16)
         return (int3){4, 2, 2};
     if (target == 32)
@@ -565,6 +611,7 @@ decompose(const int target)
     else {
         return (int3){decomposition[0], decomposition[1], decomposition[2]};
     }
+  */
 }
 
 static PackedData
