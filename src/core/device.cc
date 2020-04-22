@@ -576,6 +576,7 @@ acCreatePackedData(const int3 dims)
 
 #if AC_MPI_RT_PINNING
     ERRCHK_CUDA_ALWAYS(cudaMallocHost((void**)&data.data_pinned, bytes));
+    //ERRCHK_CUDA_ALWAYS(cudaMallocManaged((void**)&data.data_pinned, bytes)); // Significantly slower than pinned (38 ms vs. 125 ms)
 #endif // AC_MPI_RT_PINNING
 
 #if AC_MPI_UNIDIRECTIONAL_COMM
@@ -674,7 +675,7 @@ acPinPackedData(const Device device, const cudaStream_t stream, PackedData* ddat
     const size_t bytes = ddata->dims.x * ddata->dims.y * ddata->dims.z * sizeof(ddata->data[0]) *
                          NUM_VTXBUF_HANDLES;
     ERRCHK_CUDA(
-        cudaMemcpyAsync(ddata->data_pinned, ddata->data, bytes, cudaMemcpyDeviceToHost, stream));
+        cudaMemcpyAsync(ddata->data_pinned, ddata->data, bytes, cudaMemcpyDefault, stream));
 }
 
 static void
@@ -690,7 +691,7 @@ acUnpinPackedData(const Device device, const cudaStream_t stream, PackedData* dd
     const size_t bytes = ddata->dims.x * ddata->dims.y * ddata->dims.z * sizeof(ddata->data[0]) *
                          NUM_VTXBUF_HANDLES;
     ERRCHK_CUDA(
-        cudaMemcpyAsync(ddata->data, ddata->data_pinned, bytes, cudaMemcpyHostToDevice, stream));
+        cudaMemcpyAsync(ddata->data, ddata->data_pinned, bytes, cudaMemcpyDefault, stream));
 }
 #endif // AC_MPI_RT_PINNING
 
@@ -906,7 +907,9 @@ acCreateCommData(const Device device, const int3 dims, const size_t count)
         data.dsts_host[i] = acCreatePackedDataHost(dims);
 #endif
 
-        cudaStreamCreate(&data.streams[i]);
+        int low_prio, high_prio;
+        cudaDeviceGetStreamPriorityRange(&low_prio, &high_prio);
+        cudaStreamCreateWithPriority(&data.streams[i], cudaStreamNonBlocking, high_prio);
     }
 
     return data;
