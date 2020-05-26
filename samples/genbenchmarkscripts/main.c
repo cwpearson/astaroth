@@ -19,8 +19,8 @@ main(void)
         fprintf(fp, "#BATCH --job-name=astaroth\n");
         fprintf(fp, "#SBATCH --account=project_2000403\n");
         fprintf(fp, "#SBATCH --time=00:14:59\n");
-        fprintf(fp, "#SBATCH --mem=24000\n");
-        fprintf(fp, "#SBATCH --partition=gputest\n");
+        fprintf(fp, "#SBATCH --mem=32000\n");
+        fprintf(fp, "#SBATCH --partition=gpu\n");
 
         // nprocs, nodes, gpus
         const int max_gpus_per_node = 4;
