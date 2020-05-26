@@ -576,7 +576,8 @@ acCreatePackedData(const int3 dims)
 
 #if AC_MPI_RT_PINNING
     ERRCHK_CUDA_ALWAYS(cudaMallocHost((void**)&data.data_pinned, bytes));
-    //ERRCHK_CUDA_ALWAYS(cudaMallocManaged((void**)&data.data_pinned, bytes)); // Significantly slower than pinned (38 ms vs. 125 ms)
+    // ERRCHK_CUDA_ALWAYS(cudaMallocManaged((void**)&data.data_pinned, bytes)); // Significantly
+    // slower than pinned (38 ms vs. 125 ms)
 #endif // AC_MPI_RT_PINNING
 
 #if AC_MPI_UNIDIRECTIONAL_COMM
@@ -674,8 +675,7 @@ acPinPackedData(const Device device, const cudaStream_t stream, PackedData* ddat
 
     const size_t bytes = ddata->dims.x * ddata->dims.y * ddata->dims.z * sizeof(ddata->data[0]) *
                          NUM_VTXBUF_HANDLES;
-    ERRCHK_CUDA(
-        cudaMemcpyAsync(ddata->data_pinned, ddata->data, bytes, cudaMemcpyDefault, stream));
+    ERRCHK_CUDA(cudaMemcpyAsync(ddata->data_pinned, ddata->data, bytes, cudaMemcpyDefault, stream));
 }
 
 static void
@@ -690,8 +690,7 @@ acUnpinPackedData(const Device device, const cudaStream_t stream, PackedData* dd
 
     const size_t bytes = ddata->dims.x * ddata->dims.y * ddata->dims.z * sizeof(ddata->data[0]) *
                          NUM_VTXBUF_HANDLES;
-    ERRCHK_CUDA(
-        cudaMemcpyAsync(ddata->data, ddata->data_pinned, bytes, cudaMemcpyDefault, stream));
+    ERRCHK_CUDA(cudaMemcpyAsync(ddata->data, ddata->data_pinned, bytes, cudaMemcpyDefault, stream));
 }
 #endif // AC_MPI_RT_PINNING
 
@@ -1758,7 +1757,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     };
 
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
-        acPackCommData(device, corner_a0s, &corner_data);
+        // acPackCommData(device, corner_a0s, &corner_data);
         acPackCommData(device, edgex_a0s, &edgex_data);
         acPackCommData(device, edgey_a0s, &edgey_data);
         acPackCommData(device, edgez_a0s, &edgez_data);
@@ -1789,7 +1788,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         MPI_Barrier(MPI_COMM_WORLD);
 
 #if MPI_GPUDIRECT_DISABLED
-        acTransferCommDataToHost(device, &corner_data);
+        // acTransferCommDataToHost(device, &corner_data);
         acTransferCommDataToHost(device, &edgex_data);
         acTransferCommDataToHost(device, &edgey_data);
         acTransferCommDataToHost(device, &edgez_data);
@@ -1798,7 +1797,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommDataToHost(device, &sideyz_data);
 #endif
 
-        acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
+        // acTransferCommData(device, corner_a0s, corner_b0s, &corner_data);
         acTransferCommData(device, edgex_a0s, edgex_b0s, &edgex_data);
         acTransferCommData(device, edgey_a0s, edgey_b0s, &edgey_data);
         acTransferCommData(device, edgez_a0s, edgez_b0s, &edgez_data);
@@ -1806,7 +1805,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommData(device, sidexz_a0s, sidexz_b0s, &sidexz_data);
         acTransferCommData(device, sideyz_a0s, sideyz_b0s, &sideyz_data);
 
-        acTransferCommDataWait(corner_data);
+        // acTransferCommDataWait(corner_data);
         acTransferCommDataWait(edgex_data);
         acTransferCommDataWait(edgey_data);
         acTransferCommDataWait(edgez_data);
@@ -1815,7 +1814,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommDataWait(sideyz_data);
 
 #if MPI_GPUDIRECT_DISABLED
-        acTransferCommDataToDevice(device, &corner_data);
+        // acTransferCommDataToDevice(device, &corner_data);
         acTransferCommDataToDevice(device, &edgex_data);
         acTransferCommDataToDevice(device, &edgey_data);
         acTransferCommDataToDevice(device, &edgez_data);
@@ -1825,7 +1824,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
 #endif
 
 #if AC_MPI_RT_PINNING
-        acUnpinCommData(device, &corner_data);
+        // acUnpinCommData(device, &corner_data);
         acUnpinCommData(device, &edgex_data);
         acUnpinCommData(device, &edgey_data);
         acUnpinCommData(device, &edgez_data);
@@ -1834,7 +1833,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acUnpinCommData(device, &sideyz_data);
 #endif
 
-        acUnpackCommData(device, corner_b0s, &corner_data);
+        // acUnpackCommData(device, corner_b0s, &corner_data);
         acUnpackCommData(device, edgex_b0s, &edgex_data);
         acUnpackCommData(device, edgey_b0s, &edgey_data);
         acUnpackCommData(device, edgez_b0s, &edgez_data);
@@ -1844,7 +1843,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         //////////// OUTER INTEGRATION //////////////
 
         // Wait for unpacking
-        acSyncCommData(corner_data);
+        // acSyncCommData(corner_data);
         acSyncCommData(edgex_data);
         acSyncCommData(edgey_data);
         acSyncCommData(edgez_data);
