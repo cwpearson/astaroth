@@ -105,7 +105,8 @@ operator+(const int3& a, const int3& b)
     return (int3){a.x + b.x, a.y + b.y, a.z + b.z};
 }
 
-static HOST_DEVICE_INLINE int3 operator*(const int3& a, const int3& b)
+static HOST_DEVICE_INLINE int3
+operator*(const int3& a, const int3& b)
 {
     return (int3){a.x * b.x, a.y * b.y, a.z * b.z};
 }
@@ -144,12 +145,20 @@ operator-=(AcReal3& lhs, const AcReal3& rhs)
     lhs.z -= rhs.z;
 }
 
-static HOST_DEVICE_INLINE AcReal3 operator*(const AcReal& a, const AcReal3& b)
+static HOST_DEVICE_INLINE int3
+operator*(const int& a, const int3& b)
+{
+    return (int3){a * b.x, a * b.y, a * b.z};
+}
+
+static HOST_DEVICE_INLINE AcReal3
+operator*(const AcReal& a, const AcReal3& b)
 {
     return (AcReal3){a * b.x, a * b.y, a * b.z};
 }
 
-static HOST_DEVICE_INLINE AcReal3 operator*(const AcReal3& b, const AcReal& a)
+static HOST_DEVICE_INLINE AcReal3
+operator*(const AcReal3& b, const AcReal& a)
 {
     return (AcReal3){a * b.x, a * b.y, a * b.z};
 }
