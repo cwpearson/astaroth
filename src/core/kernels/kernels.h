@@ -6,6 +6,9 @@
 #include <stdbool.h>
 
 #define AC_MPI_UNIDIRECTIONAL_COMM (0)
+#define AC_MPI_BIDIRECTIONAL_SCHEME_A (0)
+#define AC_MPI_BIDIRECTIONAL_SCHEME_B (0)
+#define AC_MPI_RT_PINNING_IMPROVED (1)
 #define AC_MPI_RT_PINNING (1)
 #endif // AC_MPI_ENABLED
 

@@ -1166,7 +1166,7 @@ acTransferCommDataWait(const CommData data)
     // NOP
 }
 
-#elif AC_MPI_BIDIRECTIONAL_SCHEME
+#elif AC_MPI_BIDIRECTIONAL_SCHEME_A
 
 static int3
 mod(const int3 a, const int3 n)
@@ -1206,8 +1206,7 @@ acTransferCommData(const Device device, //
     const int3 dims         = data->dims;
     const size_t num_blocks = data->count;
 
-    cudaDeviceSynchronize(); // TODO debug REMOVE
-    for (size_t b0_idx = 0; b0_idx < num_blocks; ++b0_idx) {
+    for (size_t b0_idx = 0; b0_idx < num_blocks / 2; ++b0_idx) {
         const int3 b0     = b0s[b0_idx];
         const int3 nghost = (int3){NGHOST, NGHOST, NGHOST};
         const int3 a0     = mod(((b0 - nghost) + nn), nn) + nghost;
@@ -1232,6 +1231,15 @@ acTransferCommData(const Device device, //
             neighbor.y < 0 ? a0.y - nghost.y : neighbor.y > 0 ? a0.y + nghost.y : a0.y,
             neighbor.z < 0 ? a0.z - nghost.z : neighbor.z > 0 ? a0.z + nghost.z : a0.z,
         };
+        const int3 a1 = mod(((b1 + nn - nghost) + nn), nn) + nghost;
+        size_t a1_idx = -1;
+        for (size_t i = 0; i < num_blocks; ++i) {
+            if (a0s[i].x == a1.x && a0s[i].y == a1.y && a0s[i].z == a1.z) {
+                a1_idx = i;
+                break;
+            }
+        }
+        ERRCHK_ALWAYS(a1_idx < num_blocks); // TODO debug REMOVE
 
         size_t b1_idx = -1;
         for (size_t i = 0; i < num_blocks; ++i) {
@@ -1242,17 +1250,66 @@ acTransferCommData(const Device device, //
         }
         ERRCHK_ALWAYS(b1_idx < num_blocks); // TODO debug REMOVE
 
+        const int3 pid3d        = getPid3D(pid, decomp);
+        const int3 npid3d_front = pid3d + neighbor;
+        const int3 npid3d_back  = pid3d - neighbor;
+        const int npid_front    = getPid(npid3d_front, decomp);
+        const int npid_back     = getPid(npid3d_back, decomp);
+        const size_t count      = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+        PackedData* a0_data = &data->srcs[a0_idx];
+        PackedData* a1_data = &data->srcs[a1_idx];
+        PackedData* b0_data = &data->dsts[b0_idx];
+        PackedData* b1_data = &data->dsts[b1_idx];
+
+        // Deadlock!
+        /*
+        MPI_Sendrecv(a0_data, count, datatype, npid_front, b0_idx, //
+                     b1_data, count, datatype, npid_front, b1_idx, MPI_COMM_WORLD,
+                     MPI_STATUS_IGNORE);
+        MPI_Sendrecv(a1_data, count, datatype, npid_back, b1_idx, //
+                     b0_data, count, datatype, npid_back, b0_idx, MPI_COMM_WORLD,
+                     MPI_STATUS_IGNORE);
+                     */
+        cudaDeviceSynchronize();
+        MPI_Sendrecv(a0_data, count, datatype, npid_front, b0_idx, //
+                     b0_data, count, datatype, npid_back, b0_idx, MPI_COMM_WORLD,
+                     MPI_STATUS_IGNORE);
+        MPI_Sendrecv(a1_data, count, datatype, npid_back, b1_idx, //
+                     b1_data, count, datatype, npid_front, b1_idx, MPI_COMM_WORLD,
+                     MPI_STATUS_IGNORE);
+
+        /*
         const int3 pid3d   = getPid3D(pid, decomp);
-        const int npid     = getPid(pid3d + neighbor, decomp);
+        const int3 npid3d  = pid3d + neighbor;
+        const int npid     = getPid(npid3d, decomp);
         const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
 
         PackedData* src = &data->srcs[a0_idx];
         PackedData* dst = &data->dsts[b1_idx];
 
-        MPI_Irecv(dst->data, count, datatype, npid, b1_idx, MPI_COMM_WORLD,
-                  &data->recv_reqs[b1_idx]);
-        MPI_Isend(src->data, count, datatype, npid, b0_idx, MPI_COMM_WORLD,
-                  &data->send_reqs[b0_idx]);
+
+        if (onTheSameNode(pid, npid)) {
+            MPI_Irecv(dst->data, count, datatype, npid, b1_idx, MPI_COMM_WORLD,
+                      &data->recv_reqs[b1_idx]);
+            dst->pinned = false;
+            cudaStreamSynchronize(data->streams[a0_idx]);
+            MPI_Isend(src->data, count, datatype, npid, b0_idx, MPI_COMM_WORLD,
+                      &data->send_reqs[b0_idx]);
+        }
+        else {
+            MPI_Irecv(dst->data_pinned, count, datatype, npid, b1_idx, MPI_COMM_WORLD,
+                      &data->recv_reqs[b1_idx]);
+            dst->pinned = true;
+
+            if (!src->pinned) {
+                acPinPackedData(device, data->streams[a0_idx], src);
+                cudaStreamSynchronize(data->streams[a0_idx]);
+            }
+            MPI_Isend(src->data_pinned, count, datatype, npid, b0_idx, MPI_COMM_WORLD,
+                      &data->send_reqs[b0_idx]);
+        }
+        */
 
         /*
         const int3 neighbor = (int3){
@@ -1276,6 +1333,252 @@ acTransferCommData(const Device device, //
         printf("b0, a0: (%d, %d, %d) -> (%d, %d, %d)\n", b0.x, b0.y, b0.z, a0.x, a0.y, a0.z);
         printf("b1, a1: (%d, %d, %d) -> (%d, %d, %d)\n\n", b1.x, b1.y, b1.z, a1.x, a1.y, a1.z);
         */
+    }
+
+    return AC_SUCCESS;
+}
+
+static void
+acTransferCommDataWait(const CommData data)
+{
+    for (size_t i = 0; i < data.count; ++i) {
+        MPI_Wait(&data.send_reqs[i], MPI_STATUS_IGNORE);
+        MPI_Wait(&data.recv_reqs[i], MPI_STATUS_IGNORE);
+    }
+}
+
+#elif AC_MPI_BIDIRECTIONAL_SCHEME_B
+static AcResult
+acTransferCommData(const Device device, //
+                   const int3* a0s,     // Src idx inside comp. domain
+                   const int3* b0s,     // Dst idx inside bound zone
+                   CommData* data)
+{
+    cudaSetDevice(device->id);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const uint3_64 decomp = decompose(nprocs);
+
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    const int3 dims         = data->dims;
+    const size_t blockcount = data->count;
+
+    for (int k = -1; k <= 1; ++k) {
+        for (int j = -1; j <= 1; ++j) {
+            for (int i = -1; i <= 1; ++i) {
+                if (i == 0 && j == 0 && k == 0)
+                    continue;
+
+                for (size_t a_idx = 0; a_idx < blockcount; ++a_idx) {
+                    for (size_t b_idx = 0; b_idx < blockcount; ++b_idx) {
+                        const int3 neighbor = (int3){i, j, k};
+
+                        const int3 a0 = a0s[a_idx];
+                        // const int3 a1 = a0 + dims;
+
+                        const int3 b0 = a0 - neighbor * nn;
+                        // const int3 b1 = a1 - neighbor * nn;
+
+                        if (b0s[b_idx].x == b0.x && b0s[b_idx].y == b0.y && b0s[b_idx].z == b0.z) {
+
+                            const size_t count = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+
+#if MPI_GPUDIRECT_DISABLED
+                            PackedData* src    = &data->srcs_host[a_idx];
+                            PackedData* dst    = &data->dsts_host[b_idx];
+#else
+                            PackedData* src = &data->srcs[a_idx];
+                            PackedData* dst = &data->dsts[b_idx];
+#endif
+
+                            const int3 pid3d     = getPid3D(pid, decomp);
+                            const int npid_front = getPid(pid3d + neighbor, decomp);
+                            const int npid_back  = getPid(pid3d - neighbor, decomp);
+
+                            dst->pinned = false;
+
+                            if (onTheSameNode(pid, npid_back)) {
+                                MPI_Irecv(dst->data, count, datatype, npid_back, b_idx,
+                                          MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                                dst->pinned = false;
+                                cudaStreamSynchronize(data->streams[a_idx]);
+                                MPI_Isend(src->data, count, datatype, npid_front, b_idx,
+                                          MPI_COMM_WORLD, &data->send_reqs[b_idx]);
+                            }
+                            else {
+                                MPI_Irecv(dst->data_pinned, count, datatype, npid_back, b_idx,
+                                          MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                                dst->pinned = true;
+                                cudaStreamSynchronize(data->streams[a_idx]);
+                                if (!src->pinned) {
+                                    acPinPackedData(device, data->streams[a_idx], src);
+                                    cudaStreamSynchronize(data->streams[a_idx]);
+                                }
+                                MPI_Isend(src->data_pinned, count, datatype, npid_front, b_idx,
+                                          MPI_COMM_WORLD, &data->send_reqs[b_idx]);
+                            }
+                            /*
+                            cudaStreamSynchronize(data->streams[a_idx]);
+                            MPI_Status status;
+                            MPI_Sendrecv(src->data, count, datatype, npid_front, b_idx, //
+                                         dst->data, count, datatype, npid_back, b_idx,  //
+                                         MPI_COMM_WORLD, &status);
+                                         */
+
+                            /*
+                            const int npid_back = getPid(pid3d - neighbor, decomp);
+
+                            if (onTheSameNode(pid, npid_back)) {
+                                MPI_Irecv(dst->data, count, datatype, npid_back, b_idx,
+                                          MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                                dst->pinned = false;
+                            }
+                            else {
+                                MPI_Irecv(dst->data_pinned, count, datatype, npid_back, b_idx,
+                                          MPI_COMM_WORLD, &data->recv_reqs[b_idx]);
+                                dst->pinned = true;
+                            }
+
+                            const int npid_front = getPid(pid3d + neighbor, decomp);
+
+                            cudaStreamSynchronize(data->streams[a_idx]);
+                            if (onTheSameNode(pid, npid_front)) {
+                                MPI_Isend(src->data, count, datatype, npid_front, b_idx,
+                                          MPI_COMM_WORLD, &data->send_reqs[b_idx]);
+                            }
+                            else {
+                                if (!src->pinned) {
+                                    acPinPackedData(device, data->streams[a_idx], src);
+                                    cudaStreamSynchronize(data->streams[a_idx]);
+                                }
+                                MPI_Isend(src->data_pinned, count, datatype, npid_front, b_idx,
+                                          MPI_COMM_WORLD, &data->send_reqs[b_idx]);
+                            }
+                            */
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return AC_SUCCESS;
+}
+
+static void
+acTransferCommDataWait(const CommData data)
+{
+
+    for (size_t i = 0; i < data.count; ++i) {
+        MPI_Wait(&data.send_reqs[i], MPI_STATUS_IGNORE);
+        MPI_Wait(&data.recv_reqs[i], MPI_STATUS_IGNORE);
+    }
+}
+
+#elif AC_MPI_RT_PINNING_IMPROVED
+static int3
+mod(const int3 a, const int3 n)
+{
+    return (int3){mod(a.x, n.x), mod(a.y, n.y), mod(a.z, n.z)};
+}
+
+static AcResult
+acTransferCommData(const Device device, //
+                   const int3* a0s,     // Src idx inside comp. domain
+                   const int3* b0s,     // Dst idx inside bound zone
+                   CommData* data)
+{
+    cudaSetDevice(device->id);
+
+    MPI_Datatype datatype = MPI_FLOAT;
+    if (sizeof(AcReal) == 8)
+        datatype = MPI_DOUBLE;
+
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const uint3_64 decomp = decompose(nprocs);
+
+    const int3 nn = (int3){
+        device->local_config.int_params[AC_nx],
+        device->local_config.int_params[AC_ny],
+        device->local_config.int_params[AC_nz],
+    };
+
+    const int3 pid3d        = getPid3D(pid, decomp);
+    const int3 dims         = data->dims;
+    const size_t blockcount = data->count;
+    const size_t count      = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
+    const int3 nghost       = (int3){NGHOST, NGHOST, NGHOST};
+
+    for (size_t b0_idx = 0; b0_idx < blockcount; ++b0_idx) {
+
+        const int3 b0       = b0s[b0_idx];
+        const int3 neighbor = (int3){
+            b0.x < NGHOST ? -1 : b0.x >= NGHOST + nn.x ? 1 : 0,
+            b0.y < NGHOST ? -1 : b0.y >= NGHOST + nn.y ? 1 : 0,
+            b0.z < NGHOST ? -1 : b0.z >= NGHOST + nn.z ? 1 : 0,
+        };
+        const int npid = getPid(pid3d + neighbor, decomp);
+
+        PackedData* dst = &data->dsts[b0_idx];
+        if (onTheSameNode(pid, npid)) {
+            MPI_Irecv(dst->data, count, datatype, npid, b0_idx, //
+                      MPI_COMM_WORLD, &data->recv_reqs[b0_idx]);
+            dst->pinned = false;
+        }
+        else {
+            MPI_Irecv(dst->data_pinned, count, datatype, npid, b0_idx, //
+                      MPI_COMM_WORLD, &data->recv_reqs[b0_idx]);
+            dst->pinned = true;
+        }
+    }
+
+    for (size_t b0_idx = 0; b0_idx < blockcount; ++b0_idx) {
+        const int3 b0       = b0s[b0_idx];
+        const int3 neighbor = (int3){
+            b0.x < NGHOST ? -1 : b0.x >= NGHOST + nn.x ? 1 : 0,
+            b0.y < NGHOST ? -1 : b0.y >= NGHOST + nn.y ? 1 : 0,
+            b0.z < NGHOST ? -1 : b0.z >= NGHOST + nn.z ? 1 : 0,
+        };
+        const int npid = getPid(pid3d - neighbor, decomp);
+
+        const int3 a0 = mod(b0 - nghost, nn) + nghost;
+
+        // Not needed if there's a 1-to-1 mapping from b -> a
+        size_t a0_idx = -1;
+        for (size_t i = 0; i < blockcount; ++i) {
+            if (a0s[i].x == a0.x && a0s[i].y == a0.y && a0s[i].z == a0.z) {
+                a0_idx = i;
+                break;
+            }
+        }
+        ERRCHK(a0_idx < blockcount);
+
+        PackedData* src = &data->srcs[a0_idx];
+        if (onTheSameNode(pid, npid)) {
+            cudaStreamSynchronize(data->streams[a0_idx]);
+            MPI_Isend(src->data, count, datatype, npid, b0_idx, //
+                      MPI_COMM_WORLD, &data->send_reqs[b0_idx]);
+        }
+        else {
+            acPinPackedData(device, data->streams[a0_idx], src);
+            cudaStreamSynchronize(data->streams[a0_idx]);
+            MPI_Isend(src->data_pinned, count, datatype, npid, b0_idx, MPI_COMM_WORLD,
+                      &data->send_reqs[b0_idx]);
+            src->pinned = true;
+        }
     }
 
     return AC_SUCCESS;
@@ -1401,6 +1704,7 @@ acTransferCommData(const Device device, //
                                 if (!src->pinned) {
                                     acPinPackedData(device, data->streams[a_idx], src);
                                     cudaStreamSynchronize(data->streams[a_idx]);
+                                    src->pinned = true;
                                 }
                                 MPI_Isend(src->data_pinned, count, datatype, npid, b_idx,
                                           MPI_COMM_WORLD, &data->send_reqs[b_idx]);
@@ -1790,6 +2094,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         (int3){NGHOST, nn.y, nn.z},   //
         (int3){nn.x, nn.y, nn.z},
     };
+    /*
     const int3 corner_b0s[] = {
         (int3){0, 0, 0},
         (int3){NGHOST + nn.x, 0, 0},
@@ -1797,6 +2102,18 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
 
         (int3){0, 0, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
+        (int3){0, NGHOST + nn.y, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
+    };
+    */
+    const int3 corner_b0s[] = {
+        (int3){0, 0, 0},
+        (int3){NGHOST + nn.x, 0, 0},
+        (int3){0, NGHOST + nn.y, 0},
+        (int3){0, 0, NGHOST + nn.z},
+
+        (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
         (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
         (int3){0, NGHOST + nn.y, NGHOST + nn.z},
         (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
