@@ -5,25 +5,15 @@
 #include <mpi.h>
 #include <stdbool.h>
 
-#define AC_MPI_UNIDIRECTIONAL_COMM (0)
-#define AC_MPI_BIDIRECTIONAL_SCHEME_A (0)
-#define AC_MPI_BIDIRECTIONAL_SCHEME_B (0)
-#define AC_MPI_RT_PINNING_IMPROVED (1)
-#define AC_MPI_RT_PINNING (1)
+#define MPI_GPUDIRECT_DISABLED (0)
 #endif // AC_MPI_ENABLED
 
 typedef struct {
     int3 dims;
     AcReal* data;
 
-#if (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
     AcReal* data_pinned;
     bool pinned = false; // Set if data was received to pinned memory
-#endif                   // (AC_MPI_ENABLED && AC_MPI_RT_PINNING)
-
-#if (AC_MPI_ENABLED && AC_MPI_UNIDIRECTIONAL_COMM)
-    MPI_Win win; // MPI window for RMA
-#endif           // (AC_MPI_ENABLED && AC_MPI_UNIDIRECTIONAL_COMM)
 } PackedData;
 
 typedef struct {
