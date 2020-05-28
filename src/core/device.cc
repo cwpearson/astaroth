@@ -460,6 +460,37 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
 }
 
 #if AC_MPI_ENABLED
+/**
+Quick overview of the MPI implementation:
+
+The halo is partitioned into segments. The first coordinate of a segment is b0.
+The array containing multiple b0s is called... "b0s".
+
+Each b0 maps to an index in computational domain of some neighboring process a0.
+We have a0 = mod(b0 - nghost, nn) + nghost.
+Intuitively, we
+  1) Transform b0 into coordinate system where (0, 0, 0) is the first index in
+     the comp domain.
+  2) Wrap the transformed b0 around nn (comp domain)
+  3) Transform b0 back to a coordinate system where (0, 0, 0) is the first index
+     in the ghost zone
+
+struct PackedData is used for packing and unpacking and holds the actual data in
+                  the halo partition
+struct CommData holds multiple PackedDatas for sending and receiving halo
+                partition
+struct Grid contains information about the GPU device, decomposition, the total
+            mesh dimensions and CommDatas
+
+
+Basic steps:
+  1) Distribute the mesh among ranks
+  2) Integrate & communicate
+    - start inner integration and at the same time, pack halo data and send it to neighbors
+    - once all halo data has been received, unpack and do outer integration
+    - sync and start again
+  3) Gather the mesh to rank 0 for postprocessing
+*/
 #include <mpi.h>
 
 #include <stdint.h>
@@ -1003,7 +1034,7 @@ acUnpinCommData(const Device device, CommData* data)
 
 static AcResult
 acTransferCommData(const Device device, //
-                   const int3* b0s,     // Dst idx inside bound zone
+                   const int3* b0s,     // Halo partition coordinates
                    CommData* data)
 {
     cudaSetDevice(device->id);
@@ -1072,7 +1103,6 @@ acTransferCommData(const Device device, //
             cudaStreamSynchronize(data->streams[b0_idx]);
             MPI_Isend(src->data_pinned, count, datatype, npid, b0_idx, //
                       MPI_COMM_WORLD, &data->send_reqs[b0_idx]);
-            src->pinned = true;
         }
     }
 
