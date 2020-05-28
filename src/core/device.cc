@@ -466,21 +466,21 @@ Quick overview of the MPI implementation:
 The halo is partitioned into segments. The first coordinate of a segment is b0.
 The array containing multiple b0s is called... "b0s".
 
-Each b0 maps to an index in computational domain of some neighboring process a0.
+Each b0 maps to an index in the computational domain of some neighboring process a0.
 We have a0 = mod(b0 - nghost, nn) + nghost.
 Intuitively, we
-  1) Transform b0 into coordinate system where (0, 0, 0) is the first index in
+  1) Transform b0 into a coordinate system where (0, 0, 0) is the first index in
      the comp domain.
   2) Wrap the transformed b0 around nn (comp domain)
   3) Transform b0 back to a coordinate system where (0, 0, 0) is the first index
      in the ghost zone
 
-struct PackedData is used for packing and unpacking and holds the actual data in
+struct PackedData is used for packing and unpacking. Holds the actual data in
                   the halo partition
 struct CommData holds multiple PackedDatas for sending and receiving halo
-                partition
-struct Grid contains information about the GPU device, decomposition, the total
-            mesh dimensions and CommDatas
+                partitions
+struct Grid contains information about the local GPU device, decomposition, the
+            total mesh dimensions and CommDatas
 
 
 Basic steps:
