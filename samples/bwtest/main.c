@@ -13,6 +13,8 @@
 //#define BLOCK_SIZE (100 * 1024 * 1024) // Bytes
 #define BLOCK_SIZE (256 * 256 * 3 * 8 * 8)
 
+#define errchk(x) { if (!(x)) { fprintf(stderr, "errchk(%s) failed", #x); assert(x); }}
+
 /*
   Findings:
     - MUST ALWAYS SET DEVICE. Absolutely kills performance if device is not set explicitly
@@ -27,7 +29,7 @@ static uint8_t*
 allocHost(const size_t bytes)
 {
     uint8_t* arr = malloc(bytes);
-    assert(arr);
+    errchk(arr);
     return arr;
 }
 
@@ -47,7 +49,7 @@ allocDevice(const size_t bytes)
     // const cudaError_t retval = cudaMallocManaged((void**)&arr, bytes, cudaMemAttachGlobal);
     // Pinned (40 GiB/s internode, 10 GiB/s intranode)
     // const cudaError_t retval = cudaMallocHost((void**)&arr, bytes);
-    assert(retval == cudaSuccess);
+    errchk(retval == cudaSuccess);
     return arr;
 }
 
@@ -61,7 +63,7 @@ allocDevicePinned(const size_t bytes)
     // const cudaError_t retval = cudaMallocManaged((void**)&arr, bytes, cudaMemAttachGlobal);
     // Pinned (40 GiB/s internode, 10 GiB/s intranode)
     const cudaError_t retval = cudaMallocHost((void**)&arr, bytes);
-    assert(retval == cudaSuccess);
+    errchk(retval == cudaSuccess);
     return arr;
 }
 
@@ -147,6 +149,7 @@ sendrecv_nonblocking_multiple(uint8_t* src, uint8_t* dst)
     }
 }
 
+/*
 static void
 sendrecv_nonblocking_multiple_parallel(uint8_t* src, uint8_t* dst)
 {
@@ -154,7 +157,7 @@ sendrecv_nonblocking_multiple_parallel(uint8_t* src, uint8_t* dst)
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-    MPI_Request recv_requests[nprocs], send_requests[nprocs];
+    MPI_Request send_requests[nprocs];
     for (int i = 1; i < nprocs; ++i) {
         int nfront = (pid + i) % nprocs;
         MPI_Isend(src, BLOCK_SIZE, MPI_BYTE, nfront, nfront, MPI_COMM_WORLD, &send_requests[i]);
@@ -180,6 +183,7 @@ sendrecv_nonblocking_multiple_parallel(uint8_t* src, uint8_t* dst)
         MPI_Wait(&send_requests[i], &status);
     }
 }
+*/
 
 static void
 sendrecv_nonblocking_multiple_rt_pinning(uint8_t* src, uint8_t* dst)
@@ -197,8 +201,6 @@ sendrecv_nonblocking_multiple_rt_pinning(uint8_t* src, uint8_t* dst)
 
     int devices_per_node = -1;
     cudaGetDeviceCount(&devices_per_node);
-
-    const int node_id = pid / devices_per_node;
 
     MPI_Request recv_requests[nprocs], send_requests[nprocs];
     for (int i = 1; i < nprocs; ++i) {
@@ -226,20 +228,20 @@ sendrecv_nonblocking_multiple_rt_pinning(uint8_t* src, uint8_t* dst)
 }
 
 static void
-send_d2h(const uint8_t* src, uint8_t* dst)
+send_d2h(uint8_t* src, uint8_t* dst)
 {
     cudaMemcpy(dst, src, BLOCK_SIZE, cudaMemcpyDeviceToHost);
 }
 
 static void
-send_h2d(const uint8_t* src, uint8_t* dst)
+send_h2d(uint8_t* src, uint8_t* dst)
 {
     cudaMemcpy(dst, src, BLOCK_SIZE, cudaMemcpyHostToDevice);
 }
 
 
 static void
-sendrecv_d2h2d(const uint8_t* dsrc, uint8_t* hdst, const uint8_t* hsrc, uint8_t* ddst)
+sendrecv_d2h2d(uint8_t* dsrc, uint8_t* hdst, uint8_t* hsrc, uint8_t* ddst)
 {
     cudaStream_t d2h, h2d;
     cudaStreamCreate(&d2h);
@@ -299,8 +301,8 @@ measurebw(const char* msg, const size_t bytes, void (*sendrecv)(uint8_t*, uint8_
 
 
 static void
-measurebw2(const char* msg, const size_t bytes, void (*sendrecv)(const uint8_t*, uint8_t*, const uint8_t*, uint8_t*), const uint8_t* dsrc, uint8_t* hdst,
-                                                                                                            const uint8_t* hsrc, uint8_t* ddst)
+measurebw2(const char* msg, const size_t bytes, void (*sendrecv)(uint8_t*, uint8_t*, uint8_t*, uint8_t*), uint8_t* dsrc, uint8_t* hdst,
+                                                                                                            uint8_t* hsrc, uint8_t* ddst)
 {
     const size_t num_samples = 100;
 
@@ -342,7 +344,7 @@ main(void)
     MPI_Init(NULL, NULL);
     // int provided;
     // MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
-    // assert(provided >= MPI_THREAD_MULTIPLE);
+    // errchk(provided >= MPI_THREAD_MULTIPLE);
 
     // Disable stdout buffering
     setbuf(stdout, NULL);
@@ -350,7 +352,7 @@ main(void)
     int pid, nprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    assert(nprocs >= 2); // Require at least one neighbor
+    errchk(nprocs >= 2); // Require at least one neighbor
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (!pid) {
@@ -432,7 +434,7 @@ main(void)
         freeDevice(dst);
     }
     PRINT("\n------------------------\n");
-    
+
     {
         uint8_t* hsrc = allocHost(BLOCK_SIZE);
         uint8_t* hdst = allocHost(BLOCK_SIZE);
@@ -450,7 +452,7 @@ main(void)
         freeHost(hdst);
     }
     PRINT("\n------------------------\n");
-    
+
     {
         uint8_t* hsrc = allocHost(BLOCK_SIZE);
         uint8_t* hdst = allocHost(BLOCK_SIZE);

@@ -962,7 +962,7 @@ acSyncCommData(const CommData data)
 static int3
 mod(const int3 a, const int3 n)
 {
-    return (int3){mod(a.x, n.x), mod(a.y, n.y), mod(a.z, n.z)};
+    return (int3){(int)mod(a.x, n.x), (int)mod(a.y, n.y), (int)mod(a.z, n.z)};
 }
 
 static void
@@ -1058,7 +1058,6 @@ acTransferCommData(const Device device, //
     const int3 dims         = data->dims;
     const size_t blockcount = data->count;
     const size_t count      = dims.x * dims.y * dims.z * NUM_VTXBUF_HANDLES;
-    const int3 nghost       = (int3){NGHOST, NGHOST, NGHOST};
 
     for (size_t b0_idx = 0; b0_idx < blockcount; ++b0_idx) {
 
@@ -1286,7 +1285,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
 
     const Device device  = grid.device;
     const int3 nn        = grid.nn;
-    CommData corner_data = grid.corner_data;
+    //CommData corner_data = grid.corner_data; // Do not rm: required for corners
     CommData edgex_data  = grid.edgex_data;
     CommData edgey_data  = grid.edgey_data;
     CommData edgez_data  = grid.edgez_data;
@@ -1297,6 +1296,8 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     acDeviceSynchronizeStream(device, stream);
 
     // Corners
+    /*
+    // Do not rm: required for corners
     const int3 corner_b0s[] = {
         (int3){0, 0, 0},
         (int3){NGHOST + nn.x, 0, 0},
@@ -1308,6 +1309,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         (int3){0, NGHOST + nn.y, NGHOST + nn.z},
         (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
     };
+    */
 
     // Edges X
     const int3 edgex_b0s[] = {
@@ -1355,7 +1357,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     };
 
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
-        // acPackCommData(device, corner_b0s, &corner_data);
+        // acPackCommData(device, corner_b0s, &corner_data); // Do not rm: required for corners
         acPackCommData(device, edgex_b0s, &edgex_data);
         acPackCommData(device, edgey_b0s, &edgey_data);
         acPackCommData(device, edgez_b0s, &edgez_data);
@@ -1363,18 +1365,10 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acPackCommData(device, sidexz_b0s, &sidexz_data);
         acPackCommData(device, sideyz_b0s, &sideyz_data);
 
-        //////////// INNER INTEGRATION //////////////
-        {
-            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = nn;
-            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
-        }
-        ////////////////////////////////////////////
-
         MPI_Barrier(MPI_COMM_WORLD);
 
 #if MPI_GPUDIRECT_DISABLED
-        // acTransferCommDataToHost(device, &corner_data);
+        // acTransferCommDataToHost(device, &corner_data); // Do not rm: required for corners
         acTransferCommDataToHost(device, &edgex_data);
         acTransferCommDataToHost(device, &edgey_data);
         acTransferCommDataToHost(device, &edgez_data);
@@ -1383,7 +1377,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommDataToHost(device, &sideyz_data);
 #endif
 
-        // acTransferCommData(device, corner_b0s, &corner_data);
+        // acTransferCommData(device, corner_b0s, &corner_data); // Do not rm: required for corners
         acTransferCommData(device, edgex_b0s, &edgex_data);
         acTransferCommData(device, edgey_b0s, &edgey_data);
         acTransferCommData(device, edgez_b0s, &edgez_data);
@@ -1391,7 +1385,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommData(device, sidexz_b0s, &sidexz_data);
         acTransferCommData(device, sideyz_b0s, &sideyz_data);
 
-        // acTransferCommDataWait(corner_data);
+        // acTransferCommDataWait(corner_data); // Do not rm: required for corners
         acTransferCommDataWait(edgex_data);
         acTransferCommDataWait(edgey_data);
         acTransferCommDataWait(edgez_data);
@@ -1400,7 +1394,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommDataWait(sideyz_data);
 
 #if MPI_GPUDIRECT_DISABLED
-        // acTransferCommDataToDevice(device, &corner_data);
+        // acTransferCommDataToDevice(device, &corner_data); // Do not rm: required for corners
         acTransferCommDataToDevice(device, &edgex_data);
         acTransferCommDataToDevice(device, &edgey_data);
         acTransferCommDataToDevice(device, &edgez_data);
@@ -1409,7 +1403,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommDataToDevice(device, &sideyz_data);
 #endif
 
-        // acUnpinCommData(device, &corner_data);
+        // acUnpinCommData(device, &corner_data); // Do not rm: required for corners
         acUnpinCommData(device, &edgex_data);
         acUnpinCommData(device, &edgey_data);
         acUnpinCommData(device, &edgez_data);
@@ -1427,7 +1421,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         //////////// OUTER INTEGRATION //////////////
 
         // Wait for unpacking
-        // acSyncCommData(corner_data);
+        // acSyncCommData(corner_data); // Do not rm: required for corners
         acSyncCommData(edgex_data);
         acSyncCommData(edgey_data);
         acSyncCommData(edgez_data);
