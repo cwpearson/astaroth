@@ -1365,6 +1365,14 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acPackCommData(device, sidexz_b0s, &sidexz_data);
         acPackCommData(device, sideyz_b0s, &sideyz_data);
 
+        //////////// INNER INTEGRATION //////////////
+        {
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = nn;
+            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+        }
+        ////////////////////////////////////////////
+
         MPI_Barrier(MPI_COMM_WORLD);
 
 #if MPI_GPUDIRECT_DISABLED
