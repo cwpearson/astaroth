@@ -6,9 +6,10 @@ target_link_libraries(astaroth_core astaroth_utils astaroth_kernels CUDA::cudart
 
 ## Options
 if (MPI_ENABLED)
-    find_package(MPI)
-    find_package(OpenMP)
-    target_link_libraries(astaroth_core MPI::MPI_CXX OpenMP::OpenMP_CXX)
+    #find_package(MPI REQUIRED)
+    #find_package(OpenMP)
+    #target_link_libraries(astaroth_core MPI::MPI_CXX OpenMP::OpenMP_CXX)
+    target_link_libraries(astaroth_core MPI::MPI_CXX)
 endif()
 
 if (MULTIGPU_ENABLED)
