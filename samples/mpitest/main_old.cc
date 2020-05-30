@@ -22,8 +22,6 @@
 #include "astaroth.h"
 #include "astaroth_utils.h"
 
-#if AC_MPI_ENABLED
-
 #include <mpi.h>
 
 int
@@ -37,6 +35,10 @@ main(void)
     // CPU alloc
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
+    info.real_params[AC_inv_dsx]   = AcReal(1.0) / info.real_params[AC_dsx];
+    info.real_params[AC_inv_dsy]   = AcReal(1.0) / info.real_params[AC_dsy];
+    info.real_params[AC_inv_dsz]   = AcReal(1.0) / info.real_params[AC_dsz];
+    info.real_params[AC_cs2_sound] = info.real_params[AC_cs_sound] * info.real_params[AC_cs_sound];
 
     AcMesh model, candidate;
     if (pid == 0) {
@@ -47,14 +49,21 @@ main(void)
     }
 
     // GPU alloc & compute
-    acGridInit(info);
-    acGridLoadMesh(model, STREAM_DEFAULT);
+    Grid grid;
+    acGridCreateMPI(info, &grid);
 
-    acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
-    acGridPeriodicBoundconds(STREAM_DEFAULT);
+    acGridLoadMeshMPI(grid, STREAM_DEFAULT, model);
+    acGridSynchronizeStreamMPI(grid, STREAM_ALL);
 
-    acGridStoreMesh(STREAM_DEFAULT, &candidate);
-    acGridQuit();
+    acGridIntegrateMPI(grid, FLT_EPSILON);
+    acGridSynchronizeStreamMPI(grid, STREAM_ALL);
+    acGridSynchronizeMeshMPI(grid, STREAM_DEFAULT);
+    acGridSynchronizeStreamMPI(grid, STREAM_ALL);
+
+    acGridStoreMeshMPI(grid, STREAM_DEFAULT, &candidate);
+    acGridSynchronizeStreamMPI(grid, STREAM_ALL);
+
+    acGridDestroyMPI(grid);
 
     // Verify
     if (pid == 0) {
@@ -69,13 +78,3 @@ main(void)
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
-
-#else
-int
-main(void)
-{
-    printf("The library was built without MPI support, cannot run mpitest. Rebuild Astaroth with "
-           "cmake -DMPI_ENABLED=ON .. to enable.\n");
-    return EXIT_FAILURE;
-}
-#endif // AC_MPI_ENABLES

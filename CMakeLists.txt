@@ -89,6 +89,8 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
     add_subdirectory(samples/benchmark)
+    add_subdirectory(samples/bwtest)
+    add_subdirectory(samples/genbenchmarkscripts)
 endif()
 
 if (BUILD_STANDALONE)
