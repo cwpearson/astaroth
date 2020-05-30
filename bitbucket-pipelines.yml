@@ -19,6 +19,8 @@ pipelines:
     - step:
         script: # Modify the commands below to build your repository.
           - mkdir -p build && cd build
+          - apt-get update
+          - apt-get install -y apt-transport-https ca-certificates gnupg software-properties-common wget
           - apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
           - apt-get update
           - apt-get install -y cmake flex bison openmpi-bin libopenmpi-dev
