@@ -30,11 +30,11 @@ endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
-option(DOUBLE_PRECISION "Generates double precision code."                    OFF)
-option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            OFF)
-option(BUILD_STANDALONE "Builds standalone Astaroth."                         ON)
-option(MPI_ENABLED      "Enables additional functions for MPI communciation." OFF)
-option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." ON)
+option(DOUBLE_PRECISION "Generates double precision code."                    ON)
+option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            ON)
+option(BUILD_STANDALONE "Builds standalone Astaroth."                         OFF)
+option(MPI_ENABLED      "Enables additional functions for MPI communciation." ON)
+option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." OFF)
 
 ## Options (DEPRECATED)
 # option(BUILD_DEBUG              "Builds the program with extensive error checking"          OFF)
