@@ -53,6 +53,13 @@ main(void)
     acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
     acGridPeriodicBoundconds(STREAM_DEFAULT);
 
+    // Do reductions
+    AcReal cand_reduce_res = 0;
+    VertexBufferHandle vtxbuf = VTXBUF_UUX;
+    ReductionType rtype = RTYPE_MAX;
+    acGridReduceScal(STREAM_DEFAULT, rtype, vtxbuf, &cand_reduce_res); // TODO
+
+
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
     acGridQuit();
 
@@ -62,6 +69,13 @@ main(void)
         acMeshApplyPeriodicBounds(&model);
 
         acVerifyMesh(model, candidate);
+
+        // Check reductions
+        AcReal model_reduce_res = acModelReduceScal(model, RTYPE_MAX, vtxbuf);
+        Error error = acGetError(model_reduce_res, cand_reduce_res);
+        error.handle = vtxbuf;
+        printErrorToScreen(error);
+
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
     }

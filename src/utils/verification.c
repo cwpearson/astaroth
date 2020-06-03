@@ -18,25 +18,14 @@
 #define WHT "\x1B[37m"
 #define RESET "\x1B[0m"
 
-typedef struct {
-    VertexBufferHandle handle;
-    AcReal model;
-    AcReal candidate;
-    long double abs_error;
-    long double ulp_error;
-    long double rel_error;
-    AcReal maximum_magnitude;
-    AcReal minimum_magnitude;
-} Error;
-
 static inline bool
 is_valid(const AcReal a)
 {
     return !isnan(a) && !isinf(a);
 }
 
-static Error
-get_error(AcReal model, AcReal candidate)
+Error
+acGetError(AcReal model, AcReal candidate)
 {
     Error error;
     error.abs_error = 0;
@@ -109,7 +98,7 @@ get_max_abs_error(const VertexBufferHandle vtxbuf_handle, const AcMesh model_mes
 
     for (size_t i = 0; i < acVertexBufferSize(model_mesh.info); ++i) {
 
-        Error curr_error = get_error(model_vtxbuf[i], candidate_vtxbuf[i]);
+        Error curr_error = acGetError(model_vtxbuf[i], candidate_vtxbuf[i]);
 
         if (curr_error.abs_error > error.abs_error)
             error = curr_error;
@@ -147,8 +136,8 @@ is_acceptable(const Error error)
         return false;
 }
 
-static bool
-print_error_to_screen(const Error error)
+bool
+printErrorToScreen(const Error error)
 {
     bool errors_found = false;
 
@@ -177,7 +166,7 @@ acVerifyMesh(const AcMesh model, const AcMesh candidate)
     bool errors_found = false;
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         Error field_error = get_max_abs_error(i, model, candidate);
-        errors_found |= print_error_to_screen(field_error);
+        errors_found |= printErrorToScreen(field_error);
     }
 
     printf("%s\n", errors_found ? "Failure. Found errors in one or more vertex buffers"

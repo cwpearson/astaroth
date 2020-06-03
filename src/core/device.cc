@@ -1641,8 +1641,8 @@ acMPIReduceScal(const AcReal local_result, const ReductionType rtype, AcReal* re
     MPI_Datatype datatype = MPI_DOUBLE;
     #else
     MPI_Datatype datatype = MPI_FLOAT;
-    #endif    
-    
+    #endif
+
     /*
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -1664,31 +1664,43 @@ acMPIReduceScal(const AcReal local_result, const ReductionType rtype, AcReal* re
 }
 
 AcResult
-acGridReduceScal(const Device device, const Stream stream, const ReductionType rtype,
+acGridReduceScal(const Stream stream, const ReductionType rtype,
                  const VertexBufferHandle vtxbuf_handle, AcReal* result)
 {
+    ERRCHK(grid.initialized);
+    // acGridSynchronizeStream(stream);
+
+    const Device device  = grid.device;
+    //const int3 nn        = grid.nn;
+
     acGridSynchronizeStream(STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
 
     AcReal local_result;
     acDeviceReduceScal(device, stream, rtype, vtxbuf_handle, &local_result);
 
-    return acMPIReduceScal(local_result,rtype,result);    
+    return acMPIReduceScal(local_result,rtype,result);
 }
 
 
 AcResult
-acGridReduceVec(const Device device, const Stream stream, const ReductionType rtype,
+acGridReduceVec(const Stream stream, const ReductionType rtype,
                 const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
                 const VertexBufferHandle vtxbuf2, AcReal* result)
 {
+    ERRCHK(grid.initialized);
+    // acGridSynchronizeStream(stream);
+
+    const Device device  = grid.device;
+    //const int3 nn        = grid.nn;
+
     acGridSynchronizeStream(STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
 
     AcReal local_result;
     acDeviceReduceVec(device, stream, rtype, vtxbuf0, vtxbuf1, vtxbuf2, &local_result);
 
-    return acMPIReduceScal(local_result,rtype,result);    
+    return acMPIReduceScal(local_result,rtype,result);
 }
 
 #endif // AC_MPI_ENABLED

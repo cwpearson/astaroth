@@ -29,6 +29,25 @@
 extern "C" {
 #endif
 
+ #include <stdbool.h>
+
+typedef struct {
+    VertexBufferHandle handle;
+    AcReal model;
+    AcReal candidate;
+    long double abs_error;
+    long double ulp_error;
+    long double rel_error;
+    AcReal maximum_magnitude;
+    AcReal minimum_magnitude;
+} Error;
+
+/** TODO comment */
+Error acGetError(AcReal model, AcReal candidate);
+
+/** TODO comment */
+bool printErrorToScreen(const Error error);
+
 /** Loads data from the config file */
 AcResult acLoadConfig(const char* config_path, AcMeshInfo* config);
 
@@ -55,6 +74,15 @@ AcResult acMeshClear(AcMesh* mesh);
 
 /** */
 AcResult acModelIntegrateStep(AcMesh mesh, const AcReal dt);
+
+/** TODO */
+AcReal
+acModelReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a);
+
+/** TODO */
+AcReal
+acModelReduceVec(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a,
+                 const VertexBufferHandle b, const VertexBufferHandle c);
 
 /** */
 AcResult acVerifyMesh(const AcMesh model, const AcMesh candidate);
