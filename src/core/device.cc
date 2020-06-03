@@ -1621,8 +1621,9 @@ acGridPeriodicBoundconds(const Stream stream)
     return AC_SUCCESS;
 }
 
-AcResult
-acMPIReduceScal(AcReal* local_result, const ReductionType rtype, AcReal* result)
+
+static AcResult
+acMPIReduceScal(const AcReal local_result, const ReductionType rtype, AcReal* result)
 {
 
     MPI_Op op;
@@ -1641,20 +1642,20 @@ acMPIReduceScal(AcReal* local_result, const ReductionType rtype, AcReal* result)
     #else
     MPI_Datatype datatype = MPI_FLOAT;
     #endif    
+    
+    /*
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    */
 
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
-    if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
-        //Overflow risk?
-        *local_result = *local_result*(*local_result);
-    }
 
     AcReal mpi_res;
     MPI_Allreduce(&local_result, &mpi_res, 1, datatype, op, MPI_COMM_WORLD);
 
     if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
-        const AcReal inv_n = AcReal(1.) / world_size;
+        const AcReal inv_n = AcReal(1.) / (grid.nn.x*grid.decomposition.x * grid.nn.y*grid.decomposition.y * grid.nn.z*grid.decomposition.z);
         mpi_res = sqrt(inv_n * mpi_res);
     }
     *result = mpi_res;
@@ -1671,8 +1672,8 @@ acGridReduceScal(const Device device, const Stream stream, const ReductionType r
 
     AcReal local_result;
     acDeviceReduceScal(device, stream, rtype, vtxbuf_handle, &local_result);
-    
-    return acMPIReduceScal(&local_result,rtype,result);    
+
+    return acMPIReduceScal(local_result,rtype,result);    
 }
 
 
@@ -1687,7 +1688,7 @@ acGridReduceVec(const Device device, const Stream stream, const ReductionType rt
     AcReal local_result;
     acDeviceReduceVec(device, stream, rtype, vtxbuf0, vtxbuf1, vtxbuf2, &local_result);
 
-    return acMPIReduceScal(&local_result,rtype,result);    
+    return acMPIReduceScal(local_result,rtype,result);    
 }
 
 #endif // AC_MPI_ENABLED
