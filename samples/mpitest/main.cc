@@ -25,6 +25,7 @@
 #if AC_MPI_ENABLED
 
 #include <mpi.h>
+#include <vector>
 
 int
 main(void)
@@ -53,12 +54,32 @@ main(void)
     acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
     acGridPeriodicBoundconds(STREAM_DEFAULT);
 
-    // Do reductions
-    AcReal cand_reduce_res = 0;
-    VertexBufferHandle vtxbuf = VTXBUF_UUX;
-    ReductionType rtype = RTYPE_MAX;
-    acGridReduceScal(STREAM_DEFAULT, rtype, vtxbuf, &cand_reduce_res); // TODO
+    // clang-format off
+    // Define scalar reduction tests here
+    std::vector<AcScalReductionTestCase> scalarReductionTests{
+        AcScalReductionTestCase{"Scalar MAX",     VTXBUF_UUX, RTYPE_MAX,     0},
+        AcScalReductionTestCase{"Scalar MIN",     VTXBUF_UUX, RTYPE_MIN,     0},
+        AcScalReductionTestCase{"Scalar RMS",     VTXBUF_UUX, RTYPE_RMS,     0},
+        AcScalReductionTestCase{"Scalar RMS_EXP", VTXBUF_UUX, RTYPE_RMS_EXP, 0},
+        AcScalReductionTestCase{"Scalar SUM",     VTXBUF_UUX, RTYPE_SUM,     0}
+    };
+    // Define vector reduction tests here
+    std::vector<AcVecReductionTestCase> vectorReductionTests{
+        AcVecReductionTestCase{"Vector MAX",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MAX,     0},
+        AcVecReductionTestCase{"Vector MIN",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MIN,     0},
+        AcVecReductionTestCase{"Vector RMS",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS,     0},
+        AcVecReductionTestCase{"Vector RMS_EXP", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS_EXP, 0},
+        AcVecReductionTestCase{"Vector SUM",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_SUM,     0}
+    };
+    // clang-format on
 
+    for (auto& testCase : scalarReductionTests) {
+        acGridReduceScal(STREAM_DEFAULT, testCase.rtype, testCase.vtxbuf, &testCase.candidate);
+    }
+    for (auto& testCase : vectorReductionTests) {
+        acGridReduceVec(STREAM_DEFAULT, testCase.rtype, testCase.a, testCase.b, testCase.c,
+                        &testCase.candidate);
+    }
 
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
     acGridQuit();
@@ -71,10 +92,8 @@ main(void)
         acVerifyMesh(model, candidate);
 
         // Check reductions
-        AcReal model_reduce_res = acModelReduceScal(model, RTYPE_MAX, vtxbuf);
-        Error error = acGetError(model_reduce_res, cand_reduce_res);
-        error.handle = vtxbuf;
-        printErrorToScreen(error);
+        acVerifyScalReductions(model, scalarReductionTests.data(), scalarReductionTests.size());
+        acVerifyVecReductions(model, vectorReductionTests.data(), vectorReductionTests.size());
 
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);

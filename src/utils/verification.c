@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -105,6 +106,7 @@ get_max_abs_error(const VertexBufferHandle vtxbuf_handle, const AcMesh model_mes
     }
 
     error.handle            = vtxbuf_handle;
+    strcpy(error.label, vtxbuf_names[vtxbuf_handle]);
     error.maximum_magnitude = get_maximum_magnitude(model_vtxbuf, model_mesh.info);
     error.minimum_magnitude = get_minimum_magnitude(model_vtxbuf, model_mesh.info);
 
@@ -141,7 +143,7 @@ printErrorToScreen(const Error error)
 {
     bool errors_found = false;
 
-    printf("\t%-15s... ", vtxbuf_names[error.handle]);
+    printf("\t%-15s... ", error.label);
     if (is_acceptable(error)) {
         printf(GRN "OK! " RESET);
     }
@@ -172,8 +174,43 @@ acVerifyMesh(const AcMesh model, const AcMesh candidate)
     printf("%s\n", errors_found ? "Failure. Found errors in one or more vertex buffers"
                                 : "Success. No errors found.");
 
-    if (errors_found)
-        return AC_FAILURE;
-    else
-        return AC_SUCCESS;
+    return errors_found ? AC_FAILURE : AC_SUCCESS;
+}
+
+/** Verification function for scalar reductions*/
+AcResult 
+acVerifyScalReductions(const AcMesh model, const AcScalReductionTestCase* testCases, const size_t numCases)
+{
+    printf("\nTesting scalar reductions:\n");
+
+    bool errors_found = false;
+    for (size_t i = 0; i < numCases; i++){
+        AcReal model_reduction = acModelReduceScal(model, testCases[i].rtype, testCases[i].vtxbuf);
+        Error error = acGetError(model_reduction, testCases[i].candidate);
+        strcpy(error.label, testCases[i].label);
+        errors_found |= printErrorToScreen(error);
+    }
+    printf("%s\n", errors_found ? "Failure. Found errors in one or more scalar reductions"
+                                : "Success. No errors found.");
+
+    return errors_found ? AC_FAILURE : AC_SUCCESS;
+}
+
+/** Verification function for vector reductions*/
+AcResult 
+acVerifyVecReductions(const AcMesh model, const AcVecReductionTestCase* testCases, const size_t numCases)
+{
+    printf("\nTesting vector reductions:\n");
+
+    bool errors_found = false;
+    for (size_t i = 0; i < numCases; i++){
+        AcReal model_reduction = acModelReduceVec(model, testCases[i].rtype, testCases[i].a, testCases[i].b, testCases[i].c);
+        Error error = acGetError(model_reduction, testCases[i].candidate);
+        strcpy(error.label, testCases[i].label);
+        errors_found |= printErrorToScreen(error);
+    }
+    printf("%s\n", errors_found ? "Failure. Found errors in one or more vector reductions"
+                                : "Success. No errors found.");
+
+    return errors_found ? AC_FAILURE : AC_SUCCESS;
 }

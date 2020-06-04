@@ -29,9 +29,12 @@
 extern "C" {
 #endif
 
- #include <stdbool.h>
+#include <stdbool.h>
+
+#define ERROR_LABEL_LENGTH 30
 
 typedef struct {
+    char label[ERROR_LABEL_LENGTH];
     VertexBufferHandle handle;
     AcReal model;
     AcReal candidate;
@@ -41,6 +44,22 @@ typedef struct {
     AcReal maximum_magnitude;
     AcReal minimum_magnitude;
 } Error;
+
+typedef struct {
+    char label[ERROR_LABEL_LENGTH];
+    VertexBufferHandle vtxbuf;
+    ReductionType rtype;
+    AcReal candidate;
+} AcScalReductionTestCase;
+
+typedef struct {
+    char label[ERROR_LABEL_LENGTH];
+    VertexBufferHandle a;
+    VertexBufferHandle b;
+    VertexBufferHandle c;
+    ReductionType rtype;
+    AcReal candidate;
+} AcVecReductionTestCase;
 
 /** TODO comment */
 Error acGetError(AcReal model, AcReal candidate);
@@ -76,16 +95,19 @@ AcResult acMeshClear(AcMesh* mesh);
 AcResult acModelIntegrateStep(AcMesh mesh, const AcReal dt);
 
 /** TODO */
-AcReal
-acModelReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a);
+AcReal acModelReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a);
 
 /** TODO */
-AcReal
-acModelReduceVec(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a,
-                 const VertexBufferHandle b, const VertexBufferHandle c);
+AcReal acModelReduceVec(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a, const VertexBufferHandle b, const VertexBufferHandle c);
 
 /** */
 AcResult acVerifyMesh(const AcMesh model, const AcMesh candidate);
+
+/** */
+AcResult acVerifyScalReductions(const AcMesh model, const AcScalReductionTestCase* testCases, const size_t numCases);
+
+/** */
+AcResult acVerifyVecReductions(const AcMesh model, const AcVecReductionTestCase* testCases, const size_t numCases);
 
 #ifdef __cplusplus
 } // extern "C"
