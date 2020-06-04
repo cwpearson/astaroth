@@ -36,8 +36,14 @@ main(void)
 
         // Profile and run
         fprintf(fp, "mkdir -p profile_%d\n", nprocs);
-        fprintf(fp, "srun nvprof --annotate-mpi openmpi -o profile_%d/%%p.nvprof ./benchmark\n",
-                nprocs);
+
+        const int nx = 1792;
+        const int ny = nx;
+        const int nz = nx;
+        fprintf(fp,
+                "srun nvprof --annotate-mpi openmpi -o profile_%d/%%p.nvprof ./benchmark %d %d "
+                "%d\n",
+                nprocs, nx, ny, nz);
 
         fclose(fp);
     }

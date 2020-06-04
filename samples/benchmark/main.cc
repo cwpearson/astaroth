@@ -39,8 +39,46 @@ typedef enum {
     NUM_TESTS,
 } TestType;
 
+#include <stdint.h>
+
+typedef struct {
+    uint64_t x, y, z;
+} uint3_64;
+
+static uint3_64
+operator+(const uint3_64& a, const uint3_64& b)
+{
+    return (uint3_64){a.x + b.x, a.y + b.y, a.z + b.z};
+}
+
+static uint3_64
+morton3D(const uint64_t pid)
+{
+    uint64_t i, j, k;
+    i = j = k = 0;
+    for (int bit = 0; bit <= 21; ++bit) {
+        const uint64_t mask = 0x1l << 3 * bit;
+        i |= ((pid & (mask << 0)) >> 2 * bit) >> 0;
+        j |= ((pid & (mask << 1)) >> 2 * bit) >> 1;
+        k |= ((pid & (mask << 2)) >> 2 * bit) >> 2;
+    }
+
+    return (uint3_64){i, j, k};
+}
+
+static uint3_64
+decompose(const uint64_t target)
+{
+    // This is just so beautifully elegant. Complex and efficient decomposition
+    // in just one line of code.
+    uint3_64 p = morton3D(target - 1) + (uint3_64){1, 1, 1};
+
+    ERRCHK_ALWAYS(p.x * p.y * p.z == target);
+    return p;
+}
+
 int
-main(void)
+main(int argc, char** argv)
 {
     MPI_Init(NULL, NULL);
     int nprocs, pid;
@@ -51,9 +89,30 @@ main(void)
     AcMeshInfo info;
     acLoadConfig(AC_DEFAULT_CONFIG, &info);
 
+    if (argc > 1) {
+        if (argc == 4) {
+            const int nx           = atoi(argv[1]);
+            const int ny           = atoi(argv[2]);
+            const int nz           = atoi(argv[3]);
+            info.int_params[AC_nx] = nx;
+            info.int_params[AC_ny] = ny;
+            info.int_params[AC_nz] = nz;
+            acUpdateBuiltinParams(&info);
+            printf("Updated mesh dimensions to (%d, %d, %d)\n", nx, ny, nz);
+        }
+        else {
+            fprintf(stderr, "Could not parse arguments. Usage: ./benchmark <nx> <ny> <nz>.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     const TestType test = TEST_STRONG_SCALING;
-    if (test == TEST_WEAK_SCALING)
-        info.int_params[AC_nz] *= nprocs;
+    if (test == TEST_WEAK_SCALING) {
+        uint3_64 decomp = decompose(nprocs);
+        info.int_params[AC_nx] *= decomp.x;
+        info.int_params[AC_ny] *= decomp.y;
+        info.int_params[AC_nz] *= decomp.z;
+    }
 
     /*
     AcMesh model, candidate;

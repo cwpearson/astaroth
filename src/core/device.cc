@@ -518,6 +518,78 @@ mod(const int a, const int b)
     return r < 0 ? r + b : r;
 }
 
+#define DECOMPOSITION_AXES (3)
+
+static uint3_64
+morton3D(const uint64_t pid)
+{
+    uint64_t i, j, k;
+    i = j = k = 0;
+
+    if (DECOMPOSITION_AXES == 3) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << 3 * bit;
+            i |= ((pid & (mask << 0)) >> 2 * bit) >> 0;
+            j |= ((pid & (mask << 1)) >> 2 * bit) >> 1;
+            k |= ((pid & (mask << 2)) >> 2 * bit) >> 2;
+        }
+    }
+    // Just a quick copy/paste for other decomp dims
+    else if (DECOMPOSITION_AXES == 2) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << 2 * bit;
+            i |= ((pid & (mask << 0)) >> 1 * bit) >> 0;
+            j |= ((pid & (mask << 1)) >> 1 * bit) >> 1;
+        }
+    }
+    else if (DECOMPOSITION_AXES == 1) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << 1 * bit;
+            i |= ((pid & (mask << 0)) >> 0 * bit) >> 0;
+        }
+    }
+    else {
+        fprintf(stderr, "Invalid DECOMPOSITION_AXES\n");
+        ERRCHK_ALWAYS(0);
+    }
+
+    return (uint3_64){i, j, k};
+}
+
+static uint64_t
+morton1D(const uint3_64 pid)
+{
+    uint64_t i = 0;
+
+    if (DECOMPOSITION_AXES == 3) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << bit;
+            i |= ((pid.x & mask) << 0) << 2 * bit;
+            i |= ((pid.y & mask) << 1) << 2 * bit;
+            i |= ((pid.z & mask) << 2) << 2 * bit;
+        }
+    }
+    else if (DECOMPOSITION_AXES == 2) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << bit;
+            i |= ((pid.x & mask) << 0) << 1 * bit;
+            i |= ((pid.y & mask) << 1) << 1 * bit;
+        }
+    }
+    else if (DECOMPOSITION_AXES == 1) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << bit;
+            i |= ((pid.x & mask) << 0) << 0 * bit;
+        }
+    }
+    else {
+        fprintf(stderr, "Invalid DECOMPOSITION_AXES\n");
+        ERRCHK_ALWAYS(0);
+    }
+
+    return i;
+}
+/*
 static uint3_64
 morton3D(const uint64_t pid)
 {
@@ -545,6 +617,7 @@ morton1D(const uint3_64 pid)
     }
     return i;
 }
+*/
 
 static uint3_64
 decompose(const uint64_t target)
@@ -1277,15 +1350,18 @@ acGridStoreMesh(const Stream stream, AcMesh* host_mesh)
     return AC_SUCCESS;
 }
 
+#define MPI_COMPUTE_ENABLED (1)
+#define MPI_COMM_ENABLED (1)
+
 AcResult
 acGridIntegrate(const Stream stream, const AcReal dt)
 {
     ERRCHK(grid.initialized);
     // acGridSynchronizeStream(stream);
 
-    const Device device  = grid.device;
-    const int3 nn        = grid.nn;
-    //CommData corner_data = grid.corner_data; // Do not rm: required for corners
+    const Device device = grid.device;
+    const int3 nn       = grid.nn;
+    // CommData corner_data = grid.corner_data; // Do not rm: required for corners
     CommData edgex_data  = grid.edgex_data;
     CommData edgey_data  = grid.edgey_data;
     CommData edgez_data  = grid.edgez_data;
@@ -1357,6 +1433,8 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     };
 
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
+
+#if MPI_COMM_ENABLED
         // acPackCommData(device, corner_b0s, &corner_data); // Do not rm: required for corners
         acPackCommData(device, edgex_b0s, &edgex_data);
         acPackCommData(device, edgey_b0s, &edgey_data);
@@ -1364,15 +1442,19 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acPackCommData(device, sidexy_b0s, &sidexy_data);
         acPackCommData(device, sidexz_b0s, &sidexz_data);
         acPackCommData(device, sideyz_b0s, &sideyz_data);
+#endif
 
+#if MPI_COMPUTE_ENABLED
         //////////// INNER INTEGRATION //////////////
         {
             const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = nn;
             acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
         }
-        ////////////////////////////////////////////
+////////////////////////////////////////////
+#endif // MPI_COMPUTE_ENABLED
 
+#if MPI_COMM_ENABLED
         MPI_Barrier(MPI_COMM_WORLD);
 
 #if MPI_GPUDIRECT_DISABLED
@@ -1436,6 +1518,8 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acSyncCommData(sidexy_data);
         acSyncCommData(sidexz_data);
         acSyncCommData(sideyz_data);
+#endif // MPI_COMM_ENABLED
+#if MPI_COMPUTE_ENABLED
         { // Front
             const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
             const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
@@ -1466,6 +1550,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
             const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
             acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
         }
+#endif // MPI_COMPUTE_ENABLED
         acDeviceSwapBuffers(device);
         acDeviceSynchronizeStream(device, STREAM_ALL); // Wait until inner and outer done
         ////////////////////////////////////////////
