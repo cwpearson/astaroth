@@ -57,19 +57,19 @@ main(void)
     // clang-format off
     // Define scalar reduction tests here
     std::vector<AcScalReductionTestCase> scalarReductionTests{
-        AcScalReductionTestCase{"Scalar MAX",     VTXBUF_UUX, RTYPE_MAX,     0},
-        AcScalReductionTestCase{"Scalar MIN",     VTXBUF_UUX, RTYPE_MIN,     0},
-        AcScalReductionTestCase{"Scalar RMS",     VTXBUF_UUX, RTYPE_RMS,     0},
-        AcScalReductionTestCase{"Scalar RMS_EXP", VTXBUF_UUX, RTYPE_RMS_EXP, 0},
-        AcScalReductionTestCase{"Scalar SUM",     VTXBUF_UUX, RTYPE_SUM,     0}
+        acCreateScalReductionTestCase("Scalar MAX",     VTXBUF_UUX, RTYPE_MAX),
+        acCreateScalReductionTestCase("Scalar MIN",     VTXBUF_UUX, RTYPE_MIN),
+        acCreateScalReductionTestCase("Scalar RMS",     VTXBUF_UUX, RTYPE_RMS),
+        acCreateScalReductionTestCase("Scalar RMS_EXP", VTXBUF_UUX, RTYPE_RMS_EXP),
+        acCreateScalReductionTestCase("Scalar SUM",     VTXBUF_UUX, RTYPE_SUM)
     };
     // Define vector reduction tests here
     std::vector<AcVecReductionTestCase> vectorReductionTests{
-        AcVecReductionTestCase{"Vector MAX",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MAX,     0},
-        AcVecReductionTestCase{"Vector MIN",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MIN,     0},
-        AcVecReductionTestCase{"Vector RMS",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS,     0},
-        AcVecReductionTestCase{"Vector RMS_EXP", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS_EXP, 0},
-        AcVecReductionTestCase{"Vector SUM",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_SUM,     0}
+        acCreateVecReductionTestCase("Vector MAX",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MAX),
+        acCreateVecReductionTestCase("Vector MIN",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MIN),
+        acCreateVecReductionTestCase("Vector RMS",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS),
+        acCreateVecReductionTestCase("Vector RMS_EXP", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS_EXP),
+        acCreateVecReductionTestCase("Vector SUM",     VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_SUM)
     };
     // clang-format on
 

@@ -1283,9 +1283,9 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     ERRCHK(grid.initialized);
     // acGridSynchronizeStream(stream);
 
-    const Device device  = grid.device;
-    const int3 nn        = grid.nn;
-    //CommData corner_data = grid.corner_data; // Do not rm: required for corners
+    const Device device = grid.device;
+    const int3 nn       = grid.nn;
+    // CommData corner_data = grid.corner_data; // Do not rm: required for corners
     CommData edgex_data  = grid.edgex_data;
     CommData edgey_data  = grid.edgey_data;
     CommData edgez_data  = grid.edgez_data;
@@ -1621,7 +1621,6 @@ acGridPeriodicBoundconds(const Stream stream)
     return AC_SUCCESS;
 }
 
-
 static AcResult
 acMPIReduceScal(const AcReal local_result, const ReductionType rtype, AcReal* result)
 {
@@ -1629,19 +1628,22 @@ acMPIReduceScal(const AcReal local_result, const ReductionType rtype, AcReal* re
     MPI_Op op;
     if (rtype == RTYPE_MAX) {
         op = MPI_MAX;
-    } else if (rtype == RTYPE_MIN) {
+    }
+    else if (rtype == RTYPE_MIN) {
         op = MPI_MIN;
-    } else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP || rtype == RTYPE_SUM) {
+    }
+    else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP || rtype == RTYPE_SUM) {
         op = MPI_SUM;
-    } else {
+    }
+    else {
         ERROR("Unrecognised rtype");
     }
 
-    #if AC_DOUBLE_PRECISION == 1
+#if AC_DOUBLE_PRECISION == 1
     MPI_Datatype datatype = MPI_DOUBLE;
-    #else
+#else
     MPI_Datatype datatype = MPI_FLOAT;
-    #endif
+#endif
 
     /*
     int rank;
@@ -1655,12 +1657,12 @@ acMPIReduceScal(const AcReal local_result, const ReductionType rtype, AcReal* re
     MPI_Allreduce(&local_result, &mpi_res, 1, datatype, op, MPI_COMM_WORLD);
 
     if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
-        const AcReal inv_n = AcReal(1.) / (grid.nn.x*grid.decomposition.x * grid.nn.y*grid.decomposition.y * grid.nn.z*grid.decomposition.z);
-        mpi_res = sqrt(inv_n * mpi_res);
+        const AcReal inv_n = AcReal(1.) / (grid.nn.x * grid.decomposition.x * grid.nn.y *
+                                           grid.decomposition.y * grid.nn.z * grid.decomposition.z);
+        mpi_res            = sqrt(inv_n * mpi_res);
     }
     *result = mpi_res;
     return AC_SUCCESS;
-
 }
 
 AcResult
@@ -1668,10 +1670,8 @@ acGridReduceScal(const Stream stream, const ReductionType rtype,
                  const VertexBufferHandle vtxbuf_handle, AcReal* result)
 {
     ERRCHK(grid.initialized);
-    // acGridSynchronizeStream(stream);
 
-    const Device device  = grid.device;
-    //const int3 nn        = grid.nn;
+    const Device device = grid.device;
 
     acGridSynchronizeStream(STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1679,20 +1679,16 @@ acGridReduceScal(const Stream stream, const ReductionType rtype,
     AcReal local_result;
     acDeviceReduceScal(device, stream, rtype, vtxbuf_handle, &local_result);
 
-    return acMPIReduceScal(local_result,rtype,result);
+    return acMPIReduceScal(local_result, rtype, result);
 }
 
-
 AcResult
-acGridReduceVec(const Stream stream, const ReductionType rtype,
-                const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
-                const VertexBufferHandle vtxbuf2, AcReal* result)
+acGridReduceVec(const Stream stream, const ReductionType rtype, const VertexBufferHandle vtxbuf0,
+                const VertexBufferHandle vtxbuf1, const VertexBufferHandle vtxbuf2, AcReal* result)
 {
     ERRCHK(grid.initialized);
-    // acGridSynchronizeStream(stream);
 
-    const Device device  = grid.device;
-    //const int3 nn        = grid.nn;
+    const Device device = grid.device;
 
     acGridSynchronizeStream(STREAM_ALL);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1700,7 +1696,7 @@ acGridReduceVec(const Stream stream, const ReductionType rtype,
     AcReal local_result;
     acDeviceReduceVec(device, stream, rtype, vtxbuf0, vtxbuf1, vtxbuf2, &local_result);
 
-    return acMPIReduceScal(local_result,rtype,result);
+    return acMPIReduceScal(local_result, rtype, result);
 }
 
 #endif // AC_MPI_ENABLED

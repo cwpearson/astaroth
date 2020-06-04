@@ -105,8 +105,9 @@ get_max_abs_error(const VertexBufferHandle vtxbuf_handle, const AcMesh model_mes
             error = curr_error;
     }
 
-    error.handle            = vtxbuf_handle;
-    strcpy(error.label, vtxbuf_names[vtxbuf_handle]);
+    error.handle = vtxbuf_handle;
+    strncpy(error.label, vtxbuf_names[vtxbuf_handle], ERROR_LABEL_LENGTH - 1);
+    error.label[ERROR_LABEL_LENGTH - 1] = '\0';
     error.maximum_magnitude = get_maximum_magnitude(model_vtxbuf, model_mesh.info);
     error.minimum_magnitude = get_minimum_magnitude(model_vtxbuf, model_mesh.info);
 
@@ -178,16 +179,18 @@ acVerifyMesh(const AcMesh model, const AcMesh candidate)
 }
 
 /** Verification function for scalar reductions*/
-AcResult 
-acVerifyScalReductions(const AcMesh model, const AcScalReductionTestCase* testCases, const size_t numCases)
+AcResult
+acVerifyScalReductions(const AcMesh model, const AcScalReductionTestCase* testCases,
+                       const size_t numCases)
 {
     printf("\nTesting scalar reductions:\n");
 
     bool errors_found = false;
-    for (size_t i = 0; i < numCases; i++){
+    for (size_t i = 0; i < numCases; i++) {
         AcReal model_reduction = acModelReduceScal(model, testCases[i].rtype, testCases[i].vtxbuf);
-        Error error = acGetError(model_reduction, testCases[i].candidate);
-        strcpy(error.label, testCases[i].label);
+        Error error            = acGetError(model_reduction, testCases[i].candidate);
+        strncpy(error.label, testCases[i].label, ERROR_LABEL_LENGTH - 1);
+        error.label[ERROR_LABEL_LENGTH - 1] = '\0';
         errors_found |= printErrorToScreen(error);
     }
     printf("%s\n", errors_found ? "Failure. Found errors in one or more scalar reductions"
@@ -197,20 +200,56 @@ acVerifyScalReductions(const AcMesh model, const AcScalReductionTestCase* testCa
 }
 
 /** Verification function for vector reductions*/
-AcResult 
-acVerifyVecReductions(const AcMesh model, const AcVecReductionTestCase* testCases, const size_t numCases)
+AcResult
+acVerifyVecReductions(const AcMesh model, const AcVecReductionTestCase* testCases,
+                      const size_t numCases)
 {
     printf("\nTesting vector reductions:\n");
 
     bool errors_found = false;
-    for (size_t i = 0; i < numCases; i++){
-        AcReal model_reduction = acModelReduceVec(model, testCases[i].rtype, testCases[i].a, testCases[i].b, testCases[i].c);
-        Error error = acGetError(model_reduction, testCases[i].candidate);
-        strcpy(error.label, testCases[i].label);
+    for (size_t i = 0; i < numCases; i++) {
+        AcReal model_reduction = acModelReduceVec(model, testCases[i].rtype, testCases[i].a,
+                                                  testCases[i].b, testCases[i].c);
+        Error error            = acGetError(model_reduction, testCases[i].candidate);
+        strncpy(error.label, testCases[i].label, ERROR_LABEL_LENGTH - 1);
+        error.label[ERROR_LABEL_LENGTH - 1] = '\0';
         errors_found |= printErrorToScreen(error);
     }
     printf("%s\n", errors_found ? "Failure. Found errors in one or more vector reductions"
                                 : "Success. No errors found.");
 
     return errors_found ? AC_FAILURE : AC_SUCCESS;
+}
+
+/** Constructor for scalar reduction test case */
+AcScalReductionTestCase
+acCreateScalReductionTestCase(const char* label, const VertexBufferHandle vtxbuf, const ReductionType rtype)
+{
+    AcScalReductionTestCase testCase;
+
+    strncpy(testCase.label,label,ERROR_LABEL_LENGTH - 1);
+    testCase.label[ERROR_LABEL_LENGTH - 1] = '\0';
+    testCase.vtxbuf = vtxbuf;
+    testCase.rtype = rtype;
+    testCase.candidate = 0;
+
+    return testCase;
+}
+
+/** Constructor for vector reduction test case */
+AcVecReductionTestCase
+acCreateVecReductionTestCase(const char* label, const VertexBufferHandle a,
+                const VertexBufferHandle b, const VertexBufferHandle c, const ReductionType rtype)
+{
+    AcVecReductionTestCase testCase;
+
+    strncpy(testCase.label,label,ERROR_LABEL_LENGTH - 1);
+    testCase.label[ERROR_LABEL_LENGTH - 1] = '\0';
+    testCase.a = a;
+    testCase.b = b;
+    testCase.c = c;
+    testCase.rtype = rtype;
+    testCase.candidate = 0;
+
+    return testCase;
 }

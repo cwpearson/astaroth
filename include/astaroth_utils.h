@@ -80,6 +80,12 @@ AcResult acMeshCreate(const AcMeshInfo mesh_info, AcMesh* mesh);
 AcResult acMeshDestroy(AcMesh* mesh);
 
 /** */
+AcScalReductionTestCase acCreateScalReductionTestCase(const char* label, const VertexBufferHandle vtxbuf, const ReductionType rtype);
+
+/** */
+AcVecReductionTestCase acCreateVecReductionTestCase(const char* label, const VertexBufferHandle a, const VertexBufferHandle b, const VertexBufferHandle c, const ReductionType rtype);
+
+/** */
 AcResult acMeshSet(const AcReal value, AcMesh* mesh);
 
 /** */
