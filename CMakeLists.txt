@@ -96,6 +96,11 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
     add_subdirectory(samples/benchmark)
+    add_subdirectory(samples/mpi_reduce_bench)
+    add_custom_target(copy-mpibench-script ALL
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/samples/mpi_reduce_bench/mpibench.sh
+        ${CMAKE_CURRENT_BINARY_DIR}/mpibench.sh)
     add_subdirectory(samples/bwtest)
     add_subdirectory(samples/genbenchmarkscripts)
 endif()
