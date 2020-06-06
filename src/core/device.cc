@@ -1645,23 +1645,22 @@ acMPIReduceScal(const AcReal local_result, const ReductionType rtype, AcReal* re
     MPI_Datatype datatype = MPI_FLOAT;
 #endif
 
-    /*
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    */
 
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
     AcReal mpi_res;
-    MPI_Allreduce(&local_result, &mpi_res, 1, datatype, op, MPI_COMM_WORLD);
-
-    if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
-        const AcReal inv_n = AcReal(1.) / (grid.nn.x * grid.decomposition.x * grid.nn.y *
+    MPI_Reduce(&local_result, &mpi_res, 1, datatype, op, 0, MPI_COMM_WORLD);
+    if (rank == 0){
+        if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+            const AcReal inv_n = AcReal(1.) / (grid.nn.x * grid.decomposition.x * grid.nn.y *
                                            grid.decomposition.y * grid.nn.z * grid.decomposition.z);
-        mpi_res            = sqrt(inv_n * mpi_res);
+            mpi_res            = sqrt(inv_n * mpi_res);
+        }
+        *result = mpi_res;
     }
-    *result = mpi_res;
     return AC_SUCCESS;
 }
 
