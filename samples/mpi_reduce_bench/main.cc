@@ -80,21 +80,55 @@ main(int argc, char** argv)
     // GPU alloc & compute
     acGridInit(info);
 
+    const size_t num_iters      = 100;
+    const double nth_percentile = 0.90;
+    std::vector<double> results; // ms
+    Timer t;
+    // Scalar benchmarks
     for (auto& testCase : scalarReductionTests) {
-        // Percentiles
-        const size_t num_iters      = 100;
-        const double nth_percentile = 0.90;
-        std::vector<double> results; // ms
+        results.clear();
         results.reserve(num_iters);
-
-        // Benchmark
-        Timer t;
 
         for (size_t i = 0; i < num_iters; ++i) {
             acGridSynchronizeStream(STREAM_ALL);
             timer_reset(&t);
             acGridSynchronizeStream(STREAM_ALL);
             acGridReduceScal(STREAM_DEFAULT, testCase.rtype, testCase.vtxbuf, &testCase.candidate);
+            acGridSynchronizeStream(STREAM_ALL);
+            results.push_back(timer_diff_nsec(t) / 1e6);
+            acGridSynchronizeStream(STREAM_ALL);
+        }
+
+        if (!pid) {
+            std::sort(results.begin(), results.end(),
+                      [](const double& a, const double& b) { return a < b; });
+            fprintf(stdout,
+                    "Reduction time %g ms (%gth "
+                    "percentile)--------------------------------------\n",
+                    results[nth_percentile * num_iters], 100 * nth_percentile);
+
+            char path[4096] = "mpi_reduction_benchmark.csv";
+
+            FILE* fp = fopen(path, "a");
+            ERRCHK_ALWAYS(fp);
+            
+            // Format
+            // benchmark label, test label, nprocs, measured (ms)
+            fprintf(fp, "\"%s\",\"%s\", %d, %g\n", benchmark_label, testCase.label, nprocs, results[nth_percentile * num_iters]);
+            fclose(fp);
+        }
+    }
+
+    // Vector benchmarks
+    for (auto& testCase : vectorReductionTests) {
+        results.clear();
+        results.reserve(num_iters);
+
+        for (size_t i = 0; i < num_iters; ++i) {
+            acGridSynchronizeStream(STREAM_ALL);
+            timer_reset(&t);
+            acGridSynchronizeStream(STREAM_ALL);
+            acGridReduceVec(STREAM_DEFAULT, testCase.rtype, testCase.a, testCase.b, testCase.c, &testCase.candidate);
             acGridSynchronizeStream(STREAM_ALL);
             results.push_back(timer_diff_nsec(t) / 1e6);
             acGridSynchronizeStream(STREAM_ALL);
