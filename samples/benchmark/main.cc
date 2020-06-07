@@ -56,11 +56,12 @@ morton3D(const uint64_t pid)
 {
     uint64_t i, j, k;
     i = j = k = 0;
+
     for (int bit = 0; bit <= 21; ++bit) {
         const uint64_t mask = 0x1l << 3 * bit;
-        i |= ((pid & (mask << 0)) >> 2 * bit) >> 0;
+        k |= ((pid & (mask << 0)) >> 2 * bit) >> 0;
         j |= ((pid & (mask << 1)) >> 2 * bit) >> 1;
-        k |= ((pid & (mask << 2)) >> 2 * bit) >> 2;
+        i |= ((pid & (mask << 2)) >> 2 * bit) >> 2;
     }
 
     return (uint3_64){i, j, k};
@@ -174,7 +175,7 @@ main(int argc, char** argv)
     */
 
     // Percentiles
-    const size_t num_iters      = 100;
+    const size_t num_iters      = 1000;
     const double nth_percentile = 0.90;
     std::vector<double> results; // ms
     results.reserve(num_iters);

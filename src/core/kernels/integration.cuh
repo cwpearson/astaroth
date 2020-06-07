@@ -134,7 +134,7 @@ acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferAr
     // RK3
     dim3 best_dims(0, 0, 0);
     float best_time          = INFINITY;
-    const int num_iterations = 5;
+    const int num_iterations = 10;
 
     for (int z = 1; z <= MAX_THREADS_PER_BLOCK; ++z) {
         for (int y = 1; y <= MAX_THREADS_PER_BLOCK; ++y) {

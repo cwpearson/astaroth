@@ -529,23 +529,33 @@ morton3D(const uint64_t pid)
     if (DECOMPOSITION_AXES == 3) {
         for (int bit = 0; bit <= 21; ++bit) {
             const uint64_t mask = 0x1l << 3 * bit;
+            k |= ((pid & (mask << 0)) >> 2 * bit) >> 0;
+            j |= ((pid & (mask << 1)) >> 2 * bit) >> 1;
+            i |= ((pid & (mask << 2)) >> 2 * bit) >> 2;
+        }
+    }
+    /*
+    else if (DECOMPOSITION_AXES == 3) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << 3 * bit;
             i |= ((pid & (mask << 0)) >> 2 * bit) >> 0;
             j |= ((pid & (mask << 1)) >> 2 * bit) >> 1;
             k |= ((pid & (mask << 2)) >> 2 * bit) >> 2;
         }
     }
+    */
     // Just a quick copy/paste for other decomp dims
     else if (DECOMPOSITION_AXES == 2) {
         for (int bit = 0; bit <= 21; ++bit) {
             const uint64_t mask = 0x1l << 2 * bit;
-            i |= ((pid & (mask << 0)) >> 1 * bit) >> 0;
-            j |= ((pid & (mask << 1)) >> 1 * bit) >> 1;
+            j |= ((pid & (mask << 0)) >> 1 * bit) >> 0;
+            k |= ((pid & (mask << 1)) >> 1 * bit) >> 1;
         }
     }
     else if (DECOMPOSITION_AXES == 1) {
         for (int bit = 0; bit <= 21; ++bit) {
             const uint64_t mask = 0x1l << 1 * bit;
-            i |= ((pid & (mask << 0)) >> 0 * bit) >> 0;
+            k |= ((pid & (mask << 0)) >> 0 * bit) >> 0;
         }
     }
     else {
@@ -564,22 +574,31 @@ morton1D(const uint3_64 pid)
     if (DECOMPOSITION_AXES == 3) {
         for (int bit = 0; bit <= 21; ++bit) {
             const uint64_t mask = 0x1l << bit;
+            i |= ((pid.z & mask) << 0) << 2 * bit;
+            i |= ((pid.y & mask) << 1) << 2 * bit;
+            i |= ((pid.x & mask) << 2) << 2 * bit;
+        }
+    }
+    /*
+    else if (DECOMPOSITION_AXES == 3) {
+        for (int bit = 0; bit <= 21; ++bit) {
+            const uint64_t mask = 0x1l << bit;
             i |= ((pid.x & mask) << 0) << 2 * bit;
             i |= ((pid.y & mask) << 1) << 2 * bit;
             i |= ((pid.z & mask) << 2) << 2 * bit;
         }
-    }
+    }*/
     else if (DECOMPOSITION_AXES == 2) {
         for (int bit = 0; bit <= 21; ++bit) {
             const uint64_t mask = 0x1l << bit;
-            i |= ((pid.x & mask) << 0) << 1 * bit;
-            i |= ((pid.y & mask) << 1) << 1 * bit;
+            i |= ((pid.y & mask) << 0) << 1 * bit;
+            i |= ((pid.z & mask) << 1) << 1 * bit;
         }
     }
     else if (DECOMPOSITION_AXES == 1) {
         for (int bit = 0; bit <= 21; ++bit) {
             const uint64_t mask = 0x1l << bit;
-            i |= ((pid.x & mask) << 0) << 0 * bit;
+            i |= ((pid.z & mask) << 0) << 0 * bit;
         }
     }
     else {
@@ -1204,6 +1223,8 @@ typedef struct {
     CommData sidexy_data;
     CommData sidexz_data;
     CommData sideyz_data;
+
+    // int comm_cart;
 } Grid;
 
 static Grid grid = {};
@@ -1444,16 +1465,6 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acPackCommData(device, sideyz_b0s, &sideyz_data);
 #endif
 
-#if MPI_COMPUTE_ENABLED
-        //////////// INNER INTEGRATION //////////////
-        {
-            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
-            const int3 m2 = nn;
-            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
-        }
-////////////////////////////////////////////
-#endif // MPI_COMPUTE_ENABLED
-
 #if MPI_COMM_ENABLED
         MPI_Barrier(MPI_COMM_WORLD);
 
@@ -1474,7 +1485,19 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acTransferCommData(device, sidexy_b0s, &sidexy_data);
         acTransferCommData(device, sidexz_b0s, &sidexz_data);
         acTransferCommData(device, sideyz_b0s, &sideyz_data);
+#endif // MPI_COMM_ENABLED
 
+#if MPI_COMPUTE_ENABLED
+        //////////// INNER INTEGRATION //////////////
+        {
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = nn;
+            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+        }
+////////////////////////////////////////////
+#endif // MPI_COMPUTE_ENABLED
+
+#if MPI_COMM_ENABLED
         // acTransferCommDataWait(corner_data); // Do not rm: required for corners
         acTransferCommDataWait(edgex_data);
         acTransferCommDataWait(edgey_data);

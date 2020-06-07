@@ -29,6 +29,7 @@ main(void)
         fprintf(fp, "#SBATCH --gres=gpu:v100:%d\n", gpus_per_node);
         fprintf(fp, "#SBATCH -n %d\n", nprocs);
         fprintf(fp, "#SBATCH -N %d\n", nodes);
+        fprintf(fp, "#SBATCH --exclusive\n");
 
         // Modules
         fprintf(fp, "module load gcc/8.3.0 cuda/10.1.168 cmake hpcx-mpi/2.5.0-cuda nccl\n");
@@ -37,13 +38,13 @@ main(void)
         // Profile and run
         fprintf(fp, "mkdir -p profile_%d\n", nprocs);
 
-        const int nx = 1792;
+        const int nx = 256; // max size 1792;
         const int ny = nx;
         const int nz = nx;
         fprintf(fp,
-                "srun nvprof --annotate-mpi openmpi -o profile_%d/%%p.nvprof ./benchmark %d %d "
-                "%d\n",
-                nprocs, nx, ny, nz);
+                //"srun nvprof --annotate-mpi openmpi -o profile_%d/%%p.nvprof ./benchmark %d %d "
+                //"%d\n",
+                "srun ./benchmark %d %d %d\n", nx, ny, nz);
 
         fclose(fp);
     }
