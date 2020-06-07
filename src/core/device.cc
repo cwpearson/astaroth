@@ -1673,7 +1673,7 @@ acGridReduceScal(const Stream stream, const ReductionType rtype,
     const Device device = grid.device;
 
     acGridSynchronizeStream(STREAM_ALL);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     AcReal local_result;
     acDeviceReduceScal(device, stream, rtype, vtxbuf_handle, &local_result);
@@ -1690,7 +1690,7 @@ acGridReduceVec(const Stream stream, const ReductionType rtype, const VertexBuff
     const Device device = grid.device;
 
     acGridSynchronizeStream(STREAM_ALL);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     AcReal local_result;
     acDeviceReduceVec(device, stream, rtype, vtxbuf0, vtxbuf1, vtxbuf2, &local_result);
