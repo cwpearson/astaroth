@@ -3,9 +3,12 @@
 #defaults
 default_num_procs=8
 default_num_nodes=2
+default_partition=gpu
 
 num_procs=$default_num_procs
 num_nodes=$default_num_nodes
+
+partition=$default_partition
 
 script_name=$0
 
@@ -19,6 +22,8 @@ print_usage(){
     echo "              number of tasks for slurm, default=$default_num_procs"
     echo "      -N <num_nodes>"
     echo "              number of nodes for slurm, default=$default_num_nodes"
+    echo "      -p <partition>"
+    echo "              which partition to use for slurm, default=$default_partition"
     echo "      -t <tag>"
     echo "              A benchmark tag that will be added to the mpi_reduction_benchmark.csv file"
     echo "              By default the current git HEAD short hash will be used as a tag"
@@ -28,7 +33,7 @@ print_usage(){
     echo "              Print this message"
 }
 
-while getopts :n:N:t:ih opt
+while getopts :n:N:t:p:ih opt
 do
     case "$opt" in
         n)
@@ -42,6 +47,9 @@ do
         ;;
         i)
             interactively=1
+        ;;
+        p)
+            partition=$OPTARG
         ;;
         h)
             print_usage
@@ -67,12 +75,12 @@ sbatch <<EOF
 #SBATCH --account=project_2000403
 #SBATCH --time=00:14:59
 #SBATCH --mem=48000
-#SBATCH --partition=gpu
+#SBATCH --partition=${partition}
 #SBATCH --gres=gpu:v100:4
 #SBATCH -n ${num_procs}
 #SBATCH -N ${num_nodes}
 srun ./mpi_reduce_bench ${benchmark_label}
 EOF
 else
-    srun --account=project_2000403 --gres=gpu:v100:4 --mem=48000 -t 00:14:59 -p gpu -n ${num_procs} -N ${num_nodes} ./mpi_reduce_bench ${benchmark_label}
+    srun --account=project_2000403 --gres=gpu:v100:4 --mem=48000 -t 00:14:59 -p ${partition} -n ${num_procs} -N ${num_nodes} ./mpi_reduce_bench ${benchmark_label}
 fi
