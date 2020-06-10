@@ -12,6 +12,11 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 #define MPI_GPUDIRECT_DISABLED (0)
 
+#define DECOMPOSITION_AXES (3)
+#define MPI_COMPUTE_ENABLED (1)
+#define MPI_COMM_ENABLED (1)
+#define MPI_INCL_CORNERS (0)
+
 AcResult
 acDevicePrintInfo(const Device device)
 {
@@ -517,8 +522,6 @@ mod(const int a, const int b)
     const int r = a % b;
     return r < 0 ? r + b : r;
 }
-
-#define DECOMPOSITION_AXES (3)
 
 static uint3_64
 morton3D(const uint64_t pid)
@@ -1371,10 +1374,6 @@ acGridStoreMesh(const Stream stream, AcMesh* host_mesh)
     return AC_SUCCESS;
 }
 
-#define MPI_COMPUTE_ENABLED (1)
-#define MPI_COMM_ENABLED (1)
-#define MPI_INCL_CORNERS (0)
-
 AcResult
 acGridIntegrate(const Stream stream, const AcReal dt)
 {
@@ -1582,6 +1581,9 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acDeviceSwapBuffers(device);
     }
 
+    // Does not have to be STREAM_ALL, only the streams used with
+    // acDeviceIntegrateSubstep (less likely to break this way though)
+    acDeviceSynchronizeStream(device, STREAM_ALL); // Wait until inner and outer done
     return AC_SUCCESS;
 }
 
