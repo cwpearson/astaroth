@@ -20,8 +20,6 @@ print_usage(){
     echo "Options:"
     echo "      -n <num_procs>"
     echo "              number of tasks for slurm, default=$default_num_procs"
-    echo "      -N <num_nodes>"
-    echo "              number of nodes for slurm, default=$default_num_nodes"
     echo "      -p <partition>"
     echo "              which partition to use for slurm, default=$default_partition"
     echo "      -t <tag>"
@@ -33,14 +31,12 @@ print_usage(){
     echo "              Print this message"
 }
 
-while getopts :n:N:t:p:ih opt
+while getopts :n:t:p:ih opt
 do
     case "$opt" in
         n)
             num_procs=$OPTARG
-        ;;
-        N)
-            num_nodes=$OPTARG
+            num_nodes=$(( 1 + ($num_procs - 1)/4))
         ;;
         t)
             benchmark_label=$OPTARG
@@ -66,6 +62,8 @@ then
     benchmark_label=$(git rev-parse --short HEAD)
 fi
 set -x
+
+exit 0
 
 if [ -z "$interactively"]
 then
