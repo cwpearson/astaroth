@@ -16,6 +16,7 @@
 #define MPI_COMPUTE_ENABLED (1)
 #define MPI_COMM_ENABLED (1)
 #define MPI_INCL_CORNERS (0)
+#define MPI_USE_PINNED (1)
 
 AcResult
 acDevicePrintInfo(const Device device)
@@ -1165,7 +1166,7 @@ acTransferCommData(const Device device, //
         const int npid = getPid(pid3d + neighbor, decomp);
 
         PackedData* dst = &data->dsts[b0_idx];
-        if (onTheSameNode(pid, npid)) {
+        if (onTheSameNode(pid, npid) || !MPI_USE_PINNED) {
             MPI_Irecv(dst->data, count, datatype, npid, b0_idx, //
                       MPI_COMM_WORLD, &data->recv_reqs[b0_idx]);
             dst->pinned = false;
@@ -1187,7 +1188,7 @@ acTransferCommData(const Device device, //
         const int npid = getPid(pid3d - neighbor, decomp);
 
         PackedData* src = &data->srcs[b0_idx];
-        if (onTheSameNode(pid, npid)) {
+        if (onTheSameNode(pid, npid) || !MPI_USE_PINNED) {
             cudaStreamSynchronize(data->streams[b0_idx]);
             MPI_Isend(src->data, count, datatype, npid, b0_idx, //
                       MPI_COMM_WORLD, &data->send_reqs[b0_idx]);
