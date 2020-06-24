@@ -7,6 +7,7 @@
 #include <mpi.h>
 
 #include <cuda_runtime_api.h>
+#include <cuda.h> // CUDA driver API
 
 #include "timer_hires.h" // From src/common
 
@@ -56,6 +57,17 @@ allocDevice(const size_t bytes)
 static uint8_t*
 allocDevicePinned(const size_t bytes)
 {
+    #define USE_CUDA_DRIVER_PINNING (1)
+    #if USE_CUDA_DRIVER_PINNING
+    uint8_t* arr = allocDevice(bytes);
+
+    unsigned int flag = 1;
+    CUresult retval = cuPointerSetAttribute(&flag, CU_POINTER_ATTRIBUTE_SYNC_MEMOPS, (CUdeviceptr)arr);
+
+    errchk(retval == CUDA_SUCCESS);
+    return arr;
+
+    #else
     uint8_t* arr;
     // Standard (20 GiB/s internode, 85 GiB/s intranode)
     // const cudaError_t retval = cudaMalloc((void**)&arr, bytes);
@@ -65,7 +77,23 @@ allocDevicePinned(const size_t bytes)
     const cudaError_t retval = cudaMallocHost((void**)&arr, bytes);
     errchk(retval == cudaSuccess);
     return arr;
+    #endif
 }
+
+/*
+static uint8_t*
+allocDevicePinned(const size_t bytes)
+{
+    uint8_t* arr;
+    // Standard (20 GiB/s internode, 85 GiB/s intranode)
+    // const cudaError_t retval = cudaMalloc((void**)&arr, bytes);
+    // Unified mem (5 GiB/s internode, 6 GiB/s intranode)
+    // const cudaError_t retval = cudaMallocManaged((void**)&arr, bytes, cudaMemAttachGlobal);
+    // Pinned (40 GiB/s internode, 10 GiB/s intranode)
+    const cudaError_t retval = cudaMallocHost((void**)&arr, bytes);
+    errchk(retval == cudaSuccess);
+    return arr;
+}*/
 
 static void
 freeDevice(uint8_t* arr)
