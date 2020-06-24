@@ -10,7 +10,7 @@ project(astaroth C CXX CUDA)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 ## Project-wide compilation flags
-set(COMMON_FLAGS "-mavx -Wall -Wextra -Wdouble-promotion -Wfloat-conversion -Wshadow")
+set(COMMON_FLAGS "-mavx -Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion -Wshadow")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 set(CMAKE_C_STANDARD 11)
@@ -19,7 +19,7 @@ set(CMAKE_CXX_STANDARD 11)
 find_package(CUDA) # Still required for various macros, such as cuda_select_nvcc_...
 cuda_select_nvcc_arch_flags(ARCHLIST Common) # Common architectures depend on the available CUDA version. Listed here: https://github.com/Kitware/CMake/blob/master/Modules/FindCUDA/select_compute_arch.cmake
 string(REPLACE ";" " " CUDA_ARCH_FLAGS "${ARCHLIST}")
-set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
+set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_ARCH_FLAGS} -ccbin=${CMAKE_CXX_COMPILER} --compiler-options=${COMMON_FLAGS_CUDA}")
 
 
