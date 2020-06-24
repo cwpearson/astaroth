@@ -98,6 +98,7 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/benchmark)
     add_subdirectory(samples/bwtest)
     add_subdirectory(samples/genbenchmarkscripts)
+    add_subdirectory(samples/mpi_reduce_bench)
 endif()
 
 if (BUILD_STANDALONE)
