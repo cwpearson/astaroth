@@ -666,7 +666,7 @@ acCreatePackedData(const int3 dims)
     ERRCHK_CUDA_ALWAYS(cudaMallocHost((void**)&data.data_pinned, bytes));
     // ERRCHK_CUDA_ALWAYS(cudaMallocManaged((void**)&data.data_pinned, bytes)); // Significantly
     // slower than pinned (38 ms vs. 125 ms)
-    #fi // USE_CUDA_DRIVER_PINNING
+    #endif // USE_CUDA_DRIVER_PINNING
 
     return data;
 }
