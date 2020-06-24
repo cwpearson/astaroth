@@ -16,7 +16,7 @@
 #define MPI_COMPUTE_ENABLED (1)
 #define MPI_COMM_ENABLED (1)
 #define MPI_INCL_CORNERS (0)
-#define MPI_USE_PINNED (1) // Do inter-node comm with pinned memory
+#define MPI_USE_PINNED (1)              // Do inter-node comm with pinned memory
 #define MPI_USE_CUDA_DRIVER_PINNING (0) // Pin with cuPointerSetAttribute, otherwise cudaMallocHost
 
 #include <cuda.h> // CUDA driver API (needed if MPI_USE_CUDA_DRIVER_PINNING is set)
@@ -656,17 +656,18 @@ acCreatePackedData(const int3 dims)
     const size_t bytes = dims.x * dims.y * dims.z * sizeof(data.data[0]) * NUM_VTXBUF_HANDLES;
     ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&data.data, bytes));
 
-    #if MPI_USE_CUDA_DRIVER_PINNING
-      ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&data.data_pinned, bytes));
+#if MPI_USE_CUDA_DRIVER_PINNING
+    ERRCHK_CUDA_ALWAYS(cudaMalloc((void**)&data.data_pinned, bytes));
 
-      unsigned int flag = 1;
-      CUresult retval = cuPointerSetAttribute(&flag, CU_POINTER_ATTRIBUTE_SYNC_MEMOPS, (CUdeviceptr)data.data_pinned);
-      ERRCHK_ALWAYS(retval == CUDA_SUCCESS);
-    #else
+    unsigned int flag = 1;
+    CUresult retval   = cuPointerSetAttribute(&flag, CU_POINTER_ATTRIBUTE_SYNC_MEMOPS,
+                                            (CUdeviceptr)data.data_pinned);
+    ERRCHK_ALWAYS(retval == CUDA_SUCCESS);
+#else
     ERRCHK_CUDA_ALWAYS(cudaMallocHost((void**)&data.data_pinned, bytes));
-    // ERRCHK_CUDA_ALWAYS(cudaMallocManaged((void**)&data.data_pinned, bytes)); // Significantly
-    // slower than pinned (38 ms vs. 125 ms)
-    #endif // USE_CUDA_DRIVER_PINNING
+// ERRCHK_CUDA_ALWAYS(cudaMallocManaged((void**)&data.data_pinned, bytes)); // Significantly
+// slower than pinned (38 ms vs. 125 ms)
+#endif // USE_CUDA_DRIVER_PINNING
 
     return data;
 }
