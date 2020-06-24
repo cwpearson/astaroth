@@ -41,6 +41,7 @@
 #define LFORCING (1)
 #define LUPWD (1)
 #define AC_THERMAL_CONDUCTIVITY ((Scalar)(0.001)) // TODO: make an actual config parameter
+#define R_PI ((Scalar)M_PI)
 
 typedef AcReal Scalar;
 // typedef AcReal3 Vector;
@@ -54,6 +55,8 @@ typedef float Vector __attribute__((vector_size(4 * sizeof(float))));
 #define fabs fabsf
 #define exp expf
 #define sqrt sqrtf
+#define cos cosf
+#define sin sinf
 #endif
 
 typedef struct {
@@ -802,9 +805,9 @@ Vector
 helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vector ff_im, Scalar phi)
 {
     (void)magnitude; // WARNING: unused
-    xx[0] = xx[0] * (2.0 * M_PI / (getReal(AC_dsx) * getInt(AC_nx)));
-    xx[1] = xx[1] * (2.0 * M_PI / (getReal(AC_dsy) * getInt(AC_ny)));
-    xx[2] = xx[2] * (2.0 * M_PI / (getReal(AC_dsz) * getInt(AC_nz)));
+    xx[0] = xx[0] * ((Scalar)2.0 * R_PI / (getReal(AC_dsx) * getInt(AC_nx)));
+    xx[1] = xx[1] * ((Scalar)2.0 * R_PI / (getReal(AC_dsy) * getInt(AC_ny)));
+    xx[2] = xx[2] * ((Scalar)2.0 * R_PI / (getReal(AC_dsz) * getInt(AC_nz)));
 
     Scalar cos_phi     = cos(phi);
     Scalar sin_phi     = sin(phi);

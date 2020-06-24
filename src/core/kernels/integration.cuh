@@ -41,12 +41,11 @@ static __device__ __forceinline__ AcReal3
 rk3_integrate(const AcReal3 state_previous, const AcReal3 state_current,
               const AcReal3 rate_of_change, const AcReal dt)
 {
-    return (AcReal3){rk3_integrate<step_number>(state_previous.x, state_current.x, rate_of_change.x,
-                                                dt),
-                     rk3_integrate<step_number>(state_previous.y, state_current.y, rate_of_change.y,
-                                                dt),
-                     rk3_integrate<step_number>(state_previous.z, state_current.z, rate_of_change.z,
-                                                dt)};
+    return (AcReal3){
+        rk3_integrate<step_number>(state_previous.x, state_current.x, rate_of_change.x, dt),
+        rk3_integrate<step_number>(state_previous.y, state_current.y, rate_of_change.y, dt),
+        rk3_integrate<step_number>(state_previous.z, state_current.z, rate_of_change.z, dt),
+    };
 }
 
 #define rk3(state_previous, state_current, rate_of_change, dt)                                     \
