@@ -1,7 +1,7 @@
 ## CMake settings
 # V3.9 required for first-class CUDA support
 # V3.17 required for the FindCUDAToolkit package
-cmake_minimum_required(VERSION 3.17) 
+cmake_minimum_required(VERSION 3.17)
 find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
 find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
 
@@ -30,11 +30,11 @@ endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
-option(DOUBLE_PRECISION "Generates double precision code."                    OFF)
-option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            OFF)
-option(BUILD_STANDALONE "Builds standalone Astaroth."                         ON)
-option(MPI_ENABLED      "Enables additional functions for MPI communciation." OFF)
-option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." ON)
+option(DOUBLE_PRECISION "Generates double precision code."                    ON)
+option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            ON)
+option(BUILD_STANDALONE "Builds standalone Astaroth."                         OFF)
+option(MPI_ENABLED      "Enables additional functions for MPI communciation." ON)
+option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." OFF)
 
 ## Options (DEPRECATED)
 # option(BUILD_DEBUG              "Builds the program with extensive error checking"          OFF)
@@ -96,11 +96,6 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
     add_subdirectory(samples/benchmark)
-    add_subdirectory(samples/mpi_reduce_bench)
-    add_custom_target(copy-mpibench-script ALL
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_SOURCE_DIR}/samples/mpi_reduce_bench/mpibench.sh
-        ${CMAKE_CURRENT_BINARY_DIR}/mpibench.sh)
     add_subdirectory(samples/bwtest)
     add_subdirectory(samples/genbenchmarkscripts)
 endif()

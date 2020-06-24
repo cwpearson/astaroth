@@ -5,5 +5,5 @@ find_package(OpenMP)
 find_package(CUDAToolkit)
 
 add_executable(bwtest main.c)
-target_link_libraries(bwtest MPI::MPI_C OpenMP::OpenMP_C CUDA::cudart_static)
+target_link_libraries(bwtest MPI::MPI_C OpenMP::OpenMP_C CUDA::cudart_static CUDA::cuda_driver)
 target_compile_options(bwtest PRIVATE -O3)

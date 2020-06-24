@@ -6,6 +6,7 @@
 
 #include <mpi.h>
 
+#include <cuda.h> // CUDA driver API
 #include <cuda_runtime_api.h>
 
 #include "timer_hires.h" // From src/common
@@ -13,7 +14,13 @@
 //#define BLOCK_SIZE (100 * 1024 * 1024) // Bytes
 #define BLOCK_SIZE (256 * 256 * 3 * 8 * 8)
 
-#define errchk(x) { if (!(x)) { fprintf(stderr, "errchk(%s) failed", #x); assert(x); }}
+#define errchk(x)                                                                                  \
+    {                                                                                              \
+        if (!(x)) {                                                                                \
+            fprintf(stderr, "errchk(%s) failed", #x);                                              \
+            assert(x);                                                                             \
+        }                                                                                          \
+    }
 
 /*
   Findings:
@@ -56,6 +63,18 @@ allocDevice(const size_t bytes)
 static uint8_t*
 allocDevicePinned(const size_t bytes)
 {
+#define USE_CUDA_DRIVER_PINNING (1)
+#if USE_CUDA_DRIVER_PINNING
+    uint8_t* arr = allocDevice(bytes);
+
+    unsigned int flag = 1;
+    CUresult retval   = cuPointerSetAttribute(&flag, CU_POINTER_ATTRIBUTE_SYNC_MEMOPS,
+                                            (CUdeviceptr)arr);
+
+    errchk(retval == CUDA_SUCCESS);
+    return arr;
+
+#else
     uint8_t* arr;
     // Standard (20 GiB/s internode, 85 GiB/s intranode)
     // const cudaError_t retval = cudaMalloc((void**)&arr, bytes);
@@ -65,7 +84,23 @@ allocDevicePinned(const size_t bytes)
     const cudaError_t retval = cudaMallocHost((void**)&arr, bytes);
     errchk(retval == cudaSuccess);
     return arr;
+#endif
 }
+
+/*
+static uint8_t*
+allocDevicePinned(const size_t bytes)
+{
+    uint8_t* arr;
+    // Standard (20 GiB/s internode, 85 GiB/s intranode)
+    // const cudaError_t retval = cudaMalloc((void**)&arr, bytes);
+    // Unified mem (5 GiB/s internode, 6 GiB/s intranode)
+    // const cudaError_t retval = cudaMallocManaged((void**)&arr, bytes, cudaMemAttachGlobal);
+    // Pinned (40 GiB/s internode, 10 GiB/s intranode)
+    const cudaError_t retval = cudaMallocHost((void**)&arr, bytes);
+    errchk(retval == cudaSuccess);
+    return arr;
+}*/
 
 static void
 freeDevice(uint8_t* arr)
@@ -239,7 +274,6 @@ send_h2d(uint8_t* src, uint8_t* dst)
     cudaMemcpy(dst, src, BLOCK_SIZE, cudaMemcpyHostToDevice);
 }
 
-
 static void
 sendrecv_d2h2d(uint8_t* dsrc, uint8_t* hdst, uint8_t* hsrc, uint8_t* ddst)
 {
@@ -299,10 +333,10 @@ measurebw(const char* msg, const size_t bytes, void (*sendrecv)(uint8_t*, uint8_
     MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
 static void
-measurebw2(const char* msg, const size_t bytes, void (*sendrecv)(uint8_t*, uint8_t*, uint8_t*, uint8_t*), uint8_t* dsrc, uint8_t* hdst,
-                                                                                                            uint8_t* hsrc, uint8_t* ddst)
+measurebw2(const char* msg, const size_t bytes,
+           void (*sendrecv)(uint8_t*, uint8_t*, uint8_t*, uint8_t*), uint8_t* dsrc, uint8_t* hdst,
+           uint8_t* hsrc, uint8_t* ddst)
 {
     const size_t num_samples = 100;
 
@@ -386,8 +420,8 @@ main(void)
         measurebw("Bidirectional bandwidth, twoway (Host)", //
                   2 * BLOCK_SIZE, sendrecv_twoway, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Host)", //
-                  2 * (nprocs-1) * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
-        //measurebw("Bidirectional bandwidth, async multiple parallel (Host)", //
+                  2 * (nprocs - 1) * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
+        // measurebw("Bidirectional bandwidth, async multiple parallel (Host)", //
         //          2 * (nprocs-1) * BLOCK_SIZE, sendrecv_nonblocking_multiple_parallel, src, dst);
 
         freeHost(src);
@@ -406,11 +440,12 @@ main(void)
         measurebw("Bidirectional bandwidth, twoway (Device)", //
                   2 * BLOCK_SIZE, sendrecv_twoway, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Device)", //
-                  2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
-        //measurebw("Bidirectional bandwidth, async multiple parallel (Device)", //
+                  2 * (nprocs - 1) * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
+        // measurebw("Bidirectional bandwidth, async multiple parallel (Device)", //
         //          2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple_parallel, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Device, rt pinning)", //
-                  2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple_rt_pinning, src, dst);
+                  2 * (nprocs - 1) * BLOCK_SIZE, sendrecv_nonblocking_multiple_rt_pinning, src,
+                  dst);
 
         freeDevice(src);
         freeDevice(dst);
@@ -428,7 +463,7 @@ main(void)
         measurebw("Bidirectional bandwidth, twoway (Device, pinned)", //
                   2 * BLOCK_SIZE, sendrecv_twoway, src, dst);
         measurebw("Bidirectional bandwidth, async multiple (Device, pinned)", //
-                  2 *  (nprocs-1) *BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
+                  2 * (nprocs - 1) * BLOCK_SIZE, sendrecv_nonblocking_multiple, src, dst);
 
         freeDevice(src);
         freeDevice(dst);
@@ -444,7 +479,8 @@ main(void)
         measurebw("Unidirectional D2H", BLOCK_SIZE, send_d2h, dsrc, hdst);
         measurebw("Unidirectional H2D", BLOCK_SIZE, send_h2d, hsrc, ddst);
 
-        measurebw2("Bidirectional D2H & H2D", 2 * BLOCK_SIZE, sendrecv_d2h2d, dsrc, hdst, hsrc, ddst);
+        measurebw2("Bidirectional D2H & H2D", 2 * BLOCK_SIZE, sendrecv_d2h2d, dsrc, hdst, hsrc,
+                   ddst);
 
         freeDevice(dsrc);
         freeDevice(ddst);
@@ -462,7 +498,8 @@ main(void)
         measurebw("Unidirectional D2H (pinned)", BLOCK_SIZE, send_d2h, dsrc, hdst);
         measurebw("Unidirectional H2D (pinned)", BLOCK_SIZE, send_h2d, hsrc, ddst);
 
-        measurebw2("Bidirectional D2H & H2D (pinned)", 2 * BLOCK_SIZE, sendrecv_d2h2d, dsrc, hdst, hsrc, ddst);
+        measurebw2("Bidirectional D2H & H2D (pinned)", 2 * BLOCK_SIZE, sendrecv_d2h2d, dsrc, hdst,
+                   hsrc, ddst);
 
         freeDevice(dsrc);
         freeDevice(ddst);

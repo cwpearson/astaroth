@@ -41,10 +41,12 @@ static __device__ __forceinline__ AcReal3
 rk3_integrate(const AcReal3 state_previous, const AcReal3 state_current,
               const AcReal3 rate_of_change, const AcReal dt)
 {
-    return (AcReal3){
-        rk3_integrate<step_number>(state_previous.x, state_current.x, rate_of_change.x, dt),
-        rk3_integrate<step_number>(state_previous.y, state_current.y, rate_of_change.y, dt),
-        rk3_integrate<step_number>(state_previous.z, state_current.z, rate_of_change.z, dt)};
+    return (AcReal3){rk3_integrate<step_number>(state_previous.x, state_current.x, rate_of_change.x,
+                                                dt),
+                     rk3_integrate<step_number>(state_previous.y, state_current.y, rate_of_change.y,
+                                                dt),
+                     rk3_integrate<step_number>(state_previous.z, state_current.z, rate_of_change.z,
+                                                dt)};
 }
 
 #define rk3(state_previous, state_current, rate_of_change, dt)                                     \
@@ -192,9 +194,9 @@ acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferAr
         }
     }
 #if VERBOSE_PRINTING
-    printf(
-        "Auto-optimization done. The best threadblock dimensions for rkStep: (%d, %d, %d) %f ms\n",
-        best_dims.x, best_dims.y, best_dims.z, double(best_time) / num_iterations);
+    printf("Auto-optimization done. The best threadblock dimensions for rkStep: (%d, %d, %d) %f "
+           "ms\n",
+           best_dims.x, best_dims.y, best_dims.z, double(best_time) / num_iterations);
 #endif
     /*
     FILE* fp = fopen("../config/rk3_tbdims.cuh", "w");
@@ -204,6 +206,9 @@ acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferAr
     */
 
     rk3_tpb = best_dims;
+
+    // Failed to find valid thread block dimensions
+    ERRCHK_ALWAYS(rk3_tpb.x * rk3_tpb.y * rk3_tpb.z > 0);
     return AC_SUCCESS;
 }
 
