@@ -24,7 +24,7 @@ pipelines:
           - wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
           - apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
           - apt-get update
-          - apt-get install -y cmake flex bison openmpi-bin libopenmpi-dev
+          - apt-get install -y cmake flex bison openmpi-bin libopenmpi-dev gfortran
           - cmake -DDSL_MODULE_DIR="acc/mhd_solver" -DBUILD_STANDALONE=ON -DBUILD_UTILS=ON -DBUILD_RT_VISUALIZATION=OFF -DBUILD_SAMPLES=ON -DDOUBLE_PRECISION=OFF -DMULTIGPU_ENABLED=ON -DMPI_ENABLED=OFF .. # Single precision
           - make -j
           - rm -rf *
