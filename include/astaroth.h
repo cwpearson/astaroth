@@ -322,15 +322,13 @@ AcResult acGridIntegrate(const Stream stream, const AcReal dt);
 AcResult acGridPeriodicBoundconds(const Stream stream);
 
 /** TODO */
-AcResult
-acGridReduceScal(const Stream stream, const ReductionType rtype,
-                 const VertexBufferHandle vtxbuf_handle, AcReal* result);
+AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
+                          const VertexBufferHandle vtxbuf_handle, AcReal* result);
 
 /** TODO */
-AcResult
-acGridReduceVec(const Stream stream, const ReductionType rtype,
-               const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
-               const VertexBufferHandle vtxbuf2, AcReal* result);
+AcResult acGridReduceVec(const Stream stream, const ReductionType rtype,
+                         const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                         const VertexBufferHandle vtxbuf2, AcReal* result);
 #endif // AC_MPI_ENABLED
 
 /*

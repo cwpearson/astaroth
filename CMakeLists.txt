@@ -55,7 +55,8 @@ message(STATUS "AC module dir: ${DSL_MODULE_DIR}")
 file(GLOB DSL_SOURCES ${DSL_MODULE_DIR}/*
                       ${CMAKE_SOURCE_DIR}/acc/stdlib/*)
 set(DSL_HEADERS "${PROJECT_BINARY_DIR}/user_kernels.h"
-                "${PROJECT_BINARY_DIR}/user_defines.h")
+                "${PROJECT_BINARY_DIR}/user_defines.h"
+                "${PROJECT_BINARY_DIR}/astaroth.f90")
 
 add_custom_command (
     COMMENT "Building ACC objects ${DSL_MODULE_DIR}"
@@ -99,6 +100,7 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/bwtest)
     add_subdirectory(samples/genbenchmarkscripts)
     add_subdirectory(samples/mpi_reduce_bench)
+    add_subdirectory(samples/fortrantest)
 endif()
 
 if (BUILD_STANDALONE)
