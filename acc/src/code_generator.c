@@ -707,6 +707,48 @@ generate_headers(void)
       end type AcMeshInfo
     )";
     fprintf(FHEADER, "%s\n", fortran_structs);
+
+    // Streams
+    const size_t nstreams = 20;
+    for (size_t i = 0; i < nstreams; ++i) {
+        fprintf(DSLHEADER, "#define STREAM_%lu (%lu)\n", i, i);
+        fprintf(FHEADER, "integer(c_int), parameter :: STREAM_%lu = %lu\n", i, i);
+    }
+    fprintf(DSLHEADER, "#define NUM_STREAMS (%lu)\n", nstreams);
+    fprintf(DSLHEADER, "#define STREAM_DEFAULT (STREAM_0)\n");
+    fprintf(DSLHEADER, "#define STREAM_ALL (NUM_STREAMS)\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: NUM_STREAMS = %lu\n", nstreams);
+    fprintf(FHEADER, "integer(c_int), parameter :: STREAM_DEFAULT = STREAM_0\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: STREAM_ALL = NUM_STREAMS\n");
+
+    fprintf(DSLHEADER, "typedef int Stream;\n");
+    /*
+    // Reduction types
+    const size_t counter = 0;
+    fprintf(DSLHEADER, "#define RTYPE_MAX (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MAX = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_MIN (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MIN = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_RMS (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_RMS_EXP (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS_EXP = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_SUM (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_SUM = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_MAX (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MAX = %lu\n", counter);
+    ++counter;
+    */
 }
 
 static void
