@@ -40,12 +40,14 @@ acdeviceswapbuffers_(const Device* device)
 void
 acdeviceloadmesh_(const Device* device, const Stream* stream, const AcMesh* host_mesh)
 {
+    // TODO construct AcMesh from fortran farray
     acDeviceLoadMesh(*device, *stream, *host_mesh);
 }
 
 void
 acdevicestoremesh_(const Device* device, const Stream* stream, AcMesh* host_mesh)
 {
+    // TODO construct AcMesh from fortran farray
     acDeviceStoreMesh(*device, *stream, host_mesh);
 }
 
