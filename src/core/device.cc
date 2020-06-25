@@ -167,9 +167,7 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     *device_handle = device;
 
     // Autoptimize
-    if (id == 0) {
-        acDeviceAutoOptimize(device);
-    }
+    acDeviceAutoOptimize(device);
 
     return AC_SUCCESS;
 }
