@@ -92,14 +92,17 @@ acUpdateBuiltinParams(AcMeshInfo* config)
     config->int_params[AC_nz_min] = STENCIL_ORDER / 2;
     config->int_params[AC_nz_max] = config->int_params[AC_nz] + STENCIL_ORDER / 2;
 
-    /*
-    // DEPRECATED: Spacing TODO
     // These do not have to be defined by empty projects any more.
     // These should be set only if stdderiv.h is included
+    #ifdef AC_dsx
     config->real_params[AC_inv_dsx] = (AcReal)(1.) / config->real_params[AC_dsx];
+    #endif
+    #ifdef AC_dsy
     config->real_params[AC_inv_dsy] = (AcReal)(1.) / config->real_params[AC_dsy];
+    #endif
+    #ifdef AC_dsz
     config->real_params[AC_inv_dsz] = (AcReal)(1.) / config->real_params[AC_dsz];
-    */
+    #endif
 
     /* Additional helper params */
     // Int helpers
