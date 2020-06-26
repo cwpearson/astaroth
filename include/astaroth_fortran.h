@@ -23,9 +23,11 @@ void acupdatebuiltinparams_(AcMeshInfo* info);
 
 void acdeviceswapbuffers_(const Device* device);
 
-void acdeviceloadmesh_(const Device* device, const Stream* stream, const AcMesh* host_mesh);
+void acdeviceloadmesh_(const Device* device, const Stream* stream, const AcMeshInfo* info,
+                       const int* num_farrays, AcReal* farray);
 
-void acdevicestoremesh_(const Device* device, const Stream* stream, AcMesh* host_mesh);
+void acdevicestoremesh_(const Device* device, const Stream* stream, const AcMeshInfo* info,
+                        const int* num_farrays, AcReal* farray);
 
 void acdeviceintegratesubstep_(const Device* device, const Stream* stream, const int* step_number,
                                const int3* start, const int3* end, const AcReal* dt);
