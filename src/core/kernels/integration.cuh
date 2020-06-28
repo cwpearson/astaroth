@@ -215,6 +215,8 @@ AcResult
 acKernelIntegrateSubstep(const cudaStream_t stream, const int step_number, const int3 start,
                          const int3 end, VertexBufferArray vba)
 {
+    ERRCHK_ALWAYS(step_number >= 0);
+    ERRCHK_ALWAYS(step_number < 3);
     const dim3 tpb = rk3_tpb;
 
     const int3 n = end - start;

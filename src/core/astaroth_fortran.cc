@@ -42,7 +42,8 @@ void
 acdeviceloadmesh_(const Device* device, const Stream* stream, const AcMeshInfo* info,
                   const int* num_farrays, AcReal* farray)
 {
-    ERRCHK_ALWAYS(*num_farrays == NUM_VTXBUF_HANDLES);
+    ERRCHK_ALWAYS(*num_farrays >= NUM_VTXBUF_HANDLES);
+    WARNCHK_ALWAYS(*num_farrays == NUM_VTXBUF_HANDLES);
     const size_t mxyz = info->int_params[AC_mx] * info->int_params[AC_mx] * info->int_params[AC_mx];
 
     AcMesh mesh;
@@ -57,7 +58,8 @@ void
 acdevicestoremesh_(const Device* device, const Stream* stream, const AcMeshInfo* info,
                    const int* num_farrays, AcReal* farray)
 {
-    ERRCHK_ALWAYS(*num_farrays == NUM_VTXBUF_HANDLES);
+    ERRCHK_ALWAYS(*num_farrays >= NUM_VTXBUF_HANDLES);
+    WARNCHK_ALWAYS(*num_farrays == NUM_VTXBUF_HANDLES);
     AcMesh mesh;
     mesh.info = *info;
 
@@ -108,4 +110,10 @@ void
 acdeviceloadmeshinfo_(const Device* device, const AcMeshInfo* info)
 {
     acDeviceLoadMeshInfo(*device, *info);
+}
+
+void
+acgetdevicecount_(int* count)
+{
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(count));
 }
