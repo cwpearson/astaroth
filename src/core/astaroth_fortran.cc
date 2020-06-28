@@ -4,38 +4,46 @@
 #include "astaroth_utils.h"
 #include "errchk.h"
 
+/**
+ * Utils
+ */
+void
+acupdatebuiltinparams_(AcMeshInfo* info)
+{
+    acUpdateBuiltinParams(info);
+}
+
+void
+acgetdevicecount_(int* count)
+{
+    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(count));
+}
+
+/**
+ * Device
+ */
 void
 acdevicecreate_(const int* id, const AcMeshInfo* info, Device* handle)
 {
-    // TODO errorcheck
     acDeviceCreate(*id, *info, handle);
 }
 
 void
 acdevicedestroy_(Device* device)
 {
-    // TODO errorcheck
     acDeviceDestroy(*device);
 }
 
 void
 acdeviceprintinfo_(const Device* device)
 {
-    // TODO errorcheck
     acDevicePrintInfo(*device);
 }
 
 void
-acupdatebuiltinparams_(AcMeshInfo* info)
+acdeviceloadmeshinfo_(const Device* device, const AcMeshInfo* info)
 {
-    // TODO errorcheck
-    acUpdateBuiltinParams(info);
-}
-
-void
-acdeviceswapbuffers_(const Device* device)
-{
-    acDeviceSwapBuffers(*device);
+    acDeviceLoadMeshInfo(*device, *info);
 }
 
 void
@@ -81,8 +89,13 @@ void
 acdeviceperiodicboundconds_(const Device* device, const Stream* stream, const int3* start,
                             const int3* end)
 {
-
     acDevicePeriodicBoundconds(*device, *stream, *start, *end);
+}
+
+void
+acdeviceswapbuffers_(const Device* device)
+{
+    acDeviceSwapBuffers(*device);
 }
 
 void
@@ -104,16 +117,4 @@ void
 acdevicesynchronizestream_(const Device* device, const Stream* stream)
 {
     acDeviceSynchronizeStream(*device, *stream);
-}
-
-void
-acdeviceloadmeshinfo_(const Device* device, const AcMeshInfo* info)
-{
-    acDeviceLoadMeshInfo(*device, *info);
-}
-
-void
-acgetdevicecount_(int* count)
-{
-    ERRCHK_CUDA_ALWAYS(cudaGetDeviceCount(count));
 }

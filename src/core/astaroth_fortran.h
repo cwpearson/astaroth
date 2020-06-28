@@ -10,6 +10,8 @@ extern "C" {
  */
 void acupdatebuiltinparams_(AcMeshInfo* info);
 
+void acgetdevicecount_(int* count);
+
 /**
  * Device
  */
@@ -19,9 +21,7 @@ void acdevicedestroy_(Device* device);
 
 void acdeviceprintinfo_(const Device* device);
 
-void acupdatebuiltinparams_(AcMeshInfo* info);
-
-void acdeviceswapbuffers_(const Device* device);
+void acdeviceloadmeshinfo_(const Device* device, const AcMeshInfo* info);
 
 void acdeviceloadmesh_(const Device* device, const Stream* stream, const AcMeshInfo* info,
                        const int* num_farrays, AcReal* farray);
@@ -34,6 +34,8 @@ void acdeviceintegratesubstep_(const Device* device, const Stream* stream, const
 void acdeviceperiodicboundconds_(const Device* device, const Stream* stream, const int3* start,
                                  const int3* end);
 
+void acdeviceswapbuffers_(const Device* device);
+
 void acdevicereducescal_(const Device* device, const Stream* stream, const ReductionType* rtype,
                          const VertexBufferHandle* vtxbuf_handle, AcReal* result);
 
@@ -42,10 +44,6 @@ void acdevicereducevec_(const Device* device, const Stream* stream, const Reduct
                         const VertexBufferHandle* vtxbuf2, AcReal* result);
 
 void acdevicesynchronizestream_(const Device* device, const Stream* stream);
-
-void acdeviceloadmeshinfo_(const Device* device, const AcMeshInfo* info);
-
-void acgetdevicecount_(int* count);
 
 #ifdef __cplusplus
 } // extern "C"

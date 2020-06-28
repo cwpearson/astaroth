@@ -43,7 +43,7 @@ static FILE* FHEADER    = NULL;
 
 static const char* dslheader_filename  = "user_defines.h";
 static const char* cudaheader_filename = "user_kernels.h";
-static const char* fheader_filename    = "astaroth.f90";
+static const char* fheader_filename    = "astaroth_fortran.h";
 
 // Forward declaration of yyparse
 int yyparse(void);
@@ -601,12 +601,32 @@ generate_preprocessed_structures(void)
 static void
 generate_headers(void)
 {
-    int enumcounter = 0;
+    // Fortran interface
+    const char* fortran_interface = R"(
+!  -*-f90-*-  (for emacs)    vim:set filetype=fortran:  (for vim)
+
+! Utils (see astaroth_fortran.cc for definitions)
+external acupdatebuiltinparams
+external acgetdevicecount
+
+! Device interface (see astaroth_fortran.cc for definitions)
+external acdevicecreate, acdevicedestroy
+external acdeviceprintinfo
+external acdeviceloadmeshinfo
+external acdeviceloadmesh, acdevicestoremesh
+external acdeviceintegratesubstep
+external acdeviceperiodicboundconds
+external acdeviceswapbuffers
+external acdevicereducescal, acdevicereducevec
+external acdevicesynchronizestream
+  )";
+    fprintf(FHEADER, "%s\n", fortran_interface);
 
     fprintf(DSLHEADER, "#pragma once\n");
 
     // Int params
     fprintf(DSLHEADER, "#define AC_FOR_USER_INT_PARAM_TYPES(FUNC)");
+    int enumcounter = 0;
     for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_specifier == INT && symbol_table[i].type_qualifier == UNIFORM) {
             fprintf(DSLHEADER, "\\\nFUNC(%s)", symbol_table[i].identifier);
@@ -695,17 +715,6 @@ generate_headers(void)
     fprintf(DSLHEADER, "\n\n");
     fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_SCALARRAY_HANDLES = %d\n\n", enumcounter);
 
-    // Do Fortran-specific
-    const char* fortran_structs = R"(
-      type, bind(C) :: AcMeshInfo
-        integer(c_int), dimension(AC_NUM_INT_PARAMS)      :: int_params
-        integer(c_int), dimension(AC_NUM_INT3_PARAMS, 3)  :: int3_params
-        real, dimension(AC_NUM_REAL_PARAMS)    :: real_params
-        real, dimension(AC_NUM_REAL3_PARAMS, 3) :: real3_params
-      end type AcMeshInfo
-    )";
-    fprintf(FHEADER, "%s\n", fortran_structs);
-
     // Streams
     const size_t nstreams = 20;
     for (size_t i = 0; i < nstreams; ++i) {
@@ -719,7 +728,7 @@ generate_headers(void)
     fprintf(FHEADER, "integer(c_int), parameter :: STREAM_DEFAULT = STREAM_0\n");
     fprintf(FHEADER, "integer(c_int), parameter :: STREAM_ALL = NUM_STREAMS\n");
 
-    fprintf(DSLHEADER, "typedef int Stream;\n");
+    fprintf(DSLHEADER, "typedef int Stream;\n\n");
 
     // Reduction types
     size_t counter = 0;
@@ -746,6 +755,17 @@ generate_headers(void)
     fprintf(DSLHEADER, "typedef int ReductionType;\n");
     fprintf(DSLHEADER, "#define NUM_REDUCTION_TYPES (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: NUM_REDUCTION_TYPES = %lu\n", counter);
+
+    // Fortran structs
+    const char* fortran_structs = R"(
+type, bind(C) :: AcMeshInfo
+  integer(c_int), dimension(AC_NUM_INT_PARAMS)      :: int_params
+  integer(c_int), dimension(AC_NUM_INT3_PARAMS, 3)  :: int3_params
+  real, dimension(AC_NUM_REAL_PARAMS)               :: real_params
+  real, dimension(AC_NUM_REAL3_PARAMS, 3)           :: real3_params
+end type AcMeshInfo
+  )";
+    fprintf(FHEADER, "%s\n", fortran_structs);
 }
 
 static void
