@@ -45,6 +45,8 @@ void acdevicesynchronizestream_(const Device* device, const Stream* stream);
 
 void acdeviceloadmeshinfo_(const Device* device, const AcMeshInfo* info);
 
+void acgetdevicecount_(int* count);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
