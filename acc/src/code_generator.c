@@ -697,13 +697,11 @@ generate_headers(void)
 
     // Do Fortran-specific
     const char* fortran_structs = R"(
-      integer, parameter :: precision = c_float ! TODO WARNING
-
       type, bind(C) :: AcMeshInfo
         integer(c_int), dimension(AC_NUM_INT_PARAMS)      :: int_params
         integer(c_int), dimension(AC_NUM_INT3_PARAMS, 3)  :: int3_params
-        real(precision), dimension(AC_NUM_REAL_PARAMS)    :: real_params
-        real(precision), dimension(AC_NUM_REAL3_PARAMS, 3) :: real3_params
+        real, dimension(AC_NUM_REAL_PARAMS)    :: real_params
+        real, dimension(AC_NUM_REAL3_PARAMS, 3) :: real3_params
       end type AcMeshInfo
     )";
     fprintf(FHEADER, "%s\n", fortran_structs);
@@ -722,9 +720,9 @@ generate_headers(void)
     fprintf(FHEADER, "integer(c_int), parameter :: STREAM_ALL = NUM_STREAMS\n");
 
     fprintf(DSLHEADER, "typedef int Stream;\n");
-    /*
+
     // Reduction types
-    const size_t counter = 0;
+    size_t counter = 0;
     fprintf(DSLHEADER, "#define RTYPE_MAX (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MAX = %lu\n", counter);
     ++counter;
@@ -745,10 +743,9 @@ generate_headers(void)
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_SUM = %lu\n", counter);
     ++counter;
 
-    fprintf(DSLHEADER, "#define RTYPE_MAX (%lu)\n", counter);
-    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MAX = %lu\n", counter);
-    ++counter;
-    */
+    fprintf(DSLHEADER, "typedef int ReductionType;\n");
+    fprintf(DSLHEADER, "#define NUM_REDUCTION_TYPES (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: NUM_REDUCTION_TYPES = %lu\n", counter);
 }
 
 static void

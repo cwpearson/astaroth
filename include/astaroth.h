@@ -50,6 +50,8 @@ typedef struct {
 
 typedef enum { AC_SUCCESS = 0, AC_FAILURE = 1 } AcResult;
 
+/*
+// Deprecated, defined during code generation
 typedef enum {
     RTYPE_MAX,
     RTYPE_MIN,
@@ -58,6 +60,7 @@ typedef enum {
     RTYPE_SUM,
     NUM_REDUCTION_TYPES
 } ReductionType;
+*/
 
 #define AC_GEN_ID(X) X,
 typedef enum {
