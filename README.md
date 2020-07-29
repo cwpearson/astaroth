@@ -40,7 +40,7 @@ In the base directory, run
 | Option | Description | Default |
 |--------|-------------|---------|
 | CMAKE_BUILD_TYPE | Selects the build type. Possible values: Debug, Release, RelWithDebInfo, MinSizeRel. See (CMake documentation)[https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html] for more details. | Release |
-| CMAKE_CUDA_ARCHITECTURES | Selects the supported CUDA architectures. Multiple architectures delimited by `;`. See (CMake documentation)[https://cmake.org/cmake/help/latest/prop_tgt/CUDA_ARCHITECTURES.html] for more details. | 35;37;60;70 |
+| CMAKE_CUDA_ARCHITECTURES | Selects CUDA architecture support. Multiple architectures delimited by `;`. See (CMake documentation)[https://cmake.org/cmake/help/latest/prop_tgt/CUDA_ARCHITECTURES.html] for more details. | "35;37;60;70" |
 | DOUBLE_PRECISION | Generates double precision code. | OFF |
 | BUILD_SAMPLES | Builds projects in samples subdirectory. | OFF |
 | BUILD_STANDALONE | Builds a standalone library for testing, benchmarking and simulation. | ON |
