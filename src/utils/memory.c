@@ -21,29 +21,6 @@
 #include "errchk.h"
 
 AcResult
-acMeshCreate(const AcMeshInfo info, AcMesh* mesh)
-{
-    mesh->info = info;
-
-    const size_t bytes = acVertexBufferSizeBytes(mesh->info);
-    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
-        mesh->vertex_buffer[w] = malloc(bytes);
-        ERRCHK_ALWAYS(mesh->vertex_buffer[w]);
-    }
-
-    return AC_SUCCESS;
-}
-
-AcResult
-acMeshDestroy(AcMesh* mesh)
-{
-    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
-        free(mesh->vertex_buffer[w]);
-
-    return AC_SUCCESS;
-}
-
-AcResult
 acMeshSet(const AcReal value, AcMesh* mesh)
 {
     const int n = acVertexBufferSize(mesh->info);

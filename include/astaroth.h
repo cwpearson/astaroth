@@ -562,6 +562,20 @@ AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const 
 /** */
 AcResult acDeviceRunMPITest(void);
 
+/*
+ * =============================================================================
+ * Helper functions
+ * =============================================================================
+ */
+/** Updates the built-in parameters based on nx, ny and nz */
+AcResult acUpdateBuiltinParams(AcMeshInfo* config);
+
+/** Creates a mesh stored in host memory */
+AcResult acMeshCreate(const AcMeshInfo mesh_info, AcMesh* mesh);
+
+/** Destroys a mesh stored in host memory */
+AcResult acMeshDestroy(AcMesh* mesh);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

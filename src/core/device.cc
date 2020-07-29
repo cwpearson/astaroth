@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "astaroth_utils.h"
 #include "errchk.h"
 #include "math_utils.h"
 #include "timer_hires.h"
