@@ -12,6 +12,8 @@ image: nvidia/cuda
 # ==> Updating the kernel drivers by ourselves probably requires creating our own docker image.
 # ===> Which might not even work since I don't know what kind of hardware we're running on (lspci was not available)
 
+options:
+  max-time: 5 # Max time allowed for building (minutes) 
 pipelines:
   # default: # Default is run at every push but we have only 500 build minutes / month so that probably wouldn't work out
   custom: # Manual/scheduled building only
