@@ -1,7 +1,8 @@
 ## CMake settings
 # V3.9 required for first-class CUDA support
 # V3.17 required for the FindCUDAToolkit package
-cmake_minimum_required(VERSION 3.17)
+# V3.18 required for CMAKE_CUDA_ARCHITECTURES
+cmake_minimum_required(VERSION 3.18)
 find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
 find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
 
@@ -16,12 +17,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 11)
 
-find_package(CUDA) # Still required for various macros, such as cuda_select_nvcc_...
-cuda_select_nvcc_arch_flags(ARCHLIST Common) # Common architectures depend on the available CUDA version. Listed here: https://github.com/Kitware/CMake/blob/master/Modules/FindCUDA/select_compute_arch.cmake
-string(REPLACE ";" " " CUDA_ARCH_FLAGS "${ARCHLIST}")
+## CUDA
+# GPU, compute capability
+# K40, 3.5
+# K80, 3.7
+# P100, 6.0
+# V100, 7.0
+if (NOT CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES 60 70) # Default
+else ()
+    set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCHITECTURES}) # User-specified
+endif()
 set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_ARCH_FLAGS} -ccbin=${CMAKE_CXX_COMPILER} --compiler-options=${COMMON_FLAGS_CUDA}")
-
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${COMMON_CUDA_FLAGS}")
 
 ## Build type
 if(NOT CMAKE_BUILD_TYPE)
