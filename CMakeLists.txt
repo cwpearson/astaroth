@@ -28,8 +28,8 @@ if (NOT CUDA_ARCHITECTURES)
 else ()
     set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCHITECTURES}) # User-specified
 endif()
-set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${COMMON_CUDA_FLAGS}")
+string (REPLACE " " "," CUDA_COMMON_FLAGS "${COMMON_FLAGS}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --compiler-options=${CUDA_COMMON_FLAGS}")
 
 ## Build type
 if(NOT CMAKE_BUILD_TYPE)
