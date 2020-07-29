@@ -43,7 +43,7 @@ static FILE* FHEADER    = NULL;
 
 static const char* dslheader_filename  = "user_defines.h";
 static const char* cudaheader_filename = "user_kernels.h";
-static const char* fheader_filename    = "astaroth_fortran.h";
+static const char* fheader_filename    = "astaroth.f90";
 
 // Forward declaration of yyparse
 int yyparse(void);

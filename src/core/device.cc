@@ -16,7 +16,7 @@
 #define MPI_COMPUTE_ENABLED (1)
 #define MPI_COMM_ENABLED (1)
 #define MPI_INCL_CORNERS (0)
-#define MPI_USE_PINNED (1)              // Do inter-node comm with pinned memory
+#define MPI_USE_PINNED (0)              // Do inter-node comm with pinned memory
 #define MPI_USE_CUDA_DRIVER_PINNING (0) // Pin with cuPointerSetAttribute, otherwise cudaMallocHost
 
 #include <cuda.h> // CUDA driver API (needed if MPI_USE_CUDA_DRIVER_PINNING is set)
@@ -115,7 +115,7 @@ AcResult
 acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_handle)
 {
     cudaSetDevice(id);
-    // cudaDeviceReset(); // Would be good for safety, but messes stuff up if we want to emulate
+    cudaDeviceReset(); // Would be good for safety, but messes stuff up if we want to emulate
     // multiple devices with a single GPU
 
     // Create Device
@@ -1169,10 +1169,8 @@ acTransferCommData(const Device device, //
 static void
 acTransferCommDataWait(const CommData data)
 {
-    for (size_t i = 0; i < data.count; ++i) {
-        MPI_Wait(&data.send_reqs[i], MPI_STATUS_IGNORE);
-        MPI_Wait(&data.recv_reqs[i], MPI_STATUS_IGNORE);
-    }
+    MPI_Waitall(data.count, data.recv_reqs, MPI_STATUSES_IGNORE);
+    MPI_Waitall(data.count, data.send_reqs, MPI_STATUSES_IGNORE);
 }
 
 typedef struct {
@@ -1337,8 +1335,10 @@ acGridStoreMesh(const Stream stream, AcMesh* host_mesh)
     return AC_SUCCESS;
 }
 
+/*
+// Unused
 AcResult
-acGridIntegrate(const Stream stream, const AcReal dt)
+acGridIntegratePipelined(const Stream stream, const AcReal dt)
 {
     ERRCHK(grid.initialized);
     acGridSynchronizeStream(stream);
@@ -1547,6 +1547,220 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     // Does not have to be STREAM_ALL, only the streams used with
     // acDeviceIntegrateSubstep (less likely to break this way though)
     acDeviceSynchronizeStream(device, STREAM_ALL); // Wait until inner and outer done
+    return AC_SUCCESS;
+}
+*/
+
+AcResult
+acGridIntegrate(const Stream stream, const AcReal dt)
+{
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(stream);
+
+    const Device device = grid.device;
+    const int3 nn       = grid.nn;
+#if MPI_INCL_CORNERS
+    CommData corner_data = grid.corner_data; // Do not rm: required for corners
+#endif                                       // MPI_INCL_CORNERS
+    CommData edgex_data  = grid.edgex_data;
+    CommData edgey_data  = grid.edgey_data;
+    CommData edgez_data  = grid.edgez_data;
+    CommData sidexy_data = grid.sidexy_data;
+    CommData sidexz_data = grid.sidexz_data;
+    CommData sideyz_data = grid.sideyz_data;
+
+    acDeviceSynchronizeStream(device, stream);
+
+// Corners
+#if MPI_INCL_CORNERS
+    // Do not rm: required for corners
+    const int3 corner_b0s[] = {
+        (int3){0, 0, 0},
+        (int3){NGHOST + nn.x, 0, 0},
+        (int3){0, NGHOST + nn.y, 0},
+        (int3){0, 0, NGHOST + nn.z},
+
+        (int3){NGHOST + nn.x, NGHOST + nn.y, 0},
+        (int3){NGHOST + nn.x, 0, NGHOST + nn.z},
+        (int3){0, NGHOST + nn.y, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST + nn.z},
+    };
+#endif // MPI_INCL_CORNERS
+
+    // Edges X
+    const int3 edgex_b0s[] = {
+        (int3){NGHOST, 0, 0},
+        (int3){NGHOST, NGHOST + nn.y, 0},
+
+        (int3){NGHOST, 0, NGHOST + nn.z},
+        (int3){NGHOST, NGHOST + nn.y, NGHOST + nn.z},
+    };
+
+    // Edges Y
+    const int3 edgey_b0s[] = {
+        (int3){0, NGHOST, 0},
+        (int3){NGHOST + nn.x, NGHOST, 0},
+
+        (int3){0, NGHOST, NGHOST + nn.z},
+        (int3){NGHOST + nn.x, NGHOST, NGHOST + nn.z},
+    };
+
+    // Edges Z
+    const int3 edgez_b0s[] = {
+        (int3){0, 0, NGHOST},
+        (int3){NGHOST + nn.x, 0, NGHOST},
+
+        (int3){0, NGHOST + nn.y, NGHOST},
+        (int3){NGHOST + nn.x, NGHOST + nn.y, NGHOST},
+    };
+
+    // Sides XY
+    const int3 sidexy_b0s[] = {
+        (int3){NGHOST, NGHOST, 0},             //
+        (int3){NGHOST, NGHOST, NGHOST + nn.z}, //
+    };
+
+    // Sides XZ
+    const int3 sidexz_b0s[] = {
+        (int3){NGHOST, 0, NGHOST},             //
+        (int3){NGHOST, NGHOST + nn.y, NGHOST}, //
+    };
+
+    // Sides YZ
+    const int3 sideyz_b0s[] = {
+        (int3){0, NGHOST, NGHOST},             //
+        (int3){NGHOST + nn.x, NGHOST, NGHOST}, //
+    };
+
+    for (int isubstep = 0; isubstep < 3; ++isubstep) {
+
+#if MPI_COMM_ENABLED
+#if MPI_INCL_CORNERS
+        acPackCommData(device, corner_b0s, &corner_data); // Do not rm: required for corners
+#endif                                                    // MPI_INCL_CORNERS
+        acPackCommData(device, edgex_b0s, &edgex_data);
+        acPackCommData(device, edgey_b0s, &edgey_data);
+        acPackCommData(device, edgez_b0s, &edgez_data);
+        acPackCommData(device, sidexy_b0s, &sidexy_data);
+        acPackCommData(device, sidexz_b0s, &sidexz_data);
+        acPackCommData(device, sideyz_b0s, &sideyz_data);
+#endif
+
+#if MPI_COMM_ENABLED
+        MPI_Barrier(MPI_COMM_WORLD);
+
+#if MPI_GPUDIRECT_DISABLED
+#if MPI_INCL_CORNERS
+        acTransferCommDataToHost(device, &corner_data); // Do not rm: required for corners
+#endif                                                  // MPI_INCL_CORNERS
+        acTransferCommDataToHost(device, &edgex_data);
+        acTransferCommDataToHost(device, &edgey_data);
+        acTransferCommDataToHost(device, &edgez_data);
+        acTransferCommDataToHost(device, &sidexy_data);
+        acTransferCommDataToHost(device, &sidexz_data);
+        acTransferCommDataToHost(device, &sideyz_data);
+#endif
+#if MPI_INCL_CORNERS
+        acTransferCommData(device, corner_b0s, &corner_data); // Do not rm: required for corners
+#endif                                                        // MPI_INCL_CORNERS
+        acTransferCommData(device, edgex_b0s, &edgex_data);
+        acTransferCommData(device, edgey_b0s, &edgey_data);
+        acTransferCommData(device, edgez_b0s, &edgez_data);
+        acTransferCommData(device, sidexy_b0s, &sidexy_data);
+        acTransferCommData(device, sidexz_b0s, &sidexz_data);
+        acTransferCommData(device, sideyz_b0s, &sideyz_data);
+#endif // MPI_COMM_ENABLED
+
+#if MPI_COMPUTE_ENABLED
+        //////////// INNER INTEGRATION //////////////
+        {
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = nn;
+            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+        }
+////////////////////////////////////////////
+#endif // MPI_COMPUTE_ENABLED
+
+#if MPI_COMM_ENABLED
+#if MPI_INCL_CORNERS
+        acTransferCommDataWait(corner_data); // Do not rm: required for corners
+#endif                                       // MPI_INCL_CORNERS
+        acTransferCommDataWait(edgex_data);
+        acTransferCommDataWait(edgey_data);
+        acTransferCommDataWait(edgez_data);
+        acTransferCommDataWait(sidexy_data);
+        acTransferCommDataWait(sidexz_data);
+        acTransferCommDataWait(sideyz_data);
+
+#if MPI_INCL_CORNERS
+        acUnpinCommData(device, &corner_data); // Do not rm: required for corners
+#endif                                         // MPI_INCL_CORNERS
+        acUnpinCommData(device, &edgex_data);
+        acUnpinCommData(device, &edgey_data);
+        acUnpinCommData(device, &edgez_data);
+        acUnpinCommData(device, &sidexy_data);
+        acUnpinCommData(device, &sidexz_data);
+        acUnpinCommData(device, &sideyz_data);
+
+#if MPI_INCL_CORNERS
+        acUnpackCommData(device, corner_b0s, &corner_data);
+#endif // MPI_INCL_CORNERS
+        acUnpackCommData(device, edgex_b0s, &edgex_data);
+        acUnpackCommData(device, edgey_b0s, &edgey_data);
+        acUnpackCommData(device, edgez_b0s, &edgez_data);
+        acUnpackCommData(device, sidexy_b0s, &sidexy_data);
+        acUnpackCommData(device, sidexz_b0s, &sidexz_data);
+        acUnpackCommData(device, sideyz_b0s, &sideyz_data);
+//////////// OUTER INTEGRATION //////////////
+
+// Wait for unpacking
+#if MPI_INCL_CORNERS
+        acSyncCommData(corner_data); // Do not rm: required for corners
+#endif                               // MPI_INCL_CORNERS
+        acSyncCommData(edgex_data);
+        acSyncCommData(edgey_data);
+        acSyncCommData(edgez_data);
+        acSyncCommData(sidexy_data);
+        acSyncCommData(sidexz_data);
+        acSyncCommData(sideyz_data);
+#endif // MPI_COMM_ENABLED
+#if MPI_COMPUTE_ENABLED
+        { // Front
+            const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
+            const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
+        }
+        { // Back
+            const int3 m1 = (int3){NGHOST, NGHOST, nn.z};
+            const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
+        }
+        { // Bottom
+            const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
+        }
+        { // Top
+            const int3 m1 = (int3){NGHOST, nn.y, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
+        }
+        { // Left
+            const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
+        }
+        { // Right
+            const int3 m1 = (int3){nn.x, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
+        }
+#endif // MPI_COMPUTE_ENABLED
+        acDeviceSwapBuffers(device);
+        acDeviceSynchronizeStream(device, STREAM_ALL); // Wait until inner and outer done
+        ////////////////////////////////////////////
+    }
+
     return AC_SUCCESS;
 }
 
@@ -1774,5 +1988,4 @@ acGridReduceVec(const Stream stream, const ReductionType rtype, const VertexBuff
 
     return acMPIReduceScal(local_result, rtype, result);
 }
-
 #endif // AC_MPI_ENABLED
