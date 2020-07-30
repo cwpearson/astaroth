@@ -79,7 +79,7 @@ typedef enum {
 ```
 
 The API is divided into layers which differ in the level of control provided over the execution.
-There are two primary layers:
+There are three primary layers:
 
 * Device layer
     * Functions start with acDevice.
@@ -92,7 +92,13 @@ There are two primary layers:
     * All functions are asynchronous and executed concurrently on all devices in the node.
     * Subsequent functions called in the same stream (see Section #Streams and synchronization) are guaranteed to be synchronous.
 
-Finally, a third layer is provided for convenience and backwards compatibility.
+* Grid layer
+    * Functions start with acGrid.
+    * Provides control over all devices on multiple node.
+    * Requires MPI. `MPI_Init()` must be called before calling any acGrid functions.
+    * Streams are used to control concurrency the same way as on acDevice and acNode layers.
+
+Finally, a fourth layer is provided for convenience and backwards compatibility.
 
 * Astaroth layer (deprecated)
     * Functions start with `ac` only, f.ex. acInit().
@@ -124,6 +130,12 @@ AcResult acNodeDestroy(Node node);
 AcResult acNodePrintInfo(const Node node);
 AcResult acNodeQueryDeviceConfiguration(const Node node, DeviceConfiguration* config);
 AcResult acNodeAutoOptimize(const Node node);
+```
+
+Grid layer.
+```C
+AcResult acGridInit(const AcMeshInfo info);
+AcResult acGridQuit(void);
 ```
 
 General helper functions.
@@ -159,6 +171,7 @@ AcResult acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream,
                                           const AcMesh host_mesh,
                                           const VertexBufferHandle vtxbuf_handle, const int3 src,
                                           const int3 dst, const int num_vertices);
+AcResult acGridLoadMesh(const AcMesh host_mesh, const Stream stream);
 ```
 
 Storing meshes and vertex buffer to host memory.
@@ -180,6 +193,7 @@ AcResult acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
                                            const VertexBufferHandle vtxbuf_handle, const int3 src,
                                            const int3 dst, const int num_vertices,
                                            AcMesh* host_mesh);
+AcResult acGridStoreMesh(const Stream stream, AcMesh* host_mesh);
 ```
 
 Transferring data between devices
@@ -242,6 +256,13 @@ AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionT
 AcResult acNodeReduceVec(const Node node, const Stream stream_type, const ReductionType rtype,
                          const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
                          const VertexBufferHandle vtxbuf2, AcReal* result);
+AcResult acGridIntegrate(const Stream stream, const AcReal dt);
+AcResult acGridPeriodicBoundconds(const Stream stream);
+AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
+                          const VertexBufferHandle vtxbuf_handle, AcReal* result);
+AcResult acGridReduceVec(const Stream stream, const ReductionType rtype,
+                         const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                         const VertexBufferHandle vtxbuf2, AcReal* result);
 ```
 
 Finally, there's a library function that is automatically generated for all user-specified `Kernel`
@@ -261,9 +282,12 @@ yet completed. Therefore special care must be taken in order to ensure proper sy
 
 Synchronization is done using `Stream` primitives, defined as
 ```C
-typedef enum { STREAM_DEFAULT, STREAM_0, ..., STREAM_16, NUM_STREAMS } Stream;
+typedef enum {STREAM_0, ..., STREAM_15, NUM_STREAMS};
+#define STREAM_DEFAULT (STREAM_0)
 #define STREAM_ALL (NUM_STREAMS)
 ```
+
+> **Note:** There is guaranteed to be at least 16 distinct streams.
 
 Functions queued in the same stream will be executed sequentially. If two or more consequent
 functions are queued in different streams, then these functions may execute in parallel. For
@@ -286,6 +310,7 @@ Astaroth API provides the following functions for barrier synchronization.
 AcResult acSynchronize(void);
 AcResult acNodeSynchronizeStream(const Node node, const Stream stream);
 AcResult acDeviceSynchronizeStream(const Device device, const Stream stream);
+AcResult acGridSynchronizeStream(const Stream stream);
 ```
 
 ## Data Synchronization
@@ -408,13 +433,16 @@ int mz = info.int_params[AC_mz];
 after initialization.
 
 
-### Decomposition
-Grids and subgrids contain the dimensions of the the mesh decomposed to multiple devices.
+### Decomposition (`acNode` layer)
+
+> **Note:** This section describes implementation details specific to the acNode layer. The acGrid layer is not related to the `GridDims` structure described here. 
+
+`GridDims` contains the dimensions of the the mesh decomposed to multiple devices.
 ```C
 typedef struct {
     int3 m; // Size of the simulation domain (includes the ghost zones)
     int3 n; // Size of the computational domain (without ghost zones)
-} Grid;
+} GridDims;
 ```
 
 As briefly discussed in the section Data synchronization, a `Mesh` is distributed to multiple
@@ -426,8 +454,6 @@ Let *i* be the device id. The portion of the halos shared by neighboring devices
 *(0, 0, i * nz/n)* - *(mx, my, 2 * NGHOST + i * nz/n)*. The functions
 `acNodeSynchronizeVertexBuffer` and `acNodeSynchronizeMesh` communicate these shared areas among
 the devices in the node.
-
-> **Note:** The decomposition scheme is subject to change.
 
 # Astaroth Domain-Specific Language
 
@@ -478,8 +504,8 @@ In addition to basic datatypes in C/C++/CUDA, such as int and int3, we provide t
 | Complex     | A tuple of two 32- or 64-bit floating-point numbers. The real part is stored in member .x, while the imaginary component is in .y. Basic operations, such as multiplication, are defined as built-in functions.                                                                                                                   | std::complex<float> or std::complex<double>                                                          |
 | Matrix      | A tuple of three Vectors. Is stored in column-major order, f.ex. Matrix[i][j] is the component on row i, column j. (TODO recheck specs.)                                                                                                                                                                                          | float3[3] or double3[3]                                                                              |
 | ScalarArray | A one-dimensional array of Scalars stored in device memory. Given mesh dimensions (mx, my, mz), consists of max(mx, max(my, mz)) elements.                                                                                                                                                                                        | float[] or double[]                                                                                  |
-| ScalarField | An abstraction of a three-dimensional scalar field stored in device memory. Is implemented as a handle to a one-dimensional Scalar array consisting of input and output segments. The data is stored linearly in order i + j * mx + k * mx * my, given some vertex index (i, j, k) and mesh constisting of (mx, my, mz) vertices. | float[2][] or double[2][]                                                                            |
-| VectorField | An abstraction of a three-dimensional vector field stored in device memory. Is implemented as a tuple of three ScalarField handles.                                                                                                                                                                                               | Three distinct float[2][] or double[2][] arrays for each component. Stored as a structure of arrays. |
+| ScalarField | A three-dimensional scalar field stored in row-wise scan order where coordinates `(i, j, k)` correspond to a one-dimensional index `i + j * mx + k * mx * my`. Consists of two buffers, one used for input and another one for output. | Two float[] or double[] arrays                                                                            |
+| VectorField | A three-dimensional vector field. Consists of three `ScalarFields`. | Three `ScalarFields` stored contiguously in memory as a structure of arrays |
 
 ## Precision
 
