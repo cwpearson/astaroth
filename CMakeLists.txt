@@ -39,8 +39,7 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
 option(DOUBLE_PRECISION "Generates double precision code."                    OFF)
-option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            OFF)
-option(BUILD_STANDALONE "Builds standalone Astaroth."                         ON)
+option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            ON)
 option(MPI_ENABLED      "Enables additional functions for MPI communciation." OFF)
 option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." ON)
 
@@ -81,6 +80,9 @@ endif ()
 if (MPI_ENABLED)
     add_definitions(-DAC_MPI_ENABLED=1)
 endif ()
+if (MULTIGPU_ENABLED)
+  add_definitions(-DAC_MULTIGPU_ENABLED=1)
+endif()
 
 add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")
 
@@ -101,6 +103,7 @@ add_subdirectory(src/core/kernels)
 add_subdirectory(src/core)
 
 if (BUILD_SAMPLES)
+    add_subdirectory(samples/standalone)
     add_subdirectory(samples/ctest)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
@@ -109,8 +112,4 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/genbenchmarkscripts)
     add_subdirectory(samples/mpi_reduce_bench)
     add_subdirectory(samples/fortrantest)
-endif()
-
-if (BUILD_STANDALONE)
-    add_subdirectory(src/standalone)
 endif()
