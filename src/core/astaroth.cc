@@ -158,3 +158,65 @@ acGetNode(void)
     ERRCHK_ALWAYS(num_nodes > 0);
     return nodes[0];
 }
+
+AcResult
+acUpdateBuiltinParams(AcMeshInfo* config)
+{
+    config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER;
+    ///////////// PAD TEST
+    // config->int_params[AC_mx] = config->int_params[AC_nx] + STENCIL_ORDER + PAD_SIZE;
+    ///////////// PAD TEST
+    config->int_params[AC_my] = config->int_params[AC_ny] + STENCIL_ORDER;
+    config->int_params[AC_mz] = config->int_params[AC_nz] + STENCIL_ORDER;
+
+    // Bounds for the computational domain, i.e. nx_min <= i < nx_max
+    config->int_params[AC_nx_min] = STENCIL_ORDER / 2;
+    config->int_params[AC_nx_max] = config->int_params[AC_nx_min] + config->int_params[AC_nx];
+    config->int_params[AC_ny_min] = STENCIL_ORDER / 2;
+    config->int_params[AC_ny_max] = config->int_params[AC_ny] + STENCIL_ORDER / 2;
+    config->int_params[AC_nz_min] = STENCIL_ORDER / 2;
+    config->int_params[AC_nz_max] = config->int_params[AC_nz] + STENCIL_ORDER / 2;
+
+// These do not have to be defined by empty projects any more.
+// These should be set only if stdderiv.h is included
+#ifdef AC_dsx
+    config->real_params[AC_inv_dsx] = (AcReal)(1.) / config->real_params[AC_dsx];
+#endif
+#ifdef AC_dsy
+    config->real_params[AC_inv_dsy] = (AcReal)(1.) / config->real_params[AC_dsy];
+#endif
+#ifdef AC_dsz
+    config->real_params[AC_inv_dsz] = (AcReal)(1.) / config->real_params[AC_dsz];
+#endif
+
+    /* Additional helper params */
+    // Int helpers
+    config->int_params[AC_mxy]  = config->int_params[AC_mx] * config->int_params[AC_my];
+    config->int_params[AC_nxy]  = config->int_params[AC_nx] * config->int_params[AC_ny];
+    config->int_params[AC_nxyz] = config->int_params[AC_nxy] * config->int_params[AC_nz];
+
+    return AC_SUCCESS;
+}
+
+AcResult
+acMeshCreate(const AcMeshInfo info, AcMesh* mesh)
+{
+    mesh->info = info;
+
+    const size_t bytes = acVertexBufferSizeBytes(mesh->info);
+    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
+        mesh->vertex_buffer[w] = (AcReal*)malloc(bytes);
+        ERRCHK_ALWAYS(mesh->vertex_buffer[w]);
+    }
+
+    return AC_SUCCESS;
+}
+
+AcResult
+acMeshDestroy(AcMesh* mesh)
+{
+    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
+        free(mesh->vertex_buffer[w]);
+
+    return AC_SUCCESS;
+}

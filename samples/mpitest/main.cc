@@ -25,6 +25,7 @@
 #if AC_MPI_ENABLED
 
 #include <mpi.h>
+#include <vector>
 
 int
 main(void)
@@ -48,24 +49,65 @@ main(void)
 
     // GPU alloc & compute
     acGridInit(info);
-    acGridLoadMesh(model, STREAM_DEFAULT);
 
+    // INTEGRATION TESTS START ---------------------------------------------------------------------
+    acGridLoadMesh(model, STREAM_DEFAULT);
     acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
     acGridPeriodicBoundconds(STREAM_DEFAULT);
-
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
-    acGridQuit();
 
-    // Verify
     if (pid == 0) {
         acModelIntegrateStep(model, FLT_EPSILON);
         acMeshApplyPeriodicBounds(&model);
-
         acVerifyMesh(model, candidate);
+    }
+    // INTEGRATION TESTS END -----------------------------------------------------------------------
+
+    // REDUCTION TESTS START -----------------------------------------------------------------------
+    acGridLoadMesh(model, STREAM_DEFAULT);
+
+    std::vector<AcScalReductionTestCase> scalarReductionTests{
+        acCreateScalReductionTestCase("Scalar MAX", VTXBUF_UUX, RTYPE_MAX),
+        acCreateScalReductionTestCase("Scalar MIN", VTXBUF_UUX, RTYPE_MIN),
+        /*
+        acCreateScalReductionTestCase("Scalar RMS", VTXBUF_UUX, RTYPE_RMS),
+        acCreateScalReductionTestCase("Scalar RMS_EXP", VTXBUF_UUX, RTYPE_RMS_EXP),
+        acCreateScalReductionTestCase("Scalar SUM", VTXBUF_UUX, RTYPE_SUM),
+        */
+    };
+    std::vector<AcVecReductionTestCase> vectorReductionTests{
+        acCreateVecReductionTestCase("Vector MAX", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MAX),
+        acCreateVecReductionTestCase("Vector MIN", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MIN),
+        /*
+        acCreateVecReductionTestCase("Vector RMS", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS),
+        acCreateVecReductionTestCase("Vector RMS_EXP", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ,
+                                     RTYPE_RMS_EXP),
+        acCreateVecReductionTestCase("Vector SUM", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_SUM),
+        */
+    };
+    // False positives due to too strict error bounds, skip the tests until we can determine a
+    // proper error bound
+    fprintf(stderr, "WARNING: RTYPE_RMS, RTYPE_RMS_EXP, and RTYPE_SUM tests skipped\n");
+
+    for (auto& testCase : scalarReductionTests) {
+        acGridReduceScal(STREAM_DEFAULT, testCase.rtype, testCase.vtxbuf, &testCase.candidate);
+    }
+    for (auto& testCase : vectorReductionTests) {
+        acGridReduceVec(STREAM_DEFAULT, testCase.rtype, testCase.a, testCase.b, testCase.c,
+                        &testCase.candidate);
+    }
+    if (pid == 0) {
+        acVerifyScalReductions(model, scalarReductionTests.data(), scalarReductionTests.size());
+        acVerifyVecReductions(model, vectorReductionTests.data(), vectorReductionTests.size());
+    }
+    // REDUCTION TESTS END -------------------------------------------------------------------------
+
+    if (pid == 0) {
         acMeshDestroy(&model);
         acMeshDestroy(&candidate);
     }
 
+    acGridQuit();
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
@@ -74,7 +116,8 @@ main(void)
 int
 main(void)
 {
-    printf("The library was built without MPI support, cannot run mpitest. Rebuild Astaroth with cmake -DMPI_ENABLED=ON .. to enable.\n");
+    printf("The library was built without MPI support, cannot run mpitest. Rebuild Astaroth with "
+           "cmake -DMPI_ENABLED=ON .. to enable.\n");
     return EXIT_FAILURE;
 }
 #endif // AC_MPI_ENABLES

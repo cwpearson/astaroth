@@ -40,6 +40,7 @@ In the base directory, run
 | Option | Description | Default |
 |--------|-------------|---------|
 | CMAKE_BUILD_TYPE | Selects the build type. Possible values: Debug, Release, RelWithDebInfo, MinSizeRel. See (CMake documentation)[https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html] for more details. | Release |
+| CUDA_ARCHITECTURES | Selects CUDA architecture support. Multiple architectures delimited by `;`. See (CMake documentation)[https://cmake.org/cmake/help/latest/prop_tgt/CUDA_ARCHITECTURES.html] for more details. | "60;70" |
 | DOUBLE_PRECISION | Generates double precision code. | OFF |
 | BUILD_SAMPLES | Builds projects in samples subdirectory. | OFF |
 | BUILD_STANDALONE | Builds a standalone library for testing, benchmarking and simulation. | ON |
@@ -67,6 +68,7 @@ See `analysis/python/` directory of existing data visualization and analysis scr
 
 * `astaroth/include/astaroth.h`: Astaroth main header. Contains the interface for accessing single- and multi-GPU layers.
 * `astaroth/include/astaroth_utils.h`: Utility library header. Provides functions for performing common tasks on host, such as allocating and verifying meshes.
+* `<build directory>/astaroth.f90`: Fortran interface to Astaroth. Generated when building the library.
 
 ## FAQ
 

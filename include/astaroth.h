@@ -50,6 +50,8 @@ typedef struct {
 
 typedef enum { AC_SUCCESS = 0, AC_FAILURE = 1 } AcResult;
 
+/*
+// Deprecated, defined during code generation
 typedef enum {
     RTYPE_MAX,
     RTYPE_MIN,
@@ -58,29 +60,7 @@ typedef enum {
     RTYPE_SUM,
     NUM_REDUCTION_TYPES
 } ReductionType;
-
-typedef enum {
-    STREAM_DEFAULT,
-    STREAM_0,
-    STREAM_1,
-    STREAM_2,
-    STREAM_3,
-    STREAM_4,
-    STREAM_5,
-    STREAM_6,
-    STREAM_7,
-    STREAM_8,
-    STREAM_9,
-    STREAM_10,
-    STREAM_11,
-    STREAM_12,
-    STREAM_13,
-    STREAM_14,
-    STREAM_15,
-    STREAM_16,
-    NUM_STREAMS
-} Stream;
-#define STREAM_ALL (NUM_STREAMS)
+*/
 
 #define AC_GEN_ID(X) X,
 typedef enum {
@@ -320,6 +300,15 @@ AcResult acGridIntegrate(const Stream stream, const AcReal dt);
 
 /** */
 AcResult acGridPeriodicBoundconds(const Stream stream);
+
+/** TODO */
+AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
+                          const VertexBufferHandle vtxbuf_handle, AcReal* result);
+
+/** TODO */
+AcResult acGridReduceVec(const Stream stream, const ReductionType rtype,
+                         const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                         const VertexBufferHandle vtxbuf2, AcReal* result);
 #endif // AC_MPI_ENABLED
 
 /*
@@ -572,6 +561,20 @@ AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const 
                            const VertexBufferHandle vtxbuf2, AcReal* result);
 /** */
 AcResult acDeviceRunMPITest(void);
+
+/*
+ * =============================================================================
+ * Helper functions
+ * =============================================================================
+ */
+/** Updates the built-in parameters based on nx, ny and nz */
+AcResult acUpdateBuiltinParams(AcMeshInfo* config);
+
+/** Creates a mesh stored in host memory */
+AcResult acMeshCreate(const AcMeshInfo mesh_info, AcMesh* mesh);
+
+/** Destroys a mesh stored in host memory */
+AcResult acMeshDestroy(AcMesh* mesh);
 
 #ifdef __cplusplus
 } // extern "C"

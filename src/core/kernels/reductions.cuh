@@ -92,8 +92,9 @@ kernel_filter_vec(const __restrict__ AcReal* src0, const __restrict__ AcReal* sr
     assert(dst_idx.x < nx && dst_idx.y < ny && dst_idx.z < nz);
     assert(dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny < nx * ny * nz);
 
-    dst[dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny] = filter(
-        src0[IDX(src_idx)], src1[IDX(src_idx)], src2[IDX(src_idx)]);
+    dst[dst_idx.x + dst_idx.y * nx + dst_idx.z * nx * ny] = filter(src0[IDX(src_idx)],
+                                                                   src1[IDX(src_idx)],
+                                                                   src2[IDX(src_idx)]);
 }
 
 template <ReduceFunc reduce>

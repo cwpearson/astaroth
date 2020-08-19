@@ -38,9 +38,10 @@
 #define LMAGNETIC (1)
 #define LENTROPY (1)
 #define LTEMPERATURE (0)
-#define LFORCING (0)
+#define LFORCING (1)
 #define LUPWD (1)
 #define AC_THERMAL_CONDUCTIVITY ((Scalar)(0.001)) // TODO: make an actual config parameter
+#define R_PI ((Scalar)M_PI)
 
 typedef AcReal Scalar;
 // typedef AcReal3 Vector;
@@ -54,6 +55,8 @@ typedef float Vector __attribute__((vector_size(4 * sizeof(float))));
 #define fabs fabsf
 #define exp expf
 #define sqrt sqrtf
+#define cos cosf
+#define sin sinf
 #endif
 
 typedef struct {
@@ -103,11 +106,16 @@ first_derivative(const Scalar* pencil, const Scalar inv_ds)
 #elif STENCIL_ORDER == 4
     const Scalar coefficients[] = {0, (Scalar)(2.0 / 3.0), (Scalar)(-1.0 / 12.0)};
 #elif STENCIL_ORDER == 6
-    const Scalar coefficients[] = {0, (Scalar)(3.0 / 4.0), (Scalar)(-3.0 / 20.0),
-                                   (Scalar)(1.0 / 60.0)};
+    const Scalar coefficients[] = {
+        0,
+        (Scalar)(3.0 / 4.0),
+        (Scalar)(-3.0 / 20.0),
+        (Scalar)(1.0 / 60.0),
+    };
 #elif STENCIL_ORDER == 8
-    const Scalar coefficients[] = {0, (Scalar)(4.0 / 5.0), (Scalar)(-1.0 / 5.0),
-                                   (Scalar)(4.0 / 105.0), (Scalar)(-1.0 / 280.0)};
+    const Scalar coefficients[] = {
+        0, (Scalar)(4.0 / 5.0), (Scalar)(-1.0 / 5.0), (Scalar)(4.0 / 105.0), (Scalar)(-1.0 / 280.0),
+    };
 #endif
 
 #define MID (STENCIL_ORDER / 2)
@@ -126,15 +134,23 @@ second_derivative(const Scalar* pencil, const Scalar inv_ds)
 #if STENCIL_ORDER == 2
     const Scalar coefficients[] = {-2, 1};
 #elif STENCIL_ORDER == 4
-    const Scalar coefficients[] = {(Scalar)(-5.0 / 2.0), (Scalar)(4.0 / 3.0),
-                                   (Scalar)(-1.0 / 12.0)};
+    const Scalar coefficients[] = {
+        (Scalar)(-5.0 / 2.0),
+        (Scalar)(4.0 / 3.0),
+        (Scalar)(-1.0 / 12.0),
+    };
 #elif STENCIL_ORDER == 6
-    const Scalar coefficients[] = {(Scalar)(-49.0 / 18.0), (Scalar)(3.0 / 2.0),
-                                   (Scalar)(-3.0 / 20.0), (Scalar)(1.0 / 90.0)};
+    const Scalar coefficients[] = {
+        (Scalar)(-49.0 / 18.0),
+        (Scalar)(3.0 / 2.0),
+        (Scalar)(-3.0 / 20.0),
+        (Scalar)(1.0 / 90.0),
+    };
 #elif STENCIL_ORDER == 8
-    const Scalar coefficients[] = {(Scalar)(-205.0 / 72.0), (Scalar)(8.0 / 5.0),
-                                   (Scalar)(-1.0 / 5.0), (Scalar)(8.0 / 315.0),
-                                   (Scalar)(-1.0 / 560.0)};
+    const Scalar coefficients[] = {
+        (Scalar)(-205.0 / 72.0), (Scalar)(8.0 / 5.0),    (Scalar)(-1.0 / 5.0),
+        (Scalar)(8.0 / 315.0),   (Scalar)(-1.0 / 560.0),
+    };
 #endif
 
 #define MID (STENCIL_ORDER / 2)
@@ -156,16 +172,27 @@ cross_derivative(const Scalar* pencil_a, const Scalar* pencil_b, const Scalar in
     const Scalar coefficients[] = {0, (Scalar)(1.0 / 4.0)};
 #elif STENCIL_ORDER == 4
     const Scalar coefficients[] = {
-        0, (Scalar)(1.0 / 32.0),
-        (Scalar)(1.0 / 64.0)}; // TODO correct coefficients, these are just placeholders
+        0,
+        (Scalar)(1.0 / 32.0),
+        (Scalar)(1.0 / 64.0),
+    }; // TODO correct coefficients, these are just placeholders
 #elif STENCIL_ORDER == 6
     const Scalar fac            = ((Scalar)(1. / 720.));
-    const Scalar coefficients[] = {0 * fac, (Scalar)(270.0) * fac, (Scalar)(-27.0) * fac,
-                                   (Scalar)(2.0) * fac};
+    const Scalar coefficients[] = {
+        0 * fac,
+        (Scalar)(270.0) * fac,
+        (Scalar)(-27.0) * fac,
+        (Scalar)(2.0) * fac,
+    };
 #elif STENCIL_ORDER == 8
     const Scalar fac            = ((Scalar)(1. / 20160.));
-    const Scalar coefficients[] = {0 * fac, (Scalar)(8064.) * fac, (Scalar)(-1008.) * fac,
-                                   (Scalar)(128.) * fac, (Scalar)(-9.) * fac};
+    const Scalar coefficients[] = {
+        0 * fac,
+        (Scalar)(8064.) * fac,
+        (Scalar)(-1008.) * fac,
+        (Scalar)(128.) * fac,
+        (Scalar)(-9.) * fac,
+    };
 #endif
 
 #define MID (STENCIL_ORDER / 2)
@@ -207,14 +234,14 @@ derxy(const int i, const int j, const int k, const Scalar* arr)
     Scalar pencil_a[STENCIL_ORDER + 1];
     //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil_a[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j + offset - STENCIL_ORDER / 2,
-                                   k)];
+        pencil_a[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, //
+                                   j + offset - STENCIL_ORDER / 2, k)];
 
     Scalar pencil_b[STENCIL_ORDER + 1];
     //#pragma unroll
     for (int offset = 0; offset < STENCIL_ORDER + 1; ++offset)
-        pencil_b[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, j + STENCIL_ORDER / 2 - offset,
-                                   k)];
+        pencil_b[offset] = arr[IDX(i + offset - STENCIL_ORDER / 2, //
+                                   j + STENCIL_ORDER / 2 - offset, k)];
 
     return cross_derivative(pencil_a, pencil_b, getReal(AC_inv_dsx), getReal(AC_inv_dsy));
 }
@@ -539,7 +566,8 @@ gradient_of_divergence(const VectorData vec)
     return (Vector){
         hessian(vec.xdata).row[0][0] + hessian(vec.ydata).row[0][1] + hessian(vec.zdata).row[0][2],
         hessian(vec.xdata).row[1][0] + hessian(vec.ydata).row[1][1] + hessian(vec.zdata).row[1][2],
-        hessian(vec.xdata).row[2][0] + hessian(vec.ydata).row[2][1] + hessian(vec.zdata).row[2][2]};
+        hessian(vec.xdata).row[2][0] + hessian(vec.ydata).row[2][1] + hessian(vec.zdata).row[2][2],
+    };
 }
 
 // Takes uu gradients and returns S
@@ -777,9 +805,9 @@ Vector
 helical_forcing(Scalar magnitude, Vector k_force, Vector xx, Vector ff_re, Vector ff_im, Scalar phi)
 {
     (void)magnitude; // WARNING: unused
-    xx[0] = xx[0] * (2.0 * M_PI / (getReal(AC_dsx) * getInt(AC_nx)));
-    xx[1] = xx[1] * (2.0 * M_PI / (getReal(AC_dsy) * getInt(AC_ny)));
-    xx[2] = xx[2] * (2.0 * M_PI / (getReal(AC_dsz) * getInt(AC_nz)));
+    xx[0] = xx[0] * ((Scalar)2.0 * R_PI / (getReal(AC_dsx) * getInt(AC_nx)));
+    xx[1] = xx[1] * ((Scalar)2.0 * R_PI / (getReal(AC_dsy) * getInt(AC_ny)));
+    xx[2] = xx[2] * ((Scalar)2.0 * R_PI / (getReal(AC_dsz) * getInt(AC_nz)));
 
     Scalar cos_phi     = cos(phi);
     Scalar sin_phi     = sin(phi);
@@ -805,10 +833,11 @@ forcing(int3 globalVertexIdx, Scalar dt)
                                        getInt(AC_ny) * getReal(AC_dsy),
                                        getInt(AC_nz) * getReal(AC_dsz)}; // source (origin)
     (void)a;                                                             // WARNING: not used
-    Vector xx        = (Vector){(globalVertexIdx.x - getInt(AC_nx_min)) * getReal(AC_dsx),
-                         (globalVertexIdx.y - getInt(AC_ny_min)) * getReal(AC_dsy),
-                         (globalVertexIdx.z - getInt(AC_nz_min)) *
-                             getReal(AC_dsz)}; // sink (current index)
+    Vector xx = (Vector){
+        (globalVertexIdx.x - getInt(AC_nx_min)) * getReal(AC_dsx),
+        (globalVertexIdx.y - getInt(AC_ny_min)) * getReal(AC_dsy),
+        (globalVertexIdx.z - getInt(AC_nz_min)) * getReal(AC_dsz),
+    }; // sink (current index)
     const Scalar cs2 = getReal(AC_cs2_sound);
     const Scalar cs  = sqrt(cs2);
 

@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -18,25 +19,14 @@
 #define WHT "\x1B[37m"
 #define RESET "\x1B[0m"
 
-typedef struct {
-    VertexBufferHandle handle;
-    AcReal model;
-    AcReal candidate;
-    long double abs_error;
-    long double ulp_error;
-    long double rel_error;
-    AcReal maximum_magnitude;
-    AcReal minimum_magnitude;
-} Error;
-
 static inline bool
 is_valid(const AcReal a)
 {
     return !isnan(a) && !isinf(a);
 }
 
-static Error
-get_error(AcReal model, AcReal candidate)
+Error
+acGetError(AcReal model, AcReal candidate)
 {
     Error error;
     error.abs_error = 0;
@@ -109,13 +99,15 @@ get_max_abs_error(const VertexBufferHandle vtxbuf_handle, const AcMesh model_mes
 
     for (size_t i = 0; i < acVertexBufferSize(model_mesh.info); ++i) {
 
-        Error curr_error = get_error(model_vtxbuf[i], candidate_vtxbuf[i]);
+        Error curr_error = acGetError(model_vtxbuf[i], candidate_vtxbuf[i]);
 
         if (curr_error.abs_error > error.abs_error)
             error = curr_error;
     }
 
-    error.handle            = vtxbuf_handle;
+    error.handle = vtxbuf_handle;
+    strncpy(error.label, vtxbuf_names[vtxbuf_handle], ERROR_LABEL_LENGTH - 1);
+    error.label[ERROR_LABEL_LENGTH - 1] = '\0';
     error.maximum_magnitude = get_maximum_magnitude(model_vtxbuf, model_mesh.info);
     error.minimum_magnitude = get_minimum_magnitude(model_vtxbuf, model_mesh.info);
 
@@ -147,12 +139,12 @@ is_acceptable(const Error error)
         return false;
 }
 
-static bool
-print_error_to_screen(const Error error)
+bool
+printErrorToScreen(const Error error)
 {
     bool errors_found = false;
 
-    printf("\t%-15s... ", vtxbuf_names[error.handle]);
+    printf("\t%-15s... ", error.label);
     if (is_acceptable(error)) {
         printf(GRN "OK! " RESET);
     }
@@ -177,14 +169,87 @@ acVerifyMesh(const AcMesh model, const AcMesh candidate)
     bool errors_found = false;
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         Error field_error = get_max_abs_error(i, model, candidate);
-        errors_found |= print_error_to_screen(field_error);
+        errors_found |= printErrorToScreen(field_error);
     }
 
     printf("%s\n", errors_found ? "Failure. Found errors in one or more vertex buffers"
                                 : "Success. No errors found.");
 
-    if (errors_found)
-        return AC_FAILURE;
-    else
-        return AC_SUCCESS;
+    return errors_found ? AC_FAILURE : AC_SUCCESS;
+}
+
+/** Verification function for scalar reductions*/
+AcResult
+acVerifyScalReductions(const AcMesh model, const AcScalReductionTestCase* testCases,
+                       const size_t numCases)
+{
+    printf("\nTesting scalar reductions:\n");
+
+    bool errors_found = false;
+    for (size_t i = 0; i < numCases; i++) {
+        AcReal model_reduction = acModelReduceScal(model, testCases[i].rtype, testCases[i].vtxbuf);
+        Error error            = acGetError(model_reduction, testCases[i].candidate);
+        strncpy(error.label, testCases[i].label, ERROR_LABEL_LENGTH - 1);
+        error.label[ERROR_LABEL_LENGTH - 1] = '\0';
+        errors_found |= printErrorToScreen(error);
+    }
+    printf("%s\n", errors_found ? "Failure. Found errors in one or more scalar reductions"
+                                : "Success. No errors found.");
+
+    return errors_found ? AC_FAILURE : AC_SUCCESS;
+}
+
+/** Verification function for vector reductions*/
+AcResult
+acVerifyVecReductions(const AcMesh model, const AcVecReductionTestCase* testCases,
+                      const size_t numCases)
+{
+    printf("\nTesting vector reductions:\n");
+
+    bool errors_found = false;
+    for (size_t i = 0; i < numCases; i++) {
+        AcReal model_reduction = acModelReduceVec(model, testCases[i].rtype, testCases[i].a,
+                                                  testCases[i].b, testCases[i].c);
+        Error error            = acGetError(model_reduction, testCases[i].candidate);
+        strncpy(error.label, testCases[i].label, ERROR_LABEL_LENGTH - 1);
+        error.label[ERROR_LABEL_LENGTH - 1] = '\0';
+        errors_found |= printErrorToScreen(error);
+    }
+    printf("%s\n", errors_found ? "Failure. Found errors in one or more vector reductions"
+                                : "Success. No errors found.");
+
+    return errors_found ? AC_FAILURE : AC_SUCCESS;
+}
+
+/** Constructor for scalar reduction test case */
+AcScalReductionTestCase
+acCreateScalReductionTestCase(const char* label, const VertexBufferHandle vtxbuf, const ReductionType rtype)
+{
+    AcScalReductionTestCase testCase;
+
+    strncpy(testCase.label,label,ERROR_LABEL_LENGTH - 1);
+    testCase.label[ERROR_LABEL_LENGTH - 1] = '\0';
+    testCase.vtxbuf = vtxbuf;
+    testCase.rtype = rtype;
+    testCase.candidate = 0;
+
+    return testCase;
+}
+
+/** Constructor for vector reduction test case */
+AcVecReductionTestCase
+acCreateVecReductionTestCase(const char* label, const VertexBufferHandle a,
+                const VertexBufferHandle b, const VertexBufferHandle c, const ReductionType rtype)
+{
+    AcVecReductionTestCase testCase;
+
+    strncpy(testCase.label,label,ERROR_LABEL_LENGTH - 1);
+    testCase.label[ERROR_LABEL_LENGTH - 1] = '\0';
+    testCase.a = a;
+    testCase.b = b;
+    testCase.c = c;
+    testCase.rtype = rtype;
+    testCase.candidate = 0;
+
+    return testCase;
 }

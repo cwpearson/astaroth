@@ -1,5 +1,8 @@
 ## CMake settings
-cmake_minimum_required(VERSION 3.9) # Required for first-class CUDA support
+# V3.9 required for first-class CUDA support
+# V3.17 required for the FindCUDAToolkit package
+# V3.18 required for CMAKE_CUDA_ARCHITECTURES
+cmake_minimum_required(VERSION 3.18)
 find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
 find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
 
@@ -14,12 +17,19 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 11)
 
-find_package(CUDA) # Still required for various macros, such as cuda_select_nvcc_...
-cuda_select_nvcc_arch_flags(ARCHLIST Common) # Common architectures depend on the available CUDA version. Listed here: https://github.com/Kitware/CMake/blob/master/Modules/FindCUDA/select_compute_arch.cmake
-string(REPLACE ";" " " CUDA_ARCH_FLAGS "${ARCHLIST}")
-set(COMMON_FLAGS_CUDA "-mavx,-Wall,-Wextra,-Werror,-Wdouble-promotion,-Wfloat-conversion,-Wshadow")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_ARCH_FLAGS} -ccbin=${CMAKE_CXX_COMPILER} --compiler-options=${COMMON_FLAGS_CUDA}")
-
+## CUDA
+# GPU, compute capability
+# K40, 3.5
+# K80, 3.7
+# P100, 6.0
+# V100, 7.0
+if (NOT CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES 60 70) # Default
+else ()
+    set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCHITECTURES}) # User-specified
+endif()
+string (REPLACE " " "," CUDA_COMMON_FLAGS "${COMMON_FLAGS}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --compiler-options=${CUDA_COMMON_FLAGS}")
 
 ## Build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -53,7 +63,8 @@ message(STATUS "AC module dir: ${DSL_MODULE_DIR}")
 file(GLOB DSL_SOURCES ${DSL_MODULE_DIR}/*
                       ${CMAKE_SOURCE_DIR}/acc/stdlib/*)
 set(DSL_HEADERS "${PROJECT_BINARY_DIR}/user_kernels.h"
-                "${PROJECT_BINARY_DIR}/user_defines.h")
+                "${PROJECT_BINARY_DIR}/user_defines.h"
+                "${PROJECT_BINARY_DIR}/astaroth.f90")
 
 add_custom_command (
     COMMENT "Building ACC objects ${DSL_MODULE_DIR}"
@@ -79,6 +90,11 @@ include_directories(src/common)                                # Common headers
 include_directories(${CMAKE_BINARY_DIR})                       # DSL headers
 include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) # CUDA headers
 
+if (MPI_ENABLED)
+    find_package(MPI REQUIRED)
+    include_directories(${MPI_CXX_INCLUDE_DIRS})
+endif()
+
 ## Subdirectories
 add_subdirectory(src/utils)
 add_subdirectory(src/core/kernels)
@@ -89,6 +105,10 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
     add_subdirectory(samples/benchmark)
+    add_subdirectory(samples/bwtest)
+    add_subdirectory(samples/genbenchmarkscripts)
+    add_subdirectory(samples/mpi_reduce_bench)
+    add_subdirectory(samples/fortrantest)
 endif()
 
 if (BUILD_STANDALONE)

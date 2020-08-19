@@ -39,9 +39,11 @@ ASTNode* root = NULL;
 // Output files
 static FILE* DSLHEADER  = NULL;
 static FILE* CUDAHEADER = NULL;
+static FILE* FHEADER    = NULL;
 
 static const char* dslheader_filename  = "user_defines.h";
 static const char* cudaheader_filename = "user_kernels.h";
+static const char* fheader_filename    = "astaroth.f90";
 
 // Forward declaration of yyparse
 int yyparse(void);
@@ -98,7 +100,8 @@ static const char* translation_table[TRANSLATION_TABLE_SIZE] = {
     ['<'] = "<",
     ['>'] = ">",
     ['!'] = "!",
-    ['.'] = "."};
+    ['.'] = ".",
+};
 
 static const char*
 translate(const int token)
@@ -261,9 +264,8 @@ traverse(const ASTNode* node)
             if (typequal->token == KERNEL) {
                 fprintf(CUDAHEADER, "GEN_KERNEL_PARAM_BOILERPLATE");
                 if (node->lhs != NULL) {
-                    fprintf(
-                        stderr,
-                        "Syntax error: function parameters for Kernel functions not allowed!\n");
+                    fprintf(stderr, "Syntax error: function parameters for Kernel functions not "
+                                    "allowed!\n");
                 }
             }
             else if (typequal->token == PREPROCESSED) {
@@ -597,65 +599,173 @@ generate_preprocessed_structures(void)
 }
 
 static void
-generate_header(void)
+generate_headers(void)
 {
+    // Fortran interface
+    const char* fortran_interface = R"(
+!  -*-f90-*-  (for emacs)    vim:set filetype=fortran:  (for vim)
+
+! Utils (see astaroth_fortran.cc for definitions)
+external acupdatebuiltinparams
+external acgetdevicecount
+
+! Device interface (see astaroth_fortran.cc for definitions)
+external acdevicecreate, acdevicedestroy
+external acdeviceprintinfo
+external acdeviceloadmeshinfo
+external acdeviceloadmesh, acdevicestoremesh
+external acdeviceintegratesubstep
+external acdeviceperiodicboundconds
+external acdeviceswapbuffers
+external acdevicereducescal, acdevicereducevec
+external acdevicesynchronizestream
+  )";
+    fprintf(FHEADER, "%s\n", fortran_interface);
+
     fprintf(DSLHEADER, "#pragma once\n");
 
     // Int params
     fprintf(DSLHEADER, "#define AC_FOR_USER_INT_PARAM_TYPES(FUNC)");
+    int enumcounter = 0;
     for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_specifier == INT && symbol_table[i].type_qualifier == UNIFORM) {
             fprintf(DSLHEADER, "\\\nFUNC(%s)", symbol_table[i].identifier);
+            fprintf(FHEADER, "integer(c_int), parameter :: %s = %d\n", symbol_table[i].identifier,
+                    enumcounter);
+            ++enumcounter;
         }
     }
     fprintf(DSLHEADER, "\n\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_INT_PARAMS = %d\n\n", enumcounter);
 
     // Int3 params
     fprintf(DSLHEADER, "#define AC_FOR_USER_INT3_PARAM_TYPES(FUNC)");
+    enumcounter = 0;
     for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_specifier == INT3 && symbol_table[i].type_qualifier == UNIFORM) {
             fprintf(DSLHEADER, "\\\nFUNC(%s)", symbol_table[i].identifier);
+
+            fprintf(FHEADER, "integer(c_int), parameter :: %s = %d\n", symbol_table[i].identifier,
+                    enumcounter);
+            ++enumcounter;
         }
     }
     fprintf(DSLHEADER, "\n\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_INT3_PARAMS = %d\n\n", enumcounter);
 
     // Scalar params
     fprintf(DSLHEADER, "#define AC_FOR_USER_REAL_PARAM_TYPES(FUNC)");
+    enumcounter = 0;
     for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_specifier == SCALAR && symbol_table[i].type_qualifier == UNIFORM) {
             fprintf(DSLHEADER, "\\\nFUNC(%s)", symbol_table[i].identifier);
+
+            fprintf(FHEADER, "integer(c_int), parameter :: %s = %d\n", symbol_table[i].identifier,
+                    enumcounter);
+            ++enumcounter;
         }
     }
     fprintf(DSLHEADER, "\n\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_REAL_PARAMS = %d\n\n", enumcounter);
 
     // Vector params
     fprintf(DSLHEADER, "#define AC_FOR_USER_REAL3_PARAM_TYPES(FUNC)");
+    enumcounter = 0;
     for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_specifier == VECTOR && symbol_table[i].type_qualifier == UNIFORM) {
             fprintf(DSLHEADER, "\\\nFUNC(%s)", symbol_table[i].identifier);
+
+            fprintf(FHEADER, "integer(c_int), parameter :: %s = %d\n", symbol_table[i].identifier,
+                    enumcounter);
+            ++enumcounter;
         }
     }
     fprintf(DSLHEADER, "\n\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_REAL3_PARAMS = %d\n\n", enumcounter);
 
     // Scalar fields
     fprintf(DSLHEADER, "#define AC_FOR_VTXBUF_HANDLES(FUNC)");
+    enumcounter = 0;
     for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_specifier == SCALARFIELD &&
             symbol_table[i].type_qualifier == UNIFORM) {
             fprintf(DSLHEADER, "\\\nFUNC(%s)", symbol_table[i].identifier);
+
+            fprintf(FHEADER, "integer(c_int), parameter :: %s = %d\n", symbol_table[i].identifier,
+                    enumcounter);
+            ++enumcounter;
         }
     }
     fprintf(DSLHEADER, "\n\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_VTXBUF_HANDLES = %d\n\n", enumcounter);
 
     // Scalar arrays
     fprintf(DSLHEADER, "#define AC_FOR_SCALARARRAY_HANDLES(FUNC)");
+    enumcounter = 0;
     for (size_t i = 0; i < num_symbols[current_nest]; ++i) {
         if (symbol_table[i].type_specifier == SCALARARRAY &&
             symbol_table[i].type_qualifier == UNIFORM) {
             fprintf(DSLHEADER, "\\\nFUNC(%s)", symbol_table[i].identifier);
+
+            fprintf(FHEADER, "integer(c_int), parameter :: %s = %d\n", symbol_table[i].identifier,
+                    enumcounter);
+            ++enumcounter;
         }
     }
     fprintf(DSLHEADER, "\n\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_SCALARRAY_HANDLES = %d\n\n", enumcounter);
+
+    // Streams
+    const size_t nstreams = 20;
+    for (size_t i = 0; i < nstreams; ++i) {
+        fprintf(DSLHEADER, "#define STREAM_%lu (%lu)\n", i, i);
+        fprintf(FHEADER, "integer(c_int), parameter :: STREAM_%lu = %lu\n", i, i);
+    }
+    fprintf(DSLHEADER, "#define NUM_STREAMS (%lu)\n", nstreams);
+    fprintf(DSLHEADER, "#define STREAM_DEFAULT (STREAM_0)\n");
+    fprintf(DSLHEADER, "#define STREAM_ALL (NUM_STREAMS)\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: NUM_STREAMS = %lu\n", nstreams);
+    fprintf(FHEADER, "integer(c_int), parameter :: STREAM_DEFAULT = STREAM_0\n");
+    fprintf(FHEADER, "integer(c_int), parameter :: STREAM_ALL = NUM_STREAMS\n");
+
+    fprintf(DSLHEADER, "typedef int Stream;\n\n");
+
+    // Reduction types
+    size_t counter = 0;
+    fprintf(DSLHEADER, "#define RTYPE_MAX (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MAX = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_MIN (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MIN = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_RMS (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_RMS_EXP (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS_EXP = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "#define RTYPE_SUM (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_SUM = %lu\n", counter);
+    ++counter;
+
+    fprintf(DSLHEADER, "typedef int ReductionType;\n");
+    fprintf(DSLHEADER, "#define NUM_REDUCTION_TYPES (%lu)\n", counter);
+    fprintf(FHEADER, "integer(c_int), parameter :: NUM_REDUCTION_TYPES = %lu\n", counter);
+
+    // Fortran structs
+    const char* fortran_structs = R"(
+type, bind(C) :: AcMeshInfo
+  integer(c_int), dimension(AC_NUM_INT_PARAMS)      :: int_params
+  integer(c_int), dimension(AC_NUM_INT3_PARAMS, 3)  :: int3_params
+  real, dimension(AC_NUM_REAL_PARAMS)               :: real_params
+  real, dimension(AC_NUM_REAL3_PARAMS, 3)           :: real3_params
+end type AcMeshInfo
+  )";
+    fprintf(FHEADER, "%s\n", fortran_structs);
 }
 
 static void
@@ -681,20 +791,21 @@ main(void)
 
     DSLHEADER  = fopen(dslheader_filename, "w+");
     CUDAHEADER = fopen(cudaheader_filename, "w+");
+    FHEADER    = fopen(fheader_filename, "w+");
     assert(DSLHEADER);
     assert(CUDAHEADER);
+    assert(FHEADER);
 
     // Add built-in param symbols
-    for (size_t i = 0; i < ARRAY_SIZE(builtin_int_params); ++i) {
+    for (size_t i = 0; i < ARRAY_SIZE(builtin_int_params); ++i)
         add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT, builtin_int_params[i]);
-    }
-    for (size_t i = 0; i < ARRAY_SIZE(builtin_int3_params); ++i) {
+
+    for (size_t i = 0; i < ARRAY_SIZE(builtin_int3_params); ++i)
         add_symbol(SYMBOLTYPE_OTHER, UNIFORM, INT3, builtin_int3_params[i]);
-    }
 
     // Generate
     traverse(root);
-    generate_header();
+    generate_headers();
     generate_preprocessed_structures();
     generate_library_hooks();
 
@@ -703,9 +814,12 @@ main(void)
     // Cleanup
     fclose(DSLHEADER);
     fclose(CUDAHEADER);
+    fclose(FHEADER);
     astnode_destroy(root);
 
     fprintf(stdout, "-- Generated %s\n", dslheader_filename);
     fprintf(stdout, "-- Generated %s\n", cudaheader_filename);
+    fprintf(stdout, "-- Generated %s\n", fheader_filename);
+
     return EXIT_SUCCESS;
 }
