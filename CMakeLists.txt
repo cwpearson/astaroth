@@ -78,6 +78,8 @@ if (DOUBLE_PRECISION)
     add_definitions(-DAC_DOUBLE_PRECISION=1)
 endif ()
 if (MPI_ENABLED)
+    find_package(MPI REQUIRED)
+    include_directories(${MPI_CXX_INCLUDE_DIRS})
     add_definitions(-DAC_MPI_ENABLED=1)
 endif ()
 if (MULTIGPU_ENABLED)
@@ -91,11 +93,6 @@ include_directories(include)                                   # Library headers
 include_directories(src/common)                                # Common headers
 include_directories(${CMAKE_BINARY_DIR})                       # DSL headers
 include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) # CUDA headers
-
-if (MPI_ENABLED)
-    find_package(MPI REQUIRED)
-    include_directories(${MPI_CXX_INCLUDE_DIRS})
-endif()
 
 ## Subdirectories
 add_subdirectory(src/utils)
