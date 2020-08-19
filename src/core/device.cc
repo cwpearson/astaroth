@@ -14,7 +14,7 @@
 #define MPI_DECOMPOSITION_AXES (3)
 #define MPI_COMPUTE_ENABLED (1)
 #define MPI_COMM_ENABLED (1)
-#define MPI_INCL_CORNERS (0)
+#define MPI_INCL_CORNERS (1)
 #define MPI_USE_PINNED (0)              // Do inter-node comm with pinned memory
 #define MPI_USE_CUDA_DRIVER_PINNING (0) // Pin with cuPointerSetAttribute, otherwise cudaMallocHost
 
@@ -114,7 +114,7 @@ AcResult
 acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_handle)
 {
     cudaSetDevice(id);
-    cudaDeviceReset(); // Would be good for safety, but messes stuff up if we want to emulate
+    // cudaDeviceReset(); // Would be good for safety, but messes stuff up if we want to emulate
     // multiple devices with a single GPU
 
     // Create Device
