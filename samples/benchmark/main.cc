@@ -149,30 +149,6 @@ main(int argc, char** argv)
         }
     }*/
 
-    /*
-    // Basic
-    const size_t num_iters = 100;
-
-    // Warmup
-    for (size_t i = 0; i < num_iters / 10; ++i)
-        acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
-
-    // Benchmark
-    Timer t;
-    const AcReal dt = FLT_EPSILON;
-
-    acGridSynchronizeStream(STREAM_ALL);
-    timer_reset(&t);
-    acGridSynchronizeStream(STREAM_ALL);
-
-    for (size_t i = 0; i < num_iters; ++i)
-        acGridIntegrate(STREAM_DEFAULT, dt);
-
-    acGridSynchronizeStream(STREAM_ALL);
-    if (!pid)
-        timer_diff_print(t);
-    acGridSynchronizeStream(STREAM_ALL);
-    */
 
     // Percentiles
     const size_t num_iters      = 1000;
@@ -217,47 +193,6 @@ main(int argc, char** argv)
         fclose(fp);
     }
 
-    /*
-const size_t num_iters      = 1000;
-const double nth_percentile = 0.90;
-
-std::vector<double> results; // ms
-results.reserve(num_iters);
-
-for (size_t i = 0; i < num_iters; ++i) {
-    acGridSynchronizeStream(STREAM_ALL);
-    timer_reset(&t);
-    acGridSynchronizeStream(STREAM_ALL);
-    acGridIntegrate(STREAM_DEFAULT, dt);
-    acGridSynchronizeStream(STREAM_ALL);
-    results.push_back(timer_diff_nsec(t) / 1e6);
-}
-
-// Write benchmark to file
-if (!pid) {
-    std::sort(results.begin(), results.end(),
-              [](const double& a, const double& b) { return a < b; });
-    fprintf(stdout,
-            "Integration step time %g ms (%gth "
-            "percentile)--------------------------------------\n",
-            results[nth_percentile * num_iters], 100 * nth_percentile);
-
-    char path[4096] = "";
-    if (test == TEST_STRONG_SCALING)
-        strncpy(path, "strong_scaling.csv", sizeof(path));
-    else if (test == TEST_WEAK_SCALING)
-        strncpy(path, "weak_scaling.csv", sizeof(path));
-    else
-        ERROR("Invalid test type");
-
-    FILE* fp = fopen(path, "a");
-    ERRCHK_ALWAYS(fp);
-    // Format
-    // nprocs, measured (ms)
-    fprintf(fp, "%d, %g\n", nprocs, results[nth_percentile * num_iters]);
-
-    fclose(fp);
-}*/
 
     acGridQuit();
     MPI_Finalize();
