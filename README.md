@@ -78,7 +78,7 @@ Can I use the code even if I don't make my changes public?
 
 How do I compile with MPI support?
 
-> MPI implementation for Astaroth is still work in progress, these commands are for testing only. Invoke CMake with `cmake -DMPI_ENABLED=ON -DBUILD_SAMPLES=ON ..`. Otherwise the build steps are the same. Run with `mpirun -np 4 ./mpitest`.
+> Ensure that your MPI implementation has been built with CUDA support and invoke CMake with `cmake -DMPI_ENABLED=ON -DBUILD_SAMPLES=ON ..`. Otherwise the build steps are the same. Assign exactly one process per GPU and run with, for example, `srun --gres=gpu:v100:<ngpus per node> --ntasks-per-socket=<ngpus per node / NICs per node> -n <total number of gpus> -N <number of nodes> ./mpitest` or equivalent `mpirun` command.
 
 How do I contribute?
 
