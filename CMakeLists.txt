@@ -91,8 +91,8 @@ include_directories(${CMAKE_BINARY_DIR})                       # DSL headers
 include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) # CUDA headers
 
 if (MPI_ENABLED)
-    find_package(MPI REQUIRED)
-    include_directories(${MPI_CXX_INCLUDE_DIRS})
+    find_package(MPI REQUIRED COMPONENTS C)
+    include_directories(${MPI_C_INCLUDE_DIRS})
 endif()
 
 ## Subdirectories

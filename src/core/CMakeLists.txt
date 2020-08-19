@@ -9,7 +9,7 @@ if (MPI_ENABLED)
     #find_package(MPI REQUIRED)
     #find_package(OpenMP)
     #target_link_libraries(astaroth_core MPI::MPI_CXX OpenMP::OpenMP_CXX)
-    target_link_libraries(astaroth_core MPI::MPI_CXX)
+    target_link_libraries(astaroth_core MPI::MPI_C)
 endif()
 
 if (MULTIGPU_ENABLED)
