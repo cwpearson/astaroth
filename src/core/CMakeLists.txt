@@ -6,5 +6,5 @@ target_link_libraries(astaroth_core astaroth_kernels CUDA::cudart CUDA::cuda_dri
 
 ## Options
 if (MPI_ENABLED)
-    target_link_libraries(astaroth_core MPI::MPI_CXX)
+    target_link_libraries(astaroth_core MPI::MPI_C)
 endif()
