@@ -44,8 +44,8 @@ In the base directory, run
 | DOUBLE_PRECISION | Generates double precision code. | OFF |
 | BUILD_SAMPLES | Builds projects in samples subdirectory. | OFF |
 | BUILD_STANDALONE | Builds a standalone library for testing, benchmarking and simulation. | ON |
-| MPI_ENABLED | Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only. | OFF |
-| MULTIGPU_ENABLED | Enables Astaroth to use multiple GPUs on a single node. | ON |
+| MPI_ENABLED | Enables acGrid functions for carrying out computations with MPI. | OFF |
+| MULTIGPU_ENABLED | Enables Astaroth to use multiple GPUs on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only. | ON |
 | DSL_MODULE_DIR | Defines the directory to be scanned when looking for DSL files. | `astaroth/acc/mhd_solver` |
 
 
