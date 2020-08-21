@@ -731,29 +731,24 @@ external acdevicesynchronizestream
     fprintf(DSLHEADER, "typedef int Stream;\n\n");
 
     // Reduction types
+    fprintf(DSLHEADER, "#define AC_FOR_RTYPES(FUNC)\\\n");
+    fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_MAX");
+    fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_MIN");
+    fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_RMS");
+    fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_RMS_EXP");
+    fprintf(DSLHEADER, "FUNC(%s)\n", "RTYPE_SUM");
+
     size_t counter = 0;
-    fprintf(DSLHEADER, "#define RTYPE_MAX (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MAX = %lu\n", counter);
     ++counter;
-
-    fprintf(DSLHEADER, "#define RTYPE_MIN (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_MIN = %lu\n", counter);
     ++counter;
-
-    fprintf(DSLHEADER, "#define RTYPE_RMS (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS = %lu\n", counter);
     ++counter;
-
-    fprintf(DSLHEADER, "#define RTYPE_RMS_EXP (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS_EXP = %lu\n", counter);
     ++counter;
-
-    fprintf(DSLHEADER, "#define RTYPE_SUM (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_SUM = %lu\n", counter);
     ++counter;
-
-    fprintf(DSLHEADER, "typedef int ReductionType;\n");
-    fprintf(DSLHEADER, "#define NUM_REDUCTION_TYPES (%lu)\n", counter);
     fprintf(FHEADER, "integer(c_int), parameter :: NUM_REDUCTION_TYPES = %lu\n", counter);
 
     // Fortran structs

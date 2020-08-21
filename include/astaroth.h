@@ -50,19 +50,12 @@ typedef struct {
 
 typedef enum { AC_SUCCESS = 0, AC_FAILURE = 1 } AcResult;
 
-/*
-// Deprecated, defined during code generation
-typedef enum {
-    RTYPE_MAX,
-    RTYPE_MIN,
-    RTYPE_RMS,
-    RTYPE_RMS_EXP,
-    RTYPE_SUM,
-    NUM_REDUCTION_TYPES
-} ReductionType;
-*/
-
 #define AC_GEN_ID(X) X,
+typedef enum {
+    AC_FOR_RTYPES(AC_GEN_ID) //
+    NUM_RTYPES
+} ReductionType;
+
 typedef enum {
     AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_ID) //
     NUM_INT_PARAMS
@@ -96,6 +89,7 @@ typedef enum {
 
 #define _UNUSED __attribute__((unused)) // Does not give a warning if unused
 #define AC_GEN_STR(X) #X,
+static const char* rtype_names[] _UNUSED      = {AC_FOR_RTYPES(AC_GEN_STR) "-end-"};
 static const char* intparam_names[] _UNUSED   = {AC_FOR_USER_INT_PARAM_TYPES(AC_GEN_STR) "-end-"};
 static const char* int3param_names[] _UNUSED  = {AC_FOR_USER_INT3_PARAM_TYPES(AC_GEN_STR) "-end-"};
 static const char* realparam_names[] _UNUSED  = {AC_FOR_USER_REAL_PARAM_TYPES(AC_GEN_STR) "-end-"};
