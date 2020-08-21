@@ -105,7 +105,8 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
 {
     cudaSetDevice(device->id);
     if (param < 0 || param >= NUM_REAL_PARAMS) {
-        fprintf(stderr, "WARNING: invalid AcRealParam %d\n", param);
+        fprintf(stderr, "WARNING: invalid AcRealParam %d. Skipping.\n", param);
+        return AC_FAILURE;
     }
 
     if (!is_valid(value)) {
@@ -113,9 +114,6 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
                 (double)value, realparam_names[param]);
         return AC_FAILURE;
     }
-
-    if (param >= NUM_REAL_PARAMS)
-        return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.real_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
@@ -130,6 +128,7 @@ acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal
     cudaSetDevice(device->id);
     if (param < 0 || param >= NUM_REAL3_PARAMS) {
         fprintf(stderr, "WARNING: invalid AcReal3Param %d\n", param);
+        return AC_FAILURE;
     }
 
     if (!is_valid(value)) {
@@ -138,9 +137,6 @@ acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal
                 (double)value.x, (double)value.y, (double)value.z, real3param_names[param]);
         return AC_FAILURE;
     }
-
-    if (param >= NUM_REAL3_PARAMS || !NUM_REAL3_PARAMS)
-        return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.real3_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
@@ -155,6 +151,7 @@ acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntPara
     cudaSetDevice(device->id);
     if (param < 0 || param >= NUM_INT_PARAMS) {
         fprintf(stderr, "WARNING: invalid AcIntParam %d\n", param);
+        return AC_FAILURE;
     }
 
     if (!is_valid(value)) {
@@ -162,9 +159,6 @@ acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntPara
                 value, intparam_names[param]);
         return AC_FAILURE;
     }
-
-    if (param >= NUM_INT_PARAMS)
-        return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.int_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
@@ -179,6 +173,7 @@ acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Pa
     cudaSetDevice(device->id);
     if (param < 0 || param >= NUM_INT3_PARAMS) {
         fprintf(stderr, "WARNING: invalid AcInt3Param %d\n", param);
+        return AC_FAILURE;
     }
 
     if (!is_valid(value.x) || !is_valid(value.y) || !is_valid(value.z)) {
@@ -188,9 +183,6 @@ acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Pa
                 value.x, value.y, value.z, int3param_names[param]);
         return AC_FAILURE;
     }
-
-    if (param >= NUM_INT3_PARAMS)
-        return AC_FAILURE;
 
     const size_t offset = (size_t)&d_mesh_info.int3_params[param] - (size_t)&d_mesh_info;
     ERRCHK_CUDA(cudaMemcpyToSymbolAsync(d_mesh_info, &value, sizeof(value), offset,
