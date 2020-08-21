@@ -25,7 +25,6 @@
 // Library flags
 #define STENCIL_ORDER (6)
 #define NGHOST (STENCIL_ORDER / 2)
-#define VERBOSE_PRINTING (1)
 
 // Built-in types and parameters
 #if AC_DOUBLE_PRECISION == 1

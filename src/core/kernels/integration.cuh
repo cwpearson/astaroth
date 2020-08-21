@@ -130,6 +130,7 @@ static dim3 rk3_tpb(32, 1, 4);
 AcResult
 acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferArray vba)
 {
+    printf("Autotuning... ");
     // RK3
     dim3 best_dims(0, 0, 0);
     float best_time          = INFINITY;
@@ -192,7 +193,9 @@ acKernelAutoOptimizeIntegration(const int3 start, const int3 end, VertexBufferAr
             }
         }
     }
-#if VERBOSE_PRINTING
+    printf("\x1B[32m%s\x1B[0m\n", "OK!");
+    fflush(stdout);
+#if AC_VERBOSE
     printf("Auto-optimization done. The best threadblock dimensions for rkStep: (%d, %d, %d) %f "
            "ms\n",
            best_dims.x, best_dims.y, best_dims.z, double(best_time) / num_iterations);

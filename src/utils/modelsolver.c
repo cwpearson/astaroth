@@ -949,6 +949,7 @@ solve_beta_step(const AcMesh in, const int step_number, const Scalar dt, const i
 static void
 checkConfiguration(const AcMeshInfo info)
 {
+#if AC_VERBOSE
     for (int i = 0; i < NUM_REAL_PARAMS; ++i) {
         if (!is_valid(info.real_params[i])) {
             fprintf(stderr, "WARNING: Passed an invalid value %g to model solver (%s). Skipping.\n",
@@ -973,6 +974,7 @@ checkConfiguration(const AcMeshInfo info)
                     (double)info.real3_params[i].z, realparam_names[i]);
         }
     }
+#endif
 
     ERRCHK_ALWAYS(is_valid(info.real_params[AC_inv_dsx]));
     ERRCHK_ALWAYS(is_valid(info.real_params[AC_inv_dsy]));

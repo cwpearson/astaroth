@@ -123,15 +123,20 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
 
     device->id           = id;
     device->local_config = device_config;
+#if AC_VERBOSE
     acDevicePrintInfo(device);
+#endif
 
-    // Check that the code was compiled for the proper GPU architecture
+// Check that the code was compiled for the proper GPU architecture
+#if AC_VERBOSE
     printf("Trying to run a dummy kernel. If this fails, make sure that your\n"
-           "device supports the CUDA architecture you are compiling for.\n"
-           "Running dummy kernel... ");
+           "device supports the CUDA architecture you are compiling for.\n");
+#endif
+    printf("Testing CUDA... ");
     fflush(stdout);
     acKernelDummy();
-    printf("Success!\n");
+    printf("\x1B[32m%s\x1B[0m\n", "OK!");
+    fflush(stdout);
 
     // Concurrency
     for (int i = 0; i < NUM_STREAMS; ++i) {
@@ -162,7 +167,9 @@ acDeviceCreate(const int id, const AcMeshInfo device_config, Device* device_hand
     acDeviceLoadDefaultUniforms(device);
     acDeviceLoadMeshInfo(device, device_config);
 
+#if AC_VERBOSE
     printf("Created device %d (%p)\n", device->id, device);
+#endif
     *device_handle = device;
 
     // Autoptimize
@@ -175,7 +182,9 @@ AcResult
 acDeviceDestroy(Device device)
 {
     cudaSetDevice(device->id);
+#if AC_VERBOSE
     printf("Destroying device %d (%p)\n", device->id, device);
+#endif
     acDeviceSynchronizeStream(device, STREAM_ALL);
 
     // Memory
@@ -761,8 +770,10 @@ static AcResult
 acDeviceDistributeMeshMPI(const AcMesh src, const uint3_64 decomposition, AcMesh* dst)
 {
     MPI_Barrier(MPI_COMM_WORLD);
+#if AC_VERBOSE
     printf("Distributing mesh...\n");
     fflush(stdout);
+#endif
 
     MPI_Datatype datatype = MPI_FLOAT;
     if (sizeof(AcReal) == 8)
@@ -837,8 +848,10 @@ static AcResult
 acDeviceGatherMeshMPI(const AcMesh src, const uint3_64 decomposition, AcMesh* dst)
 {
     MPI_Barrier(MPI_COMM_WORLD);
+#if AC_VERBOSE
     printf("Gathering mesh...\n");
     fflush(stdout);
+#endif
 
     MPI_Datatype datatype = MPI_FLOAT;
     if (sizeof(AcReal) == 8)
@@ -1215,15 +1228,19 @@ acGridInit(const AcMeshInfo info)
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     int name_len;
     MPI_Get_processor_name(processor_name, &name_len);
-    printf("Processor %s. Process %d of %d.\n", processor_name, pid, nprocs);
 
     // Decompose
     AcMeshInfo submesh_info      = info;
     const uint3_64 decomposition = decompose(nprocs);
     const int3 pid3d             = getPid3D(pid, decomposition);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Processor %s. Process %d of %d: (%d, %d, %d)\n", processor_name, pid, nprocs, pid3d.x,
+           pid3d.y, pid3d.z);
     printf("Decomposition: %lu, %lu, %lu\n", decomposition.x, decomposition.y, decomposition.z);
-    printf("Process %d: (%d, %d, %d)\n", pid, pid3d.x, pid3d.y, pid3d.z);
+    fflush(stdout);
+    MPI_Barrier(MPI_COMM_WORLD);
+
     ERRCHK_ALWAYS(info.int_params[AC_nx] % decomposition.x == 0);
     ERRCHK_ALWAYS(info.int_params[AC_ny] % decomposition.y == 0);
     ERRCHK_ALWAYS(info.int_params[AC_nz] % decomposition.z == 0);

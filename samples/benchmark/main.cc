@@ -99,7 +99,7 @@ main(int argc, char** argv)
             info.int_params[AC_ny] = ny;
             info.int_params[AC_nz] = nz;
             acUpdateBuiltinParams(&info);
-            printf("Updated mesh dimensions to (%d, %d, %d)\n", nx, ny, nz);
+            printf("Benchmark mesh dimensions: (%d, %d, %d)\n", nx, ny, nz);
         }
         else {
             fprintf(stderr, "Could not parse arguments. Usage: ./benchmark <nx> <ny> <nz>.\n");

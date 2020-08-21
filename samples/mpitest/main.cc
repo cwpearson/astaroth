@@ -86,6 +86,7 @@ main(void)
     if (pid == 0) {
         printf("---Test: Scalar reductions---\n");
         printf("Warning: testing only RTYPE_MAX and RTYPE_MIN\n");
+        fflush(stdout);
     }
     for (size_t i = 0; i < 2; ++i) { // NOTE: 2 instead of NUM_RTYPES
         const VertexBufferHandle v0 = VTXBUF_UUX;
@@ -104,6 +105,7 @@ main(void)
     if (pid == 0) {
         printf("---Test: Vector reductions---\n");
         printf("Warning: testing only RTYPE_MAX and RTYPE_MIN\n");
+        fflush(stdout);
     }
     for (size_t i = 0; i < 2; ++i) { // NOTE: 2 instead of NUM_RTYPES
         const VertexBufferHandle v0 = VTXBUF_UUX;

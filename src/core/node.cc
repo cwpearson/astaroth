@@ -155,7 +155,7 @@ gridIdx3d(const GridDims grid, const int idx)
                   idx / (grid.m.x * grid.m.y)};
 }
 
-static void
+static inline void
 printInt3(const int3 vec)
 {
     printf("(%d, %d, %d)", vec.x, vec.y, vec.z);
@@ -240,7 +240,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
     AcMeshInfo subgrid_config = node->config;
     subgrid_config.int_params[AC_nz] /= node->num_devices;
     update_builtin_params(&subgrid_config);
-#if VERBOSE_PRINTING // Defined in astaroth.h
+#if AC_VERBOSE
     printf("###############################################################\n");
     printf("Config dimensions recalculated:\n");
     print(subgrid_config);
@@ -253,7 +253,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
     ERRCHK_ALWAYS(node->subgrid.n.y >= STENCIL_ORDER);
     ERRCHK_ALWAYS(node->subgrid.n.z >= STENCIL_ORDER);
 
-#if VERBOSE_PRINTING
+#if AC_VERBOSE
     // clang-format off
     printf("GridDims m ");   printInt3(node->grid.m);    printf("\n");
     printf("GridDims n ");   printInt3(node->grid.n);    printf("\n");
@@ -284,7 +284,7 @@ acNodeCreate(const int id, const AcMeshInfo node_config, Node* node_handle)
         int can_access_front, can_access_back;
         cudaDeviceCanAccessPeer(&can_access_front, i, front);
         cudaDeviceCanAccessPeer(&can_access_back, i, back);
-#if VERBOSE_PRINTING
+#if AC_VERBOSE
         printf(
             "Trying to enable peer access from %d to %d (can access: %d) and %d (can access: %d)\n",
             i, front, can_access_front, back, can_access_back);
@@ -318,7 +318,7 @@ acNodeDestroy(Node node)
         int can_access_front, can_access_back;
         cudaDeviceCanAccessPeer(&can_access_front, i, front);
         cudaDeviceCanAccessPeer(&can_access_back, i, back);
-#if VERBOSE_PRINTING
+#if AC_VERBOSE
         printf("Trying to disable peer access from %d to %d (can access: %d) and %d (can access: "
                "%d)\n",
                i, front, can_access_front, back, can_access_back);

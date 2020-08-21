@@ -149,6 +149,7 @@ AcResult
 acVerifyMesh(const char* label, const AcMesh model, const AcMesh candidate)
 {
     printf("---Test: %s---\n", label);
+    fflush(stdout);
     printf("Errors at the point of the maximum absolute error:\n");
 
     int errors_found = 0;
