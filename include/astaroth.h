@@ -290,7 +290,7 @@ AcResult acGridQuit(void);
 AcResult acGridSynchronizeStream(const Stream stream);
 
 /** */
-AcResult acGridLoadMesh(const AcMesh host_mesh, const Stream stream);
+AcResult acGridLoadMesh(const Stream stream, const AcMesh host_mesh);
 
 /** */
 AcResult acGridStoreMesh(const Stream stream, AcMesh* host_mesh);

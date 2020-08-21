@@ -171,7 +171,7 @@ AcResult acNodeLoadVertexBufferWithOffset(const Node node, const Stream stream,
                                           const AcMesh host_mesh,
                                           const VertexBufferHandle vtxbuf_handle, const int3 src,
                                           const int3 dst, const int num_vertices);
-AcResult acGridLoadMesh(const AcMesh host_mesh, const Stream stream);
+AcResult acGridLoadMesh(const Stream stream, const AcMesh host_mesh);
 ```
 
 Storing meshes and vertex buffer to host memory.
@@ -435,7 +435,7 @@ after initialization.
 
 ### Decomposition (`acNode` layer)
 
-> **Note:** This section describes implementation details specific to the acNode layer. The acGrid layer is not related to the `GridDims` structure described here. 
+> **Note:** This section describes implementation details specific to the acNode layer. The acGrid layer is not related to the `GridDims` structure described here.
 
 `GridDims` contains the dimensions of the the mesh decomposed to multiple devices.
 ```C

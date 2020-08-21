@@ -126,8 +126,12 @@ main(int argc, char** argv)
 
     // GPU alloc & compute
     acGridInit(info);
+    AcMesh model;
+    acMeshCreate(info, &model);
+    acMeshRandomize(&model);
+    acGridLoadMesh(STREAM_DEFAULT, model);
     /*
-    acGridLoadMesh(model, STREAM_DEFAULT);
+    acGridLoadMesh(STREAM_DEFAULT, model);
 
     acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
     acGridPeriodicBoundconds(STREAM_DEFAULT);
@@ -148,7 +152,6 @@ main(int argc, char** argv)
             return EXIT_FAILURE;
         }
     }*/
-
 
     // Percentiles
     const size_t num_iters      = 1000;
@@ -189,10 +192,10 @@ main(int argc, char** argv)
         ERRCHK_ALWAYS(fp);
         // Format
         // nprocs, min, 50th perc, 90th perc, max
-        fprintf(fp, "%d, %g, %g, %g, %g\n", nprocs, results[0], results[0.5 * num_iters], results[nth_percentile * num_iters], results[num_iters-1]);
+        fprintf(fp, "%d, %g, %g, %g, %g\n", nprocs, results[0], results[0.5 * num_iters],
+                results[nth_percentile * num_iters], results[num_iters - 1]);
         fclose(fp);
     }
-
 
     acGridQuit();
     MPI_Finalize();

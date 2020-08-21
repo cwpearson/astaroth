@@ -1309,7 +1309,7 @@ acGridQuit(void)
 }
 
 AcResult
-acGridLoadMesh(const AcMesh host_mesh, const Stream stream)
+acGridLoadMesh(const Stream stream, const AcMesh host_mesh)
 {
     ERRCHK(grid.initialized);
     acGridSynchronizeStream(stream);

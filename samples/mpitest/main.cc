@@ -51,7 +51,7 @@ main(void)
     acGridInit(info);
 
     // INTEGRATION TESTS START ---------------------------------------------------------------------
-    acGridLoadMesh(model, STREAM_DEFAULT);
+    acGridLoadMesh(STREAM_DEFAULT, model);
     acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
     acGridPeriodicBoundconds(STREAM_DEFAULT);
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
@@ -64,7 +64,7 @@ main(void)
     // INTEGRATION TESTS END -----------------------------------------------------------------------
 
     // REDUCTION TESTS START -----------------------------------------------------------------------
-    acGridLoadMesh(model, STREAM_DEFAULT);
+    acGridLoadMesh(STREAM_DEFAULT, model);
 
     std::vector<AcScalReductionTestCase> scalarReductionTests{
         acCreateScalReductionTestCase("Scalar MAX", VTXBUF_UUX, RTYPE_MAX),
