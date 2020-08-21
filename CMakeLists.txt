@@ -39,8 +39,7 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
 option(DOUBLE_PRECISION "Generates double precision code."                    OFF)
-option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            OFF)
-option(BUILD_STANDALONE "Builds standalone Astaroth."                         ON)
+option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            ON)
 option(MPI_ENABLED      "Enables additional functions for MPI communciation." OFF)
 option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." ON)
 
@@ -79,8 +78,13 @@ if (DOUBLE_PRECISION)
     add_definitions(-DAC_DOUBLE_PRECISION=1)
 endif ()
 if (MPI_ENABLED)
+    find_package(MPI REQUIRED COMPONENTS C)
+    include_directories(${MPI_C_INCLUDE_DIRS})
     add_definitions(-DAC_MPI_ENABLED=1)
 endif ()
+if (MULTIGPU_ENABLED)
+  add_definitions(-DAC_MULTIGPU_ENABLED=1)
+endif()
 
 add_definitions(-DAC_DEFAULT_CONFIG="${CMAKE_SOURCE_DIR}/config/astaroth.conf")
 
@@ -90,17 +94,13 @@ include_directories(src/common)                                # Common headers
 include_directories(${CMAKE_BINARY_DIR})                       # DSL headers
 include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}) # CUDA headers
 
-if (MPI_ENABLED)
-    find_package(MPI REQUIRED COMPONENTS C)
-    include_directories(${MPI_C_INCLUDE_DIRS})
-endif()
-
 ## Subdirectories
 add_subdirectory(src/utils)
 add_subdirectory(src/core/kernels)
 add_subdirectory(src/core)
 
 if (BUILD_SAMPLES)
+    add_subdirectory(samples/standalone)
     add_subdirectory(samples/ctest)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
@@ -112,8 +112,4 @@ if (BUILD_SAMPLES)
     if (MPI_ENABLED)
       add_subdirectory(samples/bwtest)
     endif()
-endif()
-
-if (BUILD_STANDALONE)
-    add_subdirectory(src/standalone)
 endif()
