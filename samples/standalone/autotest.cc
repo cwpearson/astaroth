@@ -245,7 +245,7 @@ check_reductions(const AcMeshInfo& config)
 
         acLoad(*mesh);
 
-        for (int rtype = 0; rtype < NUM_REDUCTION_TYPES; ++rtype) {
+        for (int rtype = 0; rtype < NUM_RTYPES; ++rtype) {
 
             if (rtype == RTYPE_SUM) {
                 // Skip SUM test for now. The failure is either caused by floating-point

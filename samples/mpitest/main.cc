@@ -21,11 +21,14 @@
 */
 #include "astaroth.h"
 #include "astaroth_utils.h"
+#include "errchk.h"
 
 #if AC_MPI_ENABLED
 
 #include <mpi.h>
 #include <vector>
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
 int
 main(void)
@@ -34,6 +37,9 @@ main(void)
     int nprocs, pid;
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+
+    // Set random seed for reproducibility
+    srand(321654987);
 
     // CPU alloc
     AcMeshInfo info;
@@ -50,57 +56,69 @@ main(void)
     // GPU alloc & compute
     acGridInit(info);
 
-    // INTEGRATION TESTS START ---------------------------------------------------------------------
+    // Boundconds
+    acGridLoadMesh(STREAM_DEFAULT, model);
+    acGridPeriodicBoundconds(STREAM_DEFAULT);
+    acGridStoreMesh(STREAM_DEFAULT, &candidate);
+    if (pid == 0) {
+        acMeshApplyPeriodicBounds(&model);
+        const AcResult res = acVerifyMesh("Boundconds", model, candidate);
+        ERRCHK_ALWAYS(res == AC_SUCCESS);
+        acMeshRandomize(&model);
+    }
+
+    // Integration
     acGridLoadMesh(STREAM_DEFAULT, model);
     acGridIntegrate(STREAM_DEFAULT, FLT_EPSILON);
     acGridPeriodicBoundconds(STREAM_DEFAULT);
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
-
     if (pid == 0) {
         acModelIntegrateStep(model, FLT_EPSILON);
         acMeshApplyPeriodicBounds(&model);
-        acVerifyMesh(model, candidate);
+        const AcResult res = acVerifyMesh("Integration", model, candidate);
+        ERRCHK_ALWAYS(res == AC_SUCCESS);
+        acMeshRandomize(&model);
     }
-    // INTEGRATION TESTS END -----------------------------------------------------------------------
 
-    // REDUCTION TESTS START -----------------------------------------------------------------------
+    // Scalar reductions
     acGridLoadMesh(STREAM_DEFAULT, model);
 
-    std::vector<AcScalReductionTestCase> scalarReductionTests{
-        acCreateScalReductionTestCase("Scalar MAX", VTXBUF_UUX, RTYPE_MAX),
-        acCreateScalReductionTestCase("Scalar MIN", VTXBUF_UUX, RTYPE_MIN),
-        /*
-        acCreateScalReductionTestCase("Scalar RMS", VTXBUF_UUX, RTYPE_RMS),
-        acCreateScalReductionTestCase("Scalar RMS_EXP", VTXBUF_UUX, RTYPE_RMS_EXP),
-        acCreateScalReductionTestCase("Scalar SUM", VTXBUF_UUX, RTYPE_SUM),
-        */
-    };
-    std::vector<AcVecReductionTestCase> vectorReductionTests{
-        acCreateVecReductionTestCase("Vector MAX", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MAX),
-        acCreateVecReductionTestCase("Vector MIN", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_MIN),
-        /*
-        acCreateVecReductionTestCase("Vector RMS", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_RMS),
-        acCreateVecReductionTestCase("Vector RMS_EXP", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ,
-                                     RTYPE_RMS_EXP),
-        acCreateVecReductionTestCase("Vector SUM", VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ, RTYPE_SUM),
-        */
-    };
-    // False positives due to too strict error bounds, skip the tests until we can determine a
-    // proper error bound
-    fprintf(stderr, "WARNING: RTYPE_RMS, RTYPE_RMS_EXP, and RTYPE_SUM tests skipped\n");
-
-    for (auto& testCase : scalarReductionTests) {
-        acGridReduceScal(STREAM_DEFAULT, testCase.rtype, testCase.vtxbuf, &testCase.candidate);
-    }
-    for (auto& testCase : vectorReductionTests) {
-        acGridReduceVec(STREAM_DEFAULT, testCase.rtype, testCase.a, testCase.b, testCase.c,
-                        &testCase.candidate);
-    }
     if (pid == 0) {
-        acVerifyScalReductions(model, scalarReductionTests.data(), scalarReductionTests.size());
-        acVerifyVecReductions(model, vectorReductionTests.data(), vectorReductionTests.size());
+        printf("---Test: Scalar reductions---\n");
+        printf("Warning: testing only RTYPE_MAX and RTYPE_MIN\n");
     }
-    // REDUCTION TESTS END -------------------------------------------------------------------------
+    for (size_t i = 0; i < 2; ++i) { // NOTE: 2 instead of NUM_RTYPES
+        const VertexBufferHandle v0 = VTXBUF_UUX;
+        AcReal candval;
+        acGridReduceScal(STREAM_DEFAULT, (ReductionType)i, v0, &candval);
+        if (pid == 0) {
+            const AcReal modelval   = acModelReduceScal(model, (ReductionType)i, v0);
+            Error error             = acGetError(modelval, candval);
+            error.maximum_magnitude = acModelReduceScal(model, RTYPE_MAX, v0);
+            error.minimum_magnitude = acModelReduceScal(model, RTYPE_MIN, v0);
+            ERRCHK_ALWAYS(acEvalError(rtype_names[i], error));
+        }
+    }
+
+    // Vector reductions
+    if (pid == 0) {
+        printf("---Test: Vector reductions---\n");
+        printf("Warning: testing only RTYPE_MAX and RTYPE_MIN\n");
+    }
+    for (size_t i = 0; i < 2; ++i) { // NOTE: 2 instead of NUM_RTYPES
+        const VertexBufferHandle v0 = VTXBUF_UUX;
+        const VertexBufferHandle v1 = VTXBUF_UUY;
+        const VertexBufferHandle v2 = VTXBUF_UUZ;
+        AcReal candval;
+        acGridReduceVec(STREAM_DEFAULT, (ReductionType)i, v0, v1, v2, &candval);
+        if (pid == 0) {
+            const AcReal modelval   = acModelReduceVec(model, (ReductionType)i, v0, v1, v2);
+            Error error             = acGetError(modelval, candval);
+            error.maximum_magnitude = acModelReduceVec(model, RTYPE_MAX, v0, v1, v2);
+            error.minimum_magnitude = acModelReduceVec(model, RTYPE_MIN, v0, v1, v1);
+            ERRCHK_ALWAYS(acEvalError(rtype_names[i], error));
+        }
+    }
 
     if (pid == 0) {
         acMeshDestroy(&model);

@@ -42,7 +42,7 @@ main(void)
     acInit(info);
     acLoad(model);
     acStore(&candidate);
-    acVerifyMesh(model, candidate);
+    acVerifyMesh("Load/Store", model, candidate);
 
     // Attempt to integrate and check max and min
     printf("Integrating... ");
