@@ -110,10 +110,8 @@ acDeviceLoadScalarUniform(const Device device, const Stream stream, const AcReal
     }
 
     if (!is_valid(value)) {
-#if AC_VERBOSE
         fprintf(stderr, "WARNING: Passed an invalid value %g to device constant %s. Skipping.\n",
                 (double)value, realparam_names[param]);
-#endif
         return AC_FAILURE;
     }
 
@@ -134,11 +132,9 @@ acDeviceLoadVectorUniform(const Device device, const Stream stream, const AcReal
     }
 
     if (!is_valid(value)) {
-#if AC_VERBOSE
         fprintf(stderr,
                 "WARNING: Passed an invalid value (%g, %g, %g) to device constant %s. Skipping.\n",
                 (double)value.x, (double)value.y, (double)value.z, real3param_names[param]);
-#endif
         return AC_FAILURE;
     }
 
@@ -159,10 +155,8 @@ acDeviceLoadIntUniform(const Device device, const Stream stream, const AcIntPara
     }
 
     if (!is_valid(value)) {
-#if AC_VERBOSE
         fprintf(stderr, "WARNING: Passed an invalid value %d to device constant %s. Skipping.\n",
                 value, intparam_names[param]);
-#endif
         return AC_FAILURE;
     }
 
@@ -183,12 +177,10 @@ acDeviceLoadInt3Uniform(const Device device, const Stream stream, const AcInt3Pa
     }
 
     if (!is_valid(value.x) || !is_valid(value.y) || !is_valid(value.z)) {
-#if AC_VERBOSE
         fprintf(stderr,
                 "WARNING: Passed an invalid value (%d, %d, %def) to device constant %s. "
                 "Skipping.\n",
                 value.x, value.y, value.z, int3param_names[param]);
-#endif
         return AC_FAILURE;
     }
 
@@ -232,7 +224,7 @@ acDeviceLoadDefaultUniforms(const Device device)
 {
     cudaSetDevice(device->id);
 
-// clang-format off
+    // clang-format off
     // Scalar
     #define LOAD_DEFAULT_UNIFORM(X) acDeviceLoadScalarUniform(device, STREAM_DEFAULT, X, X##_DEFAULT_VALUE);
     AC_FOR_USER_REAL_PARAM_TYPES(LOAD_DEFAULT_UNIFORM)
