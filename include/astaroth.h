@@ -283,6 +283,13 @@ AcResult acGridQuit(void);
 AcResult acGridSynchronizeStream(const Stream stream);
 
 /** */
+AcResult acGridLoadScalarUniform(const Stream stream, const AcRealParam param, const AcReal value);
+
+/** */
+AcResult acGridLoadVectorUniform(const Stream stream, const AcReal3Param param,
+                                 const AcReal3 value);
+
+/** */
 AcResult acGridLoadMesh(const Stream stream, const AcMesh host_mesh);
 
 /** */

@@ -1326,6 +1326,47 @@ acGridQuit(void)
 }
 
 AcResult
+acGridLoadScalarUniform(const Stream stream, const AcRealParam param, const AcReal value)
+{
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(stream);
+
+#if AC_DOUBLE_PRECISION == 1
+    MPI_Datatype datatype = MPI_DOUBLE;
+#else
+    MPI_Datatype datatype = MPI_FLOAT;
+#endif
+
+    const int root_proc = 0;
+    AcReal buffer       = value;
+    MPI_Bcast(&buffer, 1, datatype, root_proc, MPI_COMM_WORLD);
+
+    acDeviceLoadScalarUniform(grid.device, stream, param, buffer);
+    return AC_SUCCESS;
+}
+
+/** */
+AcResult
+acGridLoadVectorUniform(const Stream stream, const AcReal3Param param, const AcReal3 value)
+{
+    ERRCHK(grid.initialized);
+    acGridSynchronizeStream(stream);
+
+#if AC_DOUBLE_PRECISION == 1
+    MPI_Datatype datatype = MPI_DOUBLE;
+#else
+    MPI_Datatype datatype = MPI_FLOAT;
+#endif
+
+    const int root_proc = 0;
+    AcReal3 buffer      = value;
+    MPI_Bcast(&buffer, 3, datatype, root_proc, MPI_COMM_WORLD);
+
+    acDeviceLoadVectorUniform(grid.device, stream, param, buffer);
+    return AC_SUCCESS;
+}
+
+AcResult
 acGridLoadMesh(const Stream stream, const AcMesh host_mesh)
 {
     ERRCHK(grid.initialized);
