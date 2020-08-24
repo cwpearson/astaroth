@@ -21,12 +21,19 @@
 #include "errchk.h"
 
 AcResult
-acMeshSet(const AcReal value, AcMesh* mesh)
+acVertexBufferSet(const VertexBufferHandle handle, const AcReal value, AcMesh* mesh)
 {
     const int n = acVertexBufferSize(mesh->info);
+    for (int i = 0; i < n; ++i)
+        mesh->vertex_buffer[handle][i] = value;
+
+    return AC_SUCCESS;
+}
+AcResult
+acMeshSet(const AcReal value, AcMesh* mesh)
+{
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
-        for (int i = 0; i < n; ++i)
-            mesh->vertex_buffer[w][i] = value;
+        acVertexBufferSet(w, value, mesh);
 
     return AC_SUCCESS;
 }

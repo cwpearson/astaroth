@@ -45,6 +45,9 @@ typedef struct {
 AcResult acLoadConfig(const char* config_path, AcMeshInfo* config);
 
 /** */
+AcResult acVertexBufferSet(const VertexBufferHandle handle, const AcReal value, AcMesh* mesh);
+
+/** */
 AcResult acMeshSet(const AcReal value, AcMesh* mesh);
 
 /** */
