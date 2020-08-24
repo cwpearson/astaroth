@@ -26,6 +26,8 @@
  */
 #include "host_forcing.h"
 
+#include "errchk.h"
+
 // #include "math_utils.h"
 #include <cmath>
 using namespace std;
@@ -192,6 +194,7 @@ DEPRECATED_acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force,
                         const AcReal3 ff_hel_re, const AcReal3 ff_hel_im,
                         const AcReal forcing_phase, const AcReal kaver)
 {
+#if AC_MPI_ENABLED
     acGridLoadScalarUniform(STREAM_DEFAULT, AC_forcing_magnitude, forcing_magnitude);
     acGridLoadScalarUniform(STREAM_DEFAULT, AC_forcing_phase, forcing_phase);
 
@@ -208,11 +211,22 @@ DEPRECATED_acForcingVec(const AcReal forcing_magnitude, const AcReal3 k_force,
     acGridLoadScalarUniform(STREAM_DEFAULT, AC_ff_hel_imz, ff_hel_im.z);
 
     acGridLoadScalarUniform(STREAM_DEFAULT, AC_kaver, kaver);
+#else
+    (void)forcing_magnitude;
+    (void)k_force;
+    (void)ff_hel_re;
+    (void)ff_hel_im;
+    (void)k_force;
+    (void)forcing_phase;
+    (void)kaver;
+    ERROR("AC_MPI_ENABLED must be set to use DEPRECATED_acForcingVec");
+#endif // AC_MPI_ENABLED
 }
 
 void
 loadForcingParamsToGrid(const ForcingParams& forcing_params)
 {
+#if AC_MPI_ENABLED
     acGridLoadScalarUniform(STREAM_DEFAULT, AC_forcing_magnitude, forcing_params.magnitude);
     acGridLoadScalarUniform(STREAM_DEFAULT, AC_forcing_phase, forcing_params.phase);
 
@@ -230,6 +244,10 @@ loadForcingParamsToGrid(const ForcingParams& forcing_params)
 
     acGridLoadScalarUniform(STREAM_DEFAULT, AC_kaver, forcing_params.kaver);
     acGridSynchronizeStream(STREAM_ALL);
+#else
+    (void)forcing_params;
+    ERROR("AC_MPI_ENABLED must be set to use loadForcingParamsToGrid");
+#endif // AC_MPI_ENABLED
 }
 
 /** This function would be used in autotesting to update the forcing params of the host
