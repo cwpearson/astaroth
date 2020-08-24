@@ -1398,6 +1398,7 @@ AcResult
 acGridIntegratePipelined(const Stream stream, const AcReal dt)
 {
     ERRCHK(grid.initialized);
+    acGridLoadScalarUniform(stream, AC_dt, dt);
     acGridSynchronizeStream(stream);
 
     const Device device = grid.device;
@@ -1494,7 +1495,7 @@ acGridIntegratePipelined(const Stream stream, const AcReal dt)
         {
             const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = nn;
-            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_16], isubstep, m1, m2, device->vba);
         }
 
         acPackCommData(device, edgex_b0s, &edgex_data);
@@ -1570,32 +1571,32 @@ acGridIntegratePipelined(const Stream stream, const AcReal dt)
         { // Front
             const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
             const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_0], isubstep, m1, m2, device->vba);
         }
         { // Back
             const int3 m1 = (int3){NGHOST, NGHOST, nn.z};
             const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_1], isubstep, m1, m2, device->vba);
         }
         { // Bottom
             const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_2], isubstep, m1, m2, device->vba);
         }
         { // Top
             const int3 m1 = (int3){NGHOST, nn.y, 2 * NGHOST};
             const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_3], isubstep, m1, m2, device->vba);
         }
         { // Left
             const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_4], isubstep, m1, m2, device->vba);
         }
         { // Right
             const int3 m1 = (int3){nn.x, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_5], isubstep, m1, m2, device->vba);
         }
 #endif // MPI_COMPUTE_ENABLED
         acDeviceSwapBuffers(device);
@@ -1626,6 +1627,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     CommData sidexz_data = grid.sidexz_data;
     CommData sideyz_data = grid.sideyz_data;
 
+    acGridLoadScalarUniform(stream, AC_dt, dt);
     acDeviceSynchronizeStream(device, stream);
 
 // Corners
@@ -1733,7 +1735,7 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         {
             const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = nn;
-            acDeviceIntegrateSubstep(device, STREAM_16, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_16], isubstep, m1, m2, device->vba);
         }
 ////////////////////////////////////////////
 #endif // MPI_COMPUTE_ENABLED
@@ -1785,32 +1787,32 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         { // Front
             const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
             const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_0, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_0], isubstep, m1, m2, device->vba);
         }
         { // Back
             const int3 m1 = (int3){NGHOST, NGHOST, nn.z};
             const int3 m2 = m1 + (int3){nn.x, nn.y, NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_1, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_1], isubstep, m1, m2, device->vba);
         }
         { // Bottom
             const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_2, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_2], isubstep, m1, m2, device->vba);
         }
         { // Top
             const int3 m1 = (int3){NGHOST, nn.y, 2 * NGHOST};
             const int3 m2 = m1 + (int3){nn.x, NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_3, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_3], isubstep, m1, m2, device->vba);
         }
         { // Left
             const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_4, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_4], isubstep, m1, m2, device->vba);
         }
         { // Right
             const int3 m1 = (int3){nn.x, 2 * NGHOST, 2 * NGHOST};
             const int3 m2 = m1 + (int3){NGHOST, nn.y - 2 * NGHOST, nn.z - 2 * NGHOST};
-            acDeviceIntegrateSubstep(device, STREAM_5, isubstep, m1, m2, dt);
+            acKernelIntegrateSubstep(device->streams[STREAM_5], isubstep, m1, m2, device->vba);
         }
 #endif // MPI_COMPUTE_ENABLED
         acDeviceSwapBuffers(device);
