@@ -2,6 +2,8 @@
 
 #define LDENSITY (1)
 #define LHYDRO (1)
+// MV: Currenly only magnetic with entropy. Support for isothermal MHD required
+// MV: (matter of switch combination). 
 #define LMAGNETIC (1)
 #define LENTROPY (1)
 #define LTEMPERATURE (0)

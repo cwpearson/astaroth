@@ -39,10 +39,12 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 // NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
 #define LFORCING (1)
 #define LSINK (0)
+#define LBFIELD (1)
 
 // Write all setting info into a separate ascii file. This is done to guarantee
 // that we have the data specifi information in the thing, even though in
@@ -95,6 +97,7 @@ write_mesh_info(const AcMeshInfo* config)
     fclose(infotxt);
 }
 
+
 // This funtion writes a run state into a set of C binaries. 
 static inline void
 save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
@@ -133,6 +136,61 @@ save_mesh(const AcMesh& save_mesh, const int step, const AcReal t_step)
         fclose(save_ptr);
     }
 }
+
+/*
+// This funtion writes a run state into a set of C binaries. 
+static inline void
+save_slice_cut(const AcMesh& save_mesh, const int step, const AcReal t_step)
+{
+    FILE* save_ptr;
+
+    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
+        const size_t n = acVertexBufferSize(save_mesh.info);
+
+        const char* buffername = vtxbuf_names[w];
+        char cstep[11];
+        char bin_filename_xy[80] = "\0";
+        char bin_filename_xz[80] = "\0";
+        char bin_filename_yz[80] = "\0";
+
+        // sprintf(bin_filename, "");
+
+        sprintf(cstep, "%d", step);
+
+        strcat(bin_filename_xy, buffername);
+        strcat(bin_filename_xy, "_");
+        strcat(bin_filename_xy, cstep);
+        strcat(bin_filename_xy, ".mxy");
+
+        strcat(bin_filename_xz, buffername);
+        strcat(bin_filename_xz, "_");
+        strcat(bin_filename_xz, cstep);
+        strcat(bin_filename_xz, ".mxz");
+
+        strcat(bin_filename_yz, buffername);
+        strcat(bin_filename_yz, "_");
+        strcat(bin_filename_yz, cstep);
+        strcat(bin_filename_yz, ".myz");
+
+        printf("Slice files %s, %s, %s, \n", 
+               bin_filename_xy, bin_filename_xz, bin_filename_yz);
+
+        save_ptr = fopen(bin_filename, "wb");
+
+        // Start file with time stamp
+        AcReal write_long_buf = (AcReal)t_step;
+        fwrite(&write_long_buf, sizeof(AcReal), 1, save_ptr);
+        // Grid data
+        for (size_t i = 0; i < n; ++i) {
+            const AcReal point_val     = save_mesh.vertex_buffer[VertexBufferHandle(w)][i];
+            AcReal write_long_buf2 = (AcReal)point_val;
+            fwrite(&write_long_buf2, sizeof(AcReal), 1, save_ptr);
+        }
+        fclose(save_ptr);
+    }
+}
+*/
+
 
 // This funtion reads a run state from a set of C binaries.
 static inline void 
@@ -181,7 +239,7 @@ read_mesh(AcMesh& read_mesh, const int step, AcReal* t_step)
 // appends an ascii file to contain all the result.
 static inline void
 print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* diag_file,
-                  const AcReal sink_mass, const AcReal accreted_mass)
+                  const AcReal sink_mass, const AcReal accreted_mass, int* found_nan)
 {
 
     AcReal buf_rms, buf_max, buf_min;
@@ -200,6 +258,24 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* di
     fprintf(diag_file, "%d %e %e %e %e %e ", step, double(t_step), double(dt), double(buf_min),
             double(buf_rms), double(buf_max));
 
+#if LBFIELD
+    buf_max = acReduceVec(RTYPE_MAX, BFIELDX, BFIELDY, BFIELDZ);
+    buf_min = acReduceVec(RTYPE_MIN, BFIELDX, BFIELDY, BFIELDZ);
+    buf_rms = acReduceVec(RTYPE_RMS, BFIELDX, BFIELDY, BFIELDZ);
+
+    printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, "bb total", double(buf_min),
+           double(buf_rms), double(buf_max));
+    fprintf(diag_file, "%e %e %e ", double(buf_min), double(buf_rms), double(buf_max));
+
+    buf_max = acReduceVecScal(RTYPE_ALFVEN_MAX, BFIELDX, BFIELDY, BFIELDZ, VTXBUF_LNRHO);
+    buf_min = acReduceVecScal(RTYPE_ALFVEN_MIN, BFIELDX, BFIELDY, BFIELDZ, VTXBUF_LNRHO);
+    buf_rms = acReduceVecScal(RTYPE_ALFVEN_RMS, BFIELDX, BFIELDY, BFIELDZ, VTXBUF_LNRHO);
+
+    printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, "vA total", double(buf_min),
+           double(buf_rms), double(buf_max));
+    fprintf(diag_file, "%e %e %e ", double(buf_min), double(buf_rms), double(buf_max));
+#endif
+
     // Calculate rms, min and max from the variables as scalars
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         buf_max = acReduceScal(RTYPE_MAX, VertexBufferHandle(i));
@@ -209,6 +285,11 @@ print_diagnostics(const int step, const AcReal dt, const AcReal t_step, FILE* di
         printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, vtxbuf_names[i],
                double(buf_min), double(buf_rms), double(buf_max));
         fprintf(diag_file, "%e %e %e ", double(buf_min), double(buf_rms), double(buf_max));
+
+        if (isnan(buf_max) || isnan(buf_min) || isnan(buf_rms)) {
+            *found_nan = 1;
+        }
+
     }
 
     if ((sink_mass >= AcReal(0.0)) || (accreted_mass >= AcReal(0.0))) {
@@ -252,11 +333,16 @@ run_simulation(const char* config_path)
     acLoad(*mesh);
 
     FILE* diag_file;
+    int found_nan = 0, found_stop = 0; // Nan or inf finder to give an error signal
     diag_file = fopen("timeseries.ts", "a");
 
     // Generate the title row.
     if (start_step == 0) {
         fprintf(diag_file, "step  t_step  dt  uu_total_min  uu_total_rms  uu_total_max  ");
+#if LBFIELD
+        fprintf(diag_file, "bb_total_min  bb_total_rms  bb_total_max  ");
+        fprintf(diag_file, "vA_total_min  vA_total_rms  vA_total_max  ");
+#endif
         for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
             fprintf(diag_file, "%s_min  %s_rms  %s_max  ", vtxbuf_names[i], vtxbuf_names[i],
                     vtxbuf_names[i]);
@@ -271,9 +357,9 @@ run_simulation(const char* config_path)
 
     if (start_step == 0) {
 #if LSINK
-        print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0);
+        print_diagnostics(0, AcReal(.0), t_step, diag_file, mesh_info.real_params[AC_M_sink_init], 0.0, &found_nan);
 #else
-        print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0);
+        print_diagnostics(0, AcReal(.0), t_step, diag_file, -1.0, -1.0, &found_nan);
 #endif
     }
 
@@ -297,9 +383,17 @@ run_simulation(const char* config_path)
     /* Step the simulation */
     AcReal accreted_mass = 0.0;
     AcReal sink_mass     = 0.0;
+    AcReal dt_typical    = 0.0;
+    int dtcounter = 0;
     for (int i = start_step + 1; i < max_steps; ++i) {
         const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
-        const AcReal dt   = host_timestep(umax, mesh_info);
+#if LBFIELD
+        const AcReal vAmax = acReduceVecScal(RTYPE_ALFVEN_MAX, BFIELDX, BFIELDY, BFIELDZ, VTXBUF_LNRHO);
+        const AcReal uref  = max(umax, vAmax); 
+        const AcReal dt   = host_timestep(uref, vAmax, mesh_info);
+#else
+        const AcReal dt   = host_timestep(umax, 0.0l, mesh_info);
+#endif
 
 #if LSINK
 
@@ -332,7 +426,11 @@ run_simulation(const char* config_path)
 
         t_step += dt;
 
-        
+        /* Get the sense of a typical timestep */
+        if (i < start_step + 100) {
+           dt_typical = dt;
+        }        
+
 
         /* Save the simulation state and print diagnostics */
         if ((i % save_steps) == 0) {
@@ -343,7 +441,7 @@ run_simulation(const char* config_path)
                 timeseries.ts.
             */
 
-            print_diagnostics(i, dt, t_step, diag_file, sink_mass, accreted_mass);
+            print_diagnostics(i, dt, t_step, diag_file, sink_mass, accreted_mass, &found_nan);
 #if LSINK
             printf("sink mass is: %.15e \n", double(sink_mass));
             printf("accreted mass is: %.15e \n", double(accreted_mass));
@@ -385,6 +483,45 @@ run_simulation(const char* config_path)
                 break;
                 
             }
+        }
+
+        // End loop if dt is too low
+        if (dt < dt_typical/AcReal(1e5)) {
+            if (dtcounter > 10) {
+                printf("dt = %e TOO LOW! Ending run at t = %#e \n", double(dt), double(t_step));
+                acBoundcondStep();
+                acStore(mesh);
+                save_mesh(*mesh, i, t_step);
+                break;
+            } else {
+                dtcounter += 1;
+            }
+        } else {
+            dtcounter = 0;
+        }
+
+        // End loop if nan is found
+        if (found_nan > 0) {
+            printf("Found nan at t = %e \n", double(t_step));
+            acBoundcondStep();
+            acStore(mesh);
+            save_mesh(*mesh, i, t_step);
+            break;
+        }
+
+        // End loop if STOP file is found
+        if( access("STOP", F_OK ) != -1 ) {
+            found_stop = 1;
+        } else {
+            found_stop = 0;
+        }       
+ 
+        if (found_stop == 1) {
+            printf("Found STOP file at t = %e \n", double(t_step));
+            acBoundcondStep();
+            acStore(mesh);
+            save_mesh(*mesh, i, t_step);
+            break;
         }
 
     }
