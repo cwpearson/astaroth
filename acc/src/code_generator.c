@@ -736,6 +736,9 @@ external acdevicesynchronizestream
     fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_MIN");
     fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_RMS");
     fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_RMS_EXP");
+    fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_ALFVEN_MAX");
+    fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_ALFVEN_MIN");
+    fprintf(DSLHEADER, "FUNC(%s)\\\n", "RTYPE_ALFVEN_RMS");
     fprintf(DSLHEADER, "FUNC(%s)\n", "RTYPE_SUM");
 
     size_t counter = 0;
@@ -746,6 +749,12 @@ external acdevicesynchronizestream
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS = %lu\n", counter);
     ++counter;
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_RMS_EXP = %lu\n", counter);
+    ++counter;
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_ALFVEN_MAX = %lu\n", counter);
+    ++counter;
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_ALFVEN_MIN = %lu\n", counter);
+    ++counter;
+    fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_ALFVEN_RMS = %lu\n", counter);
     ++counter;
     fprintf(FHEADER, "integer(c_int), parameter :: RTYPE_SUM = %lu\n", counter);
     ++counter;
