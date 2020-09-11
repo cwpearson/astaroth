@@ -126,6 +126,15 @@ acReduceVec(const ReductionType rtype, const VertexBufferHandle a, const VertexB
     return result;
 }
 
+AcReal
+acReduceVecScal(const ReductionType rtype, const VertexBufferHandle a, const VertexBufferHandle b,
+            const VertexBufferHandle c, const VertexBufferHandle d)
+{
+    AcReal result;
+    acNodeReduceVecScal(nodes[0], STREAM_DEFAULT, rtype, a, b, c, d, &result);
+    return result;
+}
+
 AcResult
 acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh)
 {

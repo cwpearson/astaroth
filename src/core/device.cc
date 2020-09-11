@@ -474,6 +474,28 @@ acDeviceReduceVec(const Device device, const Stream stream, const ReductionType 
     return AC_SUCCESS;
 }
 
+AcResult
+acDeviceReduceVecScal(const Device device, const Stream stream, const ReductionType rtype,
+                  const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                  const VertexBufferHandle vtxbuf2, const VertexBufferHandle vtxbuf3, AcReal* result)
+{
+    cudaSetDevice(device->id);
+
+    const int3 start = (int3){device->local_config.int_params[AC_nx_min],
+                              device->local_config.int_params[AC_ny_min],
+                              device->local_config.int_params[AC_nz_min]};
+
+    const int3 end = (int3){device->local_config.int_params[AC_nx_max],
+                            device->local_config.int_params[AC_ny_max],
+                            device->local_config.int_params[AC_nz_max]};
+
+    *result = acKernelReduceVecScal(device->streams[stream], rtype, start, end, device->vba.in[vtxbuf0],
+                                    device->vba.in[vtxbuf1], device->vba.in[vtxbuf2], device->vba.in[vtxbuf3],
+                                    device->reduce_scratchpad, device->reduce_result);
+    return AC_SUCCESS;
+}
+
+
 #if AC_MPI_ENABLED
 /**
 Quick overview of the MPI implementation:
@@ -2047,4 +2069,7 @@ acGridReduceVec(const Stream stream, const ReductionType rtype, const VertexBuff
 
     return acMPIReduceScal(local_result, rtype, result);
 }
+
+//MV: for MPI we will need acGridReduceVecScal() to get Alfven speeds etc. TODO 
+
 #endif // AC_MPI_ENABLED

@@ -797,13 +797,13 @@ simple_final_reduce_scal(const Node node, const ReductionType& rtype, const AcRe
 {
     AcReal res = results[0];
     for (int i = 1; i < n; ++i) {
-        if (rtype == RTYPE_MAX) {
+        if (rtype == RTYPE_MAX || rtype == RTYPE_ALFVEN_MAX) {
             res = max(res, results[i]);
         }
-        else if (rtype == RTYPE_MIN) {
+        else if (rtype == RTYPE_MIN || rtype == RTYPE_ALFVEN_MIN) {
             res = min(res, results[i]);
         }
-        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP || rtype == RTYPE_SUM) {
+        else if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP || rtype == RTYPE_SUM || rtype == RTYPE_ALFVEN_RMS) {
             res = sum(res, results[i]);
         }
         else {
@@ -811,7 +811,7 @@ simple_final_reduce_scal(const Node node, const ReductionType& rtype, const AcRe
         }
     }
 
-    if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP) {
+    if (rtype == RTYPE_RMS || rtype == RTYPE_RMS_EXP || rtype == RTYPE_ALFVEN_RMS) {
         const AcReal inv_n = AcReal(1.) / (node->grid.n.x * node->grid.n.y * node->grid.n.z);
         res                = sqrt(inv_n * res);
     }
@@ -850,3 +850,21 @@ acNodeReduceVec(const Node node, const Stream stream, const ReductionType rtype,
     *result = simple_final_reduce_scal(node, rtype, results, node->num_devices);
     return AC_SUCCESS;
 }
+
+AcResult
+acNodeReduceVecScal(const Node node, const Stream stream, const ReductionType rtype,
+                const VertexBufferHandle a, const VertexBufferHandle b, const VertexBufferHandle c,
+                const VertexBufferHandle d, AcReal* result)
+{
+    acNodeSynchronizeStream(node, STREAM_ALL);
+
+    AcReal results[node->num_devices];
+    // #pragma omp parallel for
+    for (int i = 0; i < node->num_devices; ++i) {
+        acDeviceReduceVecScal(node->devices[i], stream, rtype, a, b, c, d, &results[i]);
+    }
+
+    *result = simple_final_reduce_scal(node, rtype, results, node->num_devices);
+    return AC_SUCCESS;
+}
+
