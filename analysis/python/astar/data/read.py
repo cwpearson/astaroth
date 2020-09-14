@@ -20,6 +20,7 @@
 # This module is for reading data.
 
 import numpy as np
+import os
 
 #Optional YT interface
 try:
