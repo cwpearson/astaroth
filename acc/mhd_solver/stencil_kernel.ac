@@ -10,7 +10,7 @@
 #define LFORCING (0)
 #define LUPWD (0)
 #define LSINK (0)
-#define LBFIELD (1)
+#define LBFIELD (0)
 
 #define AC_THERMAL_CONDUCTIVITY (0.001) // TODO: make an actual config parameter
 #define H_CONST (0)                     // TODO: make an actual config parameter
