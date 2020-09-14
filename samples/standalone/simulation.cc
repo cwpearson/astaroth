@@ -42,7 +42,7 @@
 #include <unistd.h>
 
 // NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
-#define LFORCING (1)
+#define LFORCING (0)
 #define LSINK (0)
 #define LBFIELD (1)
 
