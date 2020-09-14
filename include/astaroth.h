@@ -238,6 +238,11 @@ AcReal acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuf_h
 AcReal acReduceVec(const ReductionType rtype, const VertexBufferHandle a,
                    const VertexBufferHandle b, const VertexBufferHandle c);
 
+/** Does a reduction for an operation which requires a vector and a scalar with vertex buffers 
+ *  * where the vector components are (a, b, c) and scalr is (d) */
+AcReal acReduceVecScal(const ReductionType rtype, const VertexBufferHandle a,
+                       const VertexBufferHandle b, const VertexBufferHandle c, const VertexBufferHandle d);
+
 /** Stores a subset of the mesh stored across the devices visible to the caller back to host memory.
  */
 AcResult acStoreWithOffset(const int3 dst, const size_t num_vertices, AcMesh* host_mesh);
@@ -436,6 +441,11 @@ AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionT
 AcResult acNodeReduceVec(const Node node, const Stream stream_type, const ReductionType rtype,
                          const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
                          const VertexBufferHandle vtxbuf2, AcReal* result);
+/** */
+AcResult acNodeReduceVecScal(const Node node, const Stream stream_type, const ReductionType rtype,
+                             const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                             const VertexBufferHandle vtxbuf2, const VertexBufferHandle vtxbuf3, AcReal* result);
+
 
 /*
  * =============================================================================
@@ -559,6 +569,10 @@ AcResult acDeviceReduceScal(const Device device, const Stream stream, const Redu
 AcResult acDeviceReduceVec(const Device device, const Stream stream_type, const ReductionType rtype,
                            const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
                            const VertexBufferHandle vtxbuf2, AcReal* result);
+/** */
+AcResult acDeviceReduceVecScal(const Device device, const Stream stream_type, const ReductionType rtype,
+                               const VertexBufferHandle vtxbuf0, const VertexBufferHandle vtxbuf1,
+                               const VertexBufferHandle vtxbuf2, const VertexBufferHandle vtxbuf3, AcReal* result);
 /** */
 AcResult acDeviceRunMPITest(void);
 

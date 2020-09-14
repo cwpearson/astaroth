@@ -2,12 +2,15 @@
 
 #define LDENSITY (1)
 #define LHYDRO (1)
+// MV: Currenly only magnetic with entropy. Support for isothermal MHD required
+// MV: (matter of switch combination). 
 #define LMAGNETIC (1)
 #define LENTROPY (1)
 #define LTEMPERATURE (0)
 #define LFORCING (0)
 #define LUPWD (0)
 #define LSINK (0)
+#define LBFIELD (0)
 
 #define AC_THERMAL_CONDUCTIVITY (0.001) // TODO: make an actual config parameter
 #define H_CONST (0)                     // TODO: make an actual config parameter
@@ -74,6 +77,9 @@ uniform Scalar AC_ampl_uu;
 uniform Scalar AC_angl_uu;
 uniform Scalar AC_lnrho_edge;
 uniform Scalar AC_lnrho_out;
+uniform Scalar AC_ampl_aa;
+uniform Scalar AC_init_k_wave;
+uniform Scalar AC_init_sigma_hel;
 //  Forcing parameters. User configured.
 uniform Scalar AC_forcing_magnitude;
 uniform Scalar AC_relhel;
@@ -131,6 +137,12 @@ uniform ScalarField VTXBUF_LNRHO;
 
 #if LSINK
 uniform ScalarField VTXBUF_ACCRETION;
+#endif
+
+#if LBFIELD
+uniform ScalarField BFIELDX;
+uniform ScalarField BFIELDY;
+uniform ScalarField BFIELDZ;
 #endif
 
 #if LUPWD
@@ -449,11 +461,14 @@ induction(in VectorField uu, in VectorField aa)
     // yes this actually works. See pg.28 in arXiv:astro-ph/0109497)
     // u cross B - AC_eta * AC_mu0 * (AC_mu0^-1 * [- laplace A + grad div A ])
     const Vector B        = curl(aa);
-    const Vector grad_div = gradient_of_divergence(aa);
+    //MV: Due to gauge freedom we can reduce the gradient of scalar (divergence) from the equation
+    //const Vector grad_div = gradient_of_divergence(aa);
     const Vector lap      = laplace_vec(aa);
 
     // Note, AC_mu0 is cancelled out
-    const Vector ind = cross(value(uu), B) - AC_eta * (grad_div - lap);
+    //MV: Due to gauge freedom we can reduce the gradient of scalar (divergence) from the equation
+    //const Vector ind = cross(value(uu), B) - AC_eta * (grad_div - lap);
+    const Vector ind = cross(value(uu), B) + AC_eta * lap;
 
     return ind;
 }
@@ -626,6 +641,15 @@ forcing(int3 globalVertexIdx, Scalar dt)
 }
 #endif // LFORCING
 
+#if LBFIELD
+// Calculate the B-field for VTXBUFF
+Device Vector
+get_bfield(in VectorField aa)
+{
+    return curl(aa);
+}
+#endif
+
 // Declare input and output arrays using locations specified in the
 // array enum in astaroth.h
 in ScalarField lnrho(VTXBUF_LNRHO);
@@ -653,6 +677,11 @@ out ScalarField out_tt(VTXBUF_TEMPERATURE);
 in ScalarField accretion(VTXBUF_ACCRETION);
 out ScalarField out_accretion(VTXBUF_ACCRETION);
 #endif
+
+#if LBFIELD
+out VectorField b_out(BFIELDX, BFIELDY, BFIELDZ);
+#endif
+
 
 Kernel void
 solve()
@@ -688,4 +717,11 @@ solve()
         out_accretion = out_accretion * AC_dsx * AC_dsy * AC_dsz; // unit is now mass!
     }
 #endif
+
+#if LBFIELD
+    if (step_number == 2) {
+        b_out = get_bfield(aa); 
+    }
+#endif 
+
 }

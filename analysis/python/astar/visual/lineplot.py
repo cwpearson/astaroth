@@ -39,7 +39,7 @@ def plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3):
 def plot_ts(ts, isotherm=False, show_all=False, lnrho=False, uutot=False, 
             uux=False, uuy=False, uuz=False, 
             aax=False, aay=False, aaz=False, 
-            ss=False, acc=False, sink=False, rho=False):
+            ss=False, acc=False, sink=False, rho=False, bb=False, alfven=False):
 
     if show_all:
         lnrho=True
@@ -51,6 +51,8 @@ def plot_ts(ts, isotherm=False, show_all=False, lnrho=False, uutot=False,
         ss=True
         acc=True
         sink=True
+        bb=True
+        alfven=True
 
     if isotherm:
         lnrho=True
@@ -142,6 +144,44 @@ def plot_ts(ts, isotherm=False, show_all=False, lnrho=False, uutot=False,
         yaxis2 = 'ss_min'
         yaxis3 = 'ss_max'
         plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+    if bb:   
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'bbtot_rms'
+        yaxis2 = 'bbtot_min'
+        yaxis3 = 'bbtot_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'bbx_rms'
+        yaxis2 = 'bbx_min'
+        yaxis3 = 'bbx_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'bby_rms'
+        yaxis2 = 'bby_min'
+        yaxis3 = 'bby_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'bbz_rms'
+        yaxis2 = 'bbz_min'
+        yaxis3 = 'bbz_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
+    if alfven:
+        plt.figure()
+        xaxis = 't_step'
+        yaxis1 = 'vAtot_rms'
+        yaxis2 = 'vAtot_min'
+        yaxis3 = 'vAtot_max'
+        plot_min_man_rms(ts, xaxis, yaxis1, yaxis2, yaxis3)
+
 
     if acc:   
         plt.figure()

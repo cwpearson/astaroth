@@ -72,6 +72,12 @@ AcReal acKernelReduceVec(const cudaStream_t stream, const ReductionType rtype, c
                          const int3 end, const AcReal* vtxbuf0, const AcReal* vtxbuf1,
                          const AcReal* vtxbuf2, AcReal* scratchpad, AcReal* reduce_result);
 
+/** */
+AcReal acKernelReduceVecScal(const cudaStream_t stream, const ReductionType rtype, const int3 start,
+                             const int3 end, const AcReal* vtxbuf0, const AcReal* vtxbuf1,
+                             const AcReal* vtxbuf2, const AcReal* vtxbuf3, AcReal* scratchpad, AcReal* reduce_result);
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

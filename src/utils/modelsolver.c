@@ -702,17 +702,19 @@ momentum(const VectorData uu, const ScalarData lnrho
 static inline Vector
 induction(const VectorData uu, const VectorData aa)
 {
-    Vector ind;
     // Note: We do (-nabla^2 A + nabla(nabla dot A)) instead of (nabla x (nabla
     // x A)) in order to avoid taking the first derivative twice (did the math,
     // yes this actually works. See pg.28 in arXiv:astro-ph/0109497)
-    // u cross B - ETA * mu0 * (mu0^-1 * [- laplace A + grad div A ])
+    // u cross B - AC_eta * AC_mu0 * (AC_mu0^-1 * [- laplace A + grad div A ])
     const Vector B        = curl(aa);
-    const Vector grad_div = gradient_of_divergence(aa);
+    //MV: Due to gauge freedom we can reduce the gradient of scalar (divergence) from the equation
+    //const Vector grad_div = gradient_of_divergence(aa);
     const Vector lap      = laplace_vec(aa);
 
-    // Note, mu0 is cancelled out
-    ind = cross(vecvalue(uu), B) - getReal(AC_eta) * (grad_div - lap);
+    // Note, AC_mu0 is cancelled out
+    //MV: Due to gauge freedom we can reduce the gradient of scalar (divergence) from the equation
+    //const Vector ind = cross(value(uu), B) - getReal(AC_eta) * (grad_div - lap);
+    const Vector ind = cross(vecvalue(uu), B) + getReal(AC_eta) * lap;
 
     return ind;
 }
