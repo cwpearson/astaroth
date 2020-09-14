@@ -612,3 +612,16 @@ Uniforms are as fast as compile-time constants as long as
 1. The halting condition of a tight loop does not depend on an uniform or a variable, as this would prevent unrolling of the loop during compile-time.
 2. Uniforms are not multiplied with each other. The result should be stored in an auxiliary uniform instead. For example, the result of `nx * ny` should be stored in a new `uniform nxy`
 3. At least 32 neighboring streams in the x-axis access the same `uniform`. That is, the vertices at vertexIdx.x = i... i + 32 should access the same `uniform` where i is a multiple of 32.
+
+## Notes on autotesting
+
+We have model implementations in `src/utils/modelreduce.c` and `src/utils/modelsolver.c` which contain CPU versions of the GPU DSL/reduction code. However, these files are primarily meant for internal testing (finding parallelism bugs or issues with DSL translation) and show only that the GPU and CPU results match. There are significant benefits in doing the checks like this, notably the flexibility of being able to check the results with arbitrary input parameters, but the drawback is that these tests do not show whether the CPU result is also 'correct'.
+
+For testing
+
+* Correctness & implementation-specific: must create your own test
+* Correctness & generic: we must create an additional testing module for Astaroth that tests 'correctness'
+* CPU-GPU equivalency & generic: add CPU implementation to `src/utils/modelreduce.c`
+* CPU-GPU equivalency & implementation-specific: add CPU implementation to `src/utils/modelsolver.c` or then create your own test
+
+The model implementations are available for all projects that use the `astaroth_utils.h` interface. Used in f.ex. `samples/mpitest`. Note that standalone uses its own (deprecated) autotests in `standalone/model`.
