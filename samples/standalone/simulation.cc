@@ -44,7 +44,11 @@
 // NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
 #define LFORCING (0)
 #define LSINK (0)
+#ifdef BFIELDX
 #define LBFIELD (1)
+#else
+#define LBFIELD (0)
+#endif
 
 // Write all setting info into a separate ascii file. This is done to guarantee
 // that we have the data specifi information in the thing, even though in
