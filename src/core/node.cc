@@ -783,10 +783,33 @@ acNodePeriodicBoundcondStep(const Node node, const Stream stream,
 }
 
 AcResult
+acNodeGeneralBoundcondStep(const Node node, const Stream stream,
+                           const VertexBufferHandle vtxbuf_handle)
+{
+    local_boundcondstep(node, stream, vtxbuf_handle);
+    acNodeSynchronizeVertexBuffer(node, stream, vtxbuf_handle);
+
+    //MV: assume that global step communication is handles by acNodePeriodicBoundcondStep as above. 
+    //global_boundcondstep(node, stream, vtxbuf_handle);
+  
+
+    return AC_SUCCESS;
+}
+
+AcResult
 acNodePeriodicBoundconds(const Node node, const Stream stream)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acNodePeriodicBoundcondStep(node, stream, (VertexBufferHandle)i);
+    }
+    return AC_SUCCESS;
+}
+
+AcResult
+acNodeGeneralBoundconds(const Node node, const Stream stream)
+{
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acNodeGeneralBoundcondStep(node, stream, (VertexBufferHandle)i);
     }
     return AC_SUCCESS;
 }
