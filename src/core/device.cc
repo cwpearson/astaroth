@@ -436,19 +436,19 @@ acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 
 AcResult
 acDeviceGeneralBoundcondStep(const Device device, const Stream stream,
                               const VertexBufferHandle vtxbuf_handle, const int3 start,
-                              const int3 end)
+                              const int3 end, const int bound_direction)
 {
     cudaSetDevice(device->id);
     return acKernelGeneralBoundconds(device->streams[stream], start, end,
-                                     device->vba.in[vtxbuf_handle]);
+                                     device->vba.in[vtxbuf_handle], bound_direction);
 }
 
 AcResult
 acDeviceGeneralBoundconds(const Device device, const Stream stream, const int3 start,
-                           const int3 end)
+                           const int3 end, const int bound_direction)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        acDeviceGeneralBoundcondStep(device, stream, (VertexBufferHandle)i, start, end);
+        acDeviceGeneralBoundcondStep(device, stream, (VertexBufferHandle)i, start, end, bound_direction);
     }
     return AC_SUCCESS;
 }
@@ -1844,7 +1844,8 @@ acGridIntegrate(const Stream stream, const AcReal dt)
             (pid3d.y == 0) || (pid3d.y == decomposition.y - 1) ||
             (pid3d.z == 0) || (pid3d.z == decomposition.z - 1) ||)
         {
-            acDeviceGeneralBoundconds(device, stream, m1, m2);
+            //TODO get bound_direction
+            acDeviceGeneralBoundconds(device, stream, m1, m2, bound_direction);
         }
         acGridSynchronizeStream(stream);
 

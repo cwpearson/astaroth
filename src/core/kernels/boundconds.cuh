@@ -60,3 +60,20 @@ acKernelPeriodicBoundconds(const cudaStream_t stream, const int3 start, const in
     ERRCHK_CUDA_KERNEL();
     return AC_SUCCESS;
 }
+
+AcResult acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
+                                    AcReal* vtxbuf, const int bound_direction);
+{
+    const dim3 tpb(8, 2, 8);
+    const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),
+                   (unsigned int)ceil((end.y - start.y) / (float)tpb.y),
+                   (unsigned int)ceil((end.z - start.z) / (float)tpb.z));
+
+    if (DCONST(AC_bype) == BOUNDCOND_SYM) 
+    {
+        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bound_direction);
+        ERRCHK_CUDA_KERNEL();
+    }
+
+    return AC_SUCCESS;
+}
