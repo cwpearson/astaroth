@@ -1840,12 +1840,24 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         const int3 m2 = nn;
         const int3 pid3d = getPid3D(pid, decomposition);
         // If we are are a boundary element
-        if ((pid3d.x == 0) || (pid3d.x == decomposition.x - 1) || 
-            (pid3d.y == 0) || (pid3d.y == decomposition.y - 1) ||
-            (pid3d.z == 0) || (pid3d.z == decomposition.z - 1) ||)
+        int3 bindex = (int3){0, 0, 0};
+
+        // 1 is top edge, 2 bottom edge, 3 both edges, 0 is no boundary
+        if (pid3d.x == 0) { bindex.x = 1; }
+        else if (pid3d.x == decomposition.x - 1) { bindex.x = 2; }
+        else if ((pid3d.x == 0) && (pid3d.x == decomposition.x - 1)) { bindex.x = 3; }
+
+        if (pid3d.y == 0) { bindex.y = 1; }
+        else if (pid3d.y == decomposition.y - 1) { bindex.y = 2; }
+        else if ((pid3d.y == 0) && (pid3d.y == decomposition.y - 1)) { bindex.y = 3; }
+
+        if       (pid3d.z == 0)                                      { bindex.z = 1; }
+        else if                    (pid3d.z == decomposition.z - 1)  { bindex.z = 2; }
+        else if ((pid3d.z == 0) && (pid3d.z == decomposition.z - 1)) { bindex.z = 3; }
+
         {
-            //TODO get bound_direction
-            acDeviceGeneralBoundconds(device, stream, m1, m2, bound_direction);
+            //TODO get bound_direction -> bindex
+            acDeviceGeneralBoundconds(device, stream, m1, m2, bindex);
         }
         acGridSynchronizeStream(stream);
 
