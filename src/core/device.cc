@@ -436,19 +436,19 @@ acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 
 AcResult
 acDeviceGeneralBoundcondStep(const Device device, const Stream stream,
                               const VertexBufferHandle vtxbuf_handle, const int3 start,
-                              const int3 end, const int bound_direction)
+                              const int3 end, const int3 bindex)
 {
     cudaSetDevice(device->id);
     return acKernelGeneralBoundconds(device->streams[stream], start, end,
-                                     device->vba.in[vtxbuf_handle], bound_direction);
+                                     device->vba.in[vtxbuf_handle], bindex);
 }
 
 AcResult
 acDeviceGeneralBoundconds(const Device device, const Stream stream, const int3 start,
-                           const int3 end, const int bound_direction)
+                           const int3 end, const int3 bindex)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        acDeviceGeneralBoundcondStep(device, stream, (VertexBufferHandle)i, start, end, bound_direction);
+        acDeviceGeneralBoundcondStep(device, stream, (VertexBufferHandle)i, start, end, bindex);
     }
     return AC_SUCCESS;
 }
