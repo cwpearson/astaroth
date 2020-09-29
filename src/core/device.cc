@@ -1435,6 +1435,41 @@ acGridStoreMesh(const Stream stream, AcMesh* host_mesh)
     return AC_SUCCESS;
 }
 
+AcResult
+acGridGeneralBoundconds(const Device device, const Stream stream)
+{
+    // Non-periodic Boundary conditions 
+
+    // Set outer boudaries after substep computation. 
+    const int3 m1 = (int3){0, 0, 0};
+    const int3 m2 = grid.nn;
+    const int3 pid3d = getPid3D(pid, grid.decomposition);
+    // If we are are a boundary element
+    int3 bindex = (int3){0, 0, 0};
+
+    // Check if there are active boundary condition edges.
+    // 0 is no boundary, 1 both edges, 2 is top edge, 3 bottom edge
+    if      ((pid3d.x == 0) && (pid3d.x == decomposition.x - 1)) { bindex.x = 1; }
+    else if  (pid3d.x == 0)                                      { bindex.x = 2; }
+    else if                    (pid3d.x == decomposition.x - 1)  { bindex.x = 3; }
+
+    if      ((pid3d.y == 0) && (pid3d.y == decomposition.y - 1)) { bindex.y = 1; }
+    else if  (pid3d.y == 0)                                      { bindex.y = 2; }
+    else if                    (pid3d.y == decomposition.y - 1)  { bindex.y = 3; }
+
+    if      ((pid3d.z == 0) && (pid3d.z == decomposition.z - 1)) { bindex.z = 1; }
+    else if  (pid3d.z == 0)                                      { bindex.z = 2; }
+    else if                    (pid3d.z == decomposition.z - 1)  { bindex.z = 3; }
+
+    
+    if (bindex.x != 1) && (bindex.y != 1) && (bindex.z != 1) {
+        acDeviceGeneralBoundconds(device, stream, m1, m2, bindex);
+    }
+    acGridSynchronizeStream(stream);
+
+    return AC_SUCCESS;
+}
+
 /*
 // Unused
 AcResult
@@ -1834,32 +1869,8 @@ acGridIntegrate(const Stream stream, const AcReal dt)
         acSyncCommData(sideyz_data);
 #endif // MPI_COMM_ENABLED
 
-
-        // Set outer boudaries after substep computation. 
-        const int3 m1 = (int3){0, 0, 0};
-        const int3 m2 = nn;
-        const int3 pid3d = getPid3D(pid, decomposition);
-        // If we are are a boundary element
-        int3 bindex = (int3){0, 0, 0};
-
-        // 1 is top edge, 2 bottom edge, 3 both edges, 0 is no boundary
-        if (pid3d.x == 0) { bindex.x = 1; }
-        else if (pid3d.x == decomposition.x - 1) { bindex.x = 2; }
-        else if ((pid3d.x == 0) && (pid3d.x == decomposition.x - 1)) { bindex.x = 3; }
-
-        if (pid3d.y == 0) { bindex.y = 1; }
-        else if (pid3d.y == decomposition.y - 1) { bindex.y = 2; }
-        else if ((pid3d.y == 0) && (pid3d.y == decomposition.y - 1)) { bindex.y = 3; }
-
-        if       (pid3d.z == 0)                                      { bindex.z = 1; }
-        else if                    (pid3d.z == decomposition.z - 1)  { bindex.z = 2; }
-        else if ((pid3d.z == 0) && (pid3d.z == decomposition.z - 1)) { bindex.z = 3; }
-
-        {
-            //TODO get bound_direction -> bindex
-            acDeviceGeneralBoundconds(device, stream, m1, m2, bindex);
-        }
-        acGridSynchronizeStream(stream);
+        // Invoke outer edge boundary conditions. 
+        acGridGeneralBoundconds(device, stream)
 
 #if MPI_COMPUTE_ENABLED
         { // Front
