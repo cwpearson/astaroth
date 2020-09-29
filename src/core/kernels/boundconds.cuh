@@ -1,6 +1,46 @@
 #pragma once
 
 static __global__ void
+kernel_symmetric_boundconds(const int3 start, const int3 end, AcReal* vtxbuf, const int3 bindex)
+{
+    const int i_dst = start.x + threadIdx.x + blockIdx.x * blockDim.x;
+    const int j_dst = start.y + threadIdx.y + blockIdx.y * blockDim.y;
+    const int k_dst = start.z + threadIdx.z + blockIdx.z * blockDim.z;
+
+    // If within the start-end range (this allows threadblock dims that are not
+    // divisible by end - start)
+    if (i_dst >= end.x || j_dst >= end.y || k_dst >= end.z)
+        return;
+
+    // If destination index is inside the computational domain, return since
+    // the boundary conditions are only applied to the ghost zones
+    if (i_dst >= DCONST(AC_nx_min) && i_dst < DCONST(AC_nx_max) && j_dst >= DCONST(AC_ny_min) &&
+        j_dst < DCONST(AC_ny_max) && k_dst >= DCONST(AC_nz_min) && k_dst < DCONST(AC_nz_max))
+        return;
+
+    // Find the source index
+    // Map to nx, ny, nz coordinates
+    int i_src, j_src, k_src;
+    int bsize = STENCIL_ORDER/(int) 2;
+
+    if (bindex.x == 1)
+    {
+        if (i_dst < bsize) 
+        {
+            i_src = 2*bsize - i_dst
+        } else if (i_dst >= DCONST(AC_nx_min) - bsize) 
+        {
+            i_src = i_dst - 2*bsize BRAIN NOT WORKING CONTINUE TOMORROW
+        }
+    } 
+
+    const int src_idx = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
+    const int dst_idx = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
+    vtxbuf[dst_idx]   = vtxbuf[src_idx];
+}
+
+
+static __global__ void
 kernel_periodic_boundconds(const int3 start, const int3 end, AcReal* vtxbuf)
 {
     const int i_dst = start.x + threadIdx.x + blockIdx.x * blockDim.x;
@@ -61,8 +101,9 @@ acKernelPeriodicBoundconds(const cudaStream_t stream, const int3 start, const in
     return AC_SUCCESS;
 }
 
-AcResult acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
-                                    AcReal* vtxbuf, const int bound_direction);
+AcResult 
+acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
+                          AcReal* vtxbuf, const int bindex);
 {
     const dim3 tpb(8, 2, 8);
     const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),
@@ -71,7 +112,7 @@ AcResult acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, 
 
     if (DCONST(AC_bype) == BOUNDCOND_SYM) 
     {
-        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bound_direction);
+        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex);
         ERRCHK_CUDA_KERNEL();
     }
 
