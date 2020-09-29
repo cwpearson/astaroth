@@ -1439,11 +1439,17 @@ AcResult
 acGridGeneralBoundconds(const Device device, const Stream stream)
 {
     // Non-periodic Boundary conditions 
+    // Check the position in MPI frame 
+    int nprocs, pid;
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    const uint3_64 decomposition = decompose(nprocs);
+    const int3 pid3d             = getPid3D(pid, decomposition);
 
     // Set outer boudaries after substep computation. 
     const int3 m1 = (int3){0, 0, 0};
     const int3 m2 = grid.nn;
-    const int3 pid3d = getPid3D(pid, grid.decomposition);
+    const int3 pid3d = getPid3D(pid, decomposition);
     // If we are are a boundary element
     int3 bindex = (int3){0, 0, 0};
 
@@ -1708,12 +1714,6 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     acGridLoadScalarUniform(stream, AC_dt, dt);
     acDeviceSynchronizeStream(device, stream);
 
-    // Check the position in MPI frame 
-    int nprocs, pid;
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    const uint3_64 decomposition = decompose(nprocs);
-    const int3 pid3d             = getPid3D(pid, decomposition);
 
 // Corners
 #if MPI_INCL_CORNERS
