@@ -1,7 +1,7 @@
 #pragma once
 
 static __global__ void
-kernel_symmetric_boundconds(const int3 start, const int3 end, AcReal* vtxbuf, const int3 bindex)
+kernel_symmetric_boundconds(const int3 start, const int3 end, AcReal* vtxbuf, const int3 bindex, const int sign)
 {
     const int i_dst = start.x + threadIdx.x + blockIdx.x * blockDim.x;
     const int j_dst = start.y + threadIdx.y + blockIdx.y * blockDim.y;
@@ -20,23 +20,54 @@ kernel_symmetric_boundconds(const int3 start, const int3 end, AcReal* vtxbuf, co
 
     // Find the source index
     // Map to nx, ny, nz coordinates
-    int i_src, j_src, k_src;
+    int i_src, j_src, k_src, boundloc;
     int bsize = STENCIL_ORDER/(int) 2;
 
-    if (bindex.x == 1)
+    if (bindex.x != 0)
     {
-        if (i_dst < bsize) 
+        // Pick up the mirroring value.
+        if ((i_dst < bsize) && ((bindex.x == 3) || (bindex.x ==1)))
         {
-            i_src = 2*bsize - i_dst
-        } else if (i_dst >= DCONST(AC_nx_min) - bsize) 
+            boundloc = bsize;         //Location of central border point. 
+            i_src = 2*boundloc - i_dst;
+        } else if ((i_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.x == 2) || (bindex.x ==1)))
         {
-            i_src = i_dst - 2*bsize BRAIN NOT WORKING CONTINUE TOMORROW
+            boundloc = DCONST(AC_nx_min) - bsize - 1; //Location of central border point. 
+            i_src = 2*boundloc - i_dst;
+        }
+    } 
+    if (bindex.y != 0)
+    {
+        // Pick up the mirroring value.
+        if ((j_dst < bsize) && ((bindex.y == 3) || (bindex.y ==1)))
+        {
+            boundloc = bsize;         //Location of central border point. 
+            j_src = 2*boundloc - j_dst;
+        } else if ((j_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.y == 2) || (bindex.y ==1)))
+        {
+            boundloc = DCONST(AC_ny_min) - bsize - 1; //Location of central border point. 
+            i_src = 2*boundloc - j_dst;
+        }
+    } 
+    if (bindex.z != 0)
+    {
+        // Pick up the mirroring value.
+        if ((k_dst < bsize) && ((bindex.z == 3) || (bindex.z ==1)))
+        {
+            boundloc = bsize;         //Location of central border point. 
+            k_src = 2*boundloc - k_dst;
+        } else if ((i_dst >= DCONST(AC_nz_min) - bsize) && ((bindex.z == 2) || (bindex.z ==1)))
+        {
+            boundloc = DCONST(AC_nz_min) - bsize - 1; //Location of central border point. 
+            k_src = 2*boundloc - k_dst;
         }
     } 
 
+
+
     const int src_idx = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
-    vtxbuf[dst_idx]   = vtxbuf[src_idx];
+    vtxbuf[dst_idx]   = sign*vtxbuf[src_idx]; // sign = 1 symmetric, sign = -1 antisymmetric
 }
 
 
@@ -112,7 +143,12 @@ acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int
 
     if (DCONST(AC_bype) == BOUNDCOND_SYM) 
     {
-        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex);
+        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex,  1);
+        ERRCHK_CUDA_KERNEL();
+    } 
+    else if (DCONST(AC_bype) == BOUNDCOND_ASYM) 
+    {
+        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex, -1);
         ERRCHK_CUDA_KERNEL();
     }
 
