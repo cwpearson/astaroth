@@ -304,7 +304,13 @@ AcResult acGridStoreMesh(const Stream stream, AcMesh* host_mesh);
 AcResult acGridIntegrate(const Stream stream, const AcReal dt);
 
 /** */
+AcResult acGridIntegrateNonperiodic(const Stream stream, const AcReal dt);
+
+/** */
 AcResult acGridPeriodicBoundconds(const Stream stream);
+
+/** */
+AcResult acGridGeneralBoundconds(const Device device, const Stream stream);
 
 /** TODO */
 AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
@@ -561,6 +567,16 @@ AcResult acDevicePeriodicBoundcondStep(const Device device, const Stream stream,
 /** */
 AcResult acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 start,
                                     const int3 end);
+
+/** */
+AcResult acDeviceGeneralBoundcondStep(const Device device, const Stream stream,
+                                      const VertexBufferHandle vtxbuf_handle, const int3 start,
+                                      const int3 end, const int3 bindex);
+
+/** */
+AcResult acDeviceGeneralBoundconds(const Device device, const Stream stream, const int3 start,
+                                   const int3 end, const int3 bindex);
+
 
 /** */
 AcResult acDeviceReduceScal(const Device device, const Stream stream, const ReductionType rtype,
