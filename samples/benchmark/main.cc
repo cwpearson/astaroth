@@ -154,7 +154,7 @@ main(int argc, char** argv)
     }*/
 
     // Percentiles
-    const size_t num_iters      = 1000;
+    const size_t num_iters      = 100;
     const double nth_percentile = 0.90;
     std::vector<double> results; // ms
     results.reserve(num_iters);

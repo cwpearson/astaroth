@@ -11,7 +11,7 @@ project(astaroth C CXX CUDA)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 ## Project-wide compilation flags
-set(COMMON_FLAGS "-mavx -DOMPI_SKIP_MPICXX -Wall -Wextra -Werror -Wdouble-promotion -Wfloat-conversion -Wshadow") # -DOMPI_SKIP_MPICXX is to force OpenMPI to use the C interface
+set(COMMON_FLAGS "-mavx -DOMPI_SKIP_MPICXX -Wdouble-promotion -Wfloat-conversion -Wshadow") # -DOMPI_SKIP_MPICXX is to force OpenMPI to use the C interface
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 set(CMAKE_C_STANDARD 11)
@@ -38,10 +38,10 @@ endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## Options
-option(DOUBLE_PRECISION "Generates double precision code."                    OFF)
+option(DOUBLE_PRECISION "Generates double precision code."                    ON)
 option(BUILD_SAMPLES    "Builds projects in samples subdirectory."            ON)
-option(MPI_ENABLED      "Enables additional functions for MPI communciation." OFF)
-option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." ON)
+option(MPI_ENABLED      "Enables additional functions for MPI communciation." ON)
+option(MULTIGPU_ENABLED "Enables multi-GPU on a single node. Uses peer-to-peer communication instead of MPI. Affects Legacy & Node layers only." OFF)
 option(VERBOSE          "Enables various status and warning messages"         OFF)
 
 ## Options (DEPRECATED)
@@ -110,7 +110,7 @@ if (BUILD_SAMPLES)
     add_subdirectory(samples/cpptest)
     add_subdirectory(samples/mpitest)
     add_subdirectory(samples/benchmark)
-    #add_subdirectory(samples/genbenchmarkscripts)
+    add_subdirectory(samples/genbenchmarkscripts)
     #add_subdirectory(samples/mpi_reduce_bench)
     add_subdirectory(samples/fortrantest)
 
