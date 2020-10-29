@@ -46,6 +46,14 @@ create_case "meshsize_512"
 create_case "meshsize_1024"
 create_case "meshsize_2048"
 
+# Weak scaling
+load_default_case
+sed -i 's/const TestType test = .*;/const TestType test = TEST_WEAK_SCALING;/' samples/benchmark/main.cc
+create_case "weak_128"
+create_case "weak_256"
+sed -i 's/const size_t num_iters      = .*;/const size_t num_iters      = 100;/' samples/benchmark/main.cc
+create_case "weak_512"
+
 # Run batch jobs
 sbatch benchmark_meshsize_256/benchmark_1.sh
 sbatch benchmark_meshsize_256/benchmark_2.sh
