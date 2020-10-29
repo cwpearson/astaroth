@@ -284,6 +284,9 @@ Resets all devices on the current grid.
  */
 AcResult acGridQuit(void);
 
+/** Randomizes the local mesh */
+AcResult acGridRandomize(void);
+
 /** */
 AcResult acGridSynchronizeStream(const Stream stream);
 

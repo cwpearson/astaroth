@@ -1242,6 +1242,22 @@ acGridSynchronizeStream(const Stream stream)
     return AC_SUCCESS;
 }
 
+
+#include "astaroth_utils.h" // HACK TO RANDOMIZE
+AcResult
+acGridRandomize(void)
+{
+    ERRCHK(grid.initialized);
+
+    AcMesh host;
+    acMeshCreate(grid.submesh.info, &host);
+    acMeshRandomize(&host);
+    acDeviceLoadMesh(grid.device, STREAM_DEFAULT, host);
+    acMeshDestroy(&host);
+
+    return AC_SUCCESS;
+}
+
 AcResult
 acGridInit(const AcMeshInfo info)
 {

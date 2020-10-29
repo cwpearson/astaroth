@@ -107,7 +107,7 @@ main(int argc, char** argv)
         }
     }
 
-    const TestType test = TEST_STRONG_SCALING;
+    const TestType test = TEST_WEAK_SCALING;
     if (test == TEST_WEAK_SCALING) {
         uint3_64 decomp = decompose(nprocs);
         info.int_params[AC_nx] *= decomp.x;
@@ -126,10 +126,15 @@ main(int argc, char** argv)
 
     // GPU alloc & compute
     acGridInit(info);
+    acGridRandomize();
+
+    /*
     AcMesh model;
     acMeshCreate(info, &model);
     acMeshRandomize(&model);
     acGridLoadMesh(STREAM_DEFAULT, model);
+    */
+
     /*
     acGridLoadMesh(STREAM_DEFAULT, model);
 
