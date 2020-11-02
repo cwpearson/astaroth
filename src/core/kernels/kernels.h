@@ -8,7 +8,7 @@
 #define MPI_GPUDIRECT_DISABLED (0)
 #endif // AC_MPI_ENABLED
 
-typedef float AcRealPacked;
+typedef AcReal AcRealPacked;
 
 typedef struct {
     int3 dims;
