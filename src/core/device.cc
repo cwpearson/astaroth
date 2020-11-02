@@ -1242,8 +1242,6 @@ acGridSynchronizeStream(const Stream stream)
     return AC_SUCCESS;
 }
 
-
-#include "astaroth_utils.h" // HACK TO RANDOMIZE
 AcResult
 acGridRandomize(void)
 {

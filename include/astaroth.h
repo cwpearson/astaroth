@@ -590,6 +590,9 @@ AcResult acUpdateBuiltinParams(AcMeshInfo* config);
 /** Creates a mesh stored in host memory */
 AcResult acMeshCreate(const AcMeshInfo mesh_info, AcMesh* mesh);
 
+/** Randomizes a host mesh */
+AcResult acMeshRandomize(AcMesh* mesh);
+
 /** Destroys a mesh stored in host memory */
 AcResult acMeshDestroy(AcMesh* mesh);
 
