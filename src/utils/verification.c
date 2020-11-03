@@ -53,10 +53,10 @@ acGetError(const AcReal model, const AcReal candidate)
         const long double e = floorl(logl(fabsl(error.model)) / logl(2));
 
         const long double ulp             = powl(base, e - (p - 1));
-        const long double machine_epsilon = 0.5 * powl(base, -(p - 1));
-        error.abs_error                   = fabsl(model - candidate);
+        const long double machine_epsilon = 0.5l * powl(base, -(p - 1));
+        error.abs_error                   = fabsl((long double)model - (long double)candidate);
         error.ulp_error                   = error.abs_error / ulp;
-        error.rel_error                   = fabsl(1.0l - candidate / model) / machine_epsilon;
+        error.rel_error                   = fabsl(1.0l - (long double)candidate / (long double)model) / machine_epsilon;
     }
 
     error.maximum_magnitude = error.minimum_magnitude = 0;
