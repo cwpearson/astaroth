@@ -39,6 +39,7 @@ uniform Scalar AC_zorig;
 uniform Scalar AC_unit_density;
 uniform Scalar AC_unit_velocity;
 uniform Scalar AC_unit_length;
+uniform Scalar AC_unit_magnetic;
 // properties of gravitating star
 uniform Scalar AC_star_pos_x;
 uniform Scalar AC_star_pos_y;
