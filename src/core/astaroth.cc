@@ -117,9 +117,9 @@ acBoundcondStep(void)
 }
 
 AcResult
-acBoundcondStepGBC(void) //TODO ADAPT
+acBoundcondStepGBC(const AcMeshInfo config) 
 {
-    return acNodeGeneralBoundconds(nodes[0], STREAM_DEFAULT);
+    return acNodeGeneralBoundconds(nodes[0], STREAM_DEFAULT, config);
 }
 
 AcReal

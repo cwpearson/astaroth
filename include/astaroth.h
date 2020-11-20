@@ -241,6 +241,10 @@ AcResult acIntegrateGBC(const AcMeshInfo config, const AcReal dt);
  * the caller*/
 AcResult acBoundcondStep(void);
 
+/** Applies general outer boundary conditions for the Mesh distributed among the devices visible to
+ * the caller*/
+AcResult acBoundcondStepGBC(const AcMeshInfo config);
+
 /** Does a scalar reduction with the data stored in some vertex buffer */
 AcReal acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuf_handle);
 
