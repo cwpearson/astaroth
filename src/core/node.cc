@@ -657,11 +657,11 @@ local_boundcondstep(const Node node, const Stream stream, const VertexBufferHand
 }
 
 static AcResult
-local_boundcondstep_GBC(const Node node, const Stream stream, const VertexBufferHandle vtxbuf, const MeshInfo config) 
+local_boundcondstep_GBC(const Node node, const Stream stream, const VertexBufferHandle vtxbuf, const AcMeshInfo config) 
 {
     acNodeSynchronizeStream(node, stream);
 
-    int3 bindex = {-1, -1, -1} //Dummy for node level. Relevant only for MPI. 
+    int3 bindex = {-1, -1, -1}; //Dummy for node level. Relevant only for MPI. 
 
     if (node->num_devices > 1) {
         // Local boundary conditions
@@ -793,7 +793,7 @@ acNodeIntegrate(const Node node, const AcReal dt)
 }
 
 AcResult
-acNodeIntegrateGBG(const Node node, const AcReal dt) //TODO ADAPT
+acNodeIntegrateGBC(const Node node, const AcMeshInfo config, const AcReal dt) 
 {
     acNodeSynchronizeStream(node, STREAM_ALL);
     // xxx|OOO OOOOOOOOO OOO|xxx
@@ -807,7 +807,7 @@ acNodeIntegrateGBG(const Node node, const AcReal dt) //TODO ADAPT
     for (int isubstep = 0; isubstep < 3; ++isubstep) {
         acNodeSynchronizeStream(node, STREAM_ALL);
         for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
-            local_boundcondstep_GBC(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
+            local_boundcondstep_GBC(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf, config);
         }
         acNodeSynchronizeStream(node, STREAM_ALL);
 
@@ -886,10 +886,10 @@ acNodePeriodicBoundcondStep(const Node node, const Stream stream,
 }
 
 AcResult
-acNodeGeneralBoundcondStep(const Node node, const Stream stream,   //TODO ADAPT
-                           const VertexBufferHandle vtxbuf_handle)
+acNodeGeneralBoundcondStep(const Node node, const Stream stream,   
+                           const VertexBufferHandle vtxbuf_handle, const AcMeshInfo config)
 {
-    local_boundcondstep_GBC(node, stream, vtxbuf_handle);
+    local_boundcondstep_GBC(node, stream, vtxbuf_handle, config);
     acNodeSynchronizeVertexBuffer(node, stream, vtxbuf_handle);
 
     global_boundcondstep(node, stream, vtxbuf_handle);
@@ -899,7 +899,7 @@ acNodeGeneralBoundcondStep(const Node node, const Stream stream,   //TODO ADAPT
 }
 
 AcResult
-acNodePeriodicBoundconds(const Node node, const Stream stream) //TODO ADAPT
+acNodePeriodicBoundconds(const Node node, const Stream stream) 
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acNodePeriodicBoundcondStep(node, stream, (VertexBufferHandle)i);
@@ -908,10 +908,10 @@ acNodePeriodicBoundconds(const Node node, const Stream stream) //TODO ADAPT
 }
 
 AcResult
-acNodeGeneralBoundconds(const Node node, const Stream stream) //TODO ADAPT
+acNodeGeneralBoundconds(const Node node, const Stream stream, const AcMeshInfo config) 
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        acNodeGeneralBoundcondStep(node, stream, (VertexBufferHandle)i);
+        acNodeGeneralBoundcondStep(node, stream, (VertexBufferHandle)i, config);
     }
     return AC_SUCCESS;
 }

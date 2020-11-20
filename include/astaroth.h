@@ -454,11 +454,21 @@ AcResult acNodeIntegrateSubstep(const Node node, const Stream stream, const int 
 AcResult acNodeIntegrate(const Node node, const AcReal dt);
 
 /** */
+AcResult acNodeIntegrateGBC(const Node node, const AcMeshInfo config, const AcReal dt);
+
+/** */
 AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream,
                                      const VertexBufferHandle vtxbuf_handle);
 
 /** */
 AcResult acNodePeriodicBoundconds(const Node node, const Stream stream);
+
+/** */
+AcResult acNodeGeneralBoundcondStep(const Node node, const Stream stream,   
+                                    const VertexBufferHandle vtxbuf_handle, const AcMeshInfo config);
+
+/** */
+AcResult acNodeGeneralBoundconds(const Node node, const Stream stream, const AcMeshInfo config);
 
 /** */
 AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
