@@ -23,47 +23,83 @@ kernel_symmetric_boundconds(const int3 start, const int3 end, AcReal* vtxbuf, co
     int i_src, j_src, k_src, boundloc;
     int bsize = STENCIL_ORDER/(int) 2;
 
-    if (bindex.x != 0)
-    {
+    //if (bindex.x != 0)
+    //{
+    //    // Pick up the mirroring value.
+    //    if ((i_dst < bsize) && ((bindex.x == 3) || (bindex.x ==1)))
+    //    {
+    //        boundloc = bsize;         //Location of central border point. 
+    //        i_src = 2*boundloc - i_dst;
+    //    } else if ((i_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.x == 2) || (bindex.x ==1)))
+    //    {
+    //        boundloc = DCONST(AC_nx_min) - bsize - 1; //Location of central border point. 
+    //        i_src = 2*boundloc - i_dst;
+    //    }
+    //} 
+    //if (bindex.y != 0)
+    //{
+    //    // Pick up the mirroring value.
+    //    if ((j_dst < bsize) && ((bindex.y == 3) || (bindex.y ==1)))
+    //    {
+    //        boundloc = bsize;         //Location of central border point. 
+    //        j_src = 2*boundloc - j_dst;
+    //    } else if ((j_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.y == 2) || (bindex.y ==1)))
+    //    {
+    //        boundloc = DCONST(AC_ny_min) - bsize - 1; //Location of central border point. 
+    //        i_src = 2*boundloc - j_dst;
+    //    }
+    //} 
+    //if (bindex.z != 0)
+    //{
+    //    // Pick up the mirroring value.
+    //    if ((k_dst < bsize) && ((bindex.z == 3) || (bindex.z ==1)))
+    //    {
+    //        boundloc = bsize;         //Location of central border point. 
+    //        k_src = 2*boundloc - k_dst;
+    //    } else if ((i_dst >= DCONST(AC_nz_min) - bsize) && ((bindex.z == 2) || (bindex.z ==1)))
+    //    {
+    //        boundloc = DCONST(AC_nz_min) - bsize - 1; //Location of central border point. 
+    //        k_src = 2*boundloc - k_dst;
+    //    }
+    //}
+
+    if (bindex.x < 0)
+    { 
+
         // Pick up the mirroring value.
-        if ((i_dst < bsize) && ((bindex.x == 3) || (bindex.x ==1)))
+        if ((i_dst < bsize))
         {
             boundloc = bsize;         //Location of central border point. 
             i_src = 2*boundloc - i_dst;
-        } else if ((i_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.x == 2) || (bindex.x ==1)))
+        } else if ((i_dst >= DCONST(AC_nx_min) - bsize))
         {
             boundloc = DCONST(AC_nx_min) - bsize - 1; //Location of central border point. 
             i_src = 2*boundloc - i_dst;
         }
-    } 
-    if (bindex.y != 0)
-    {
+        
         // Pick up the mirroring value.
-        if ((j_dst < bsize) && ((bindex.y == 3) || (bindex.y ==1)))
+        if ((j_dst < bsize))
         {
             boundloc = bsize;         //Location of central border point. 
             j_src = 2*boundloc - j_dst;
-        } else if ((j_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.y == 2) || (bindex.y ==1)))
+        } else if ((j_dst >= DCONST(AC_nx_min) - bsize))
         {
             boundloc = DCONST(AC_ny_min) - bsize - 1; //Location of central border point. 
             i_src = 2*boundloc - j_dst;
         }
-    } 
-    if (bindex.z != 0)
-    {
+        
         // Pick up the mirroring value.
-        if ((k_dst < bsize) && ((bindex.z == 3) || (bindex.z ==1)))
+        if ((k_dst < bsize))
         {
             boundloc = bsize;         //Location of central border point. 
             k_src = 2*boundloc - k_dst;
-        } else if ((i_dst >= DCONST(AC_nz_min) - bsize) && ((bindex.z == 2) || (bindex.z ==1)))
+        } else if ((i_dst >= DCONST(AC_nz_min) - bsize))
         {
             boundloc = DCONST(AC_nz_min) - bsize - 1; //Location of central border point. 
             k_src = 2*boundloc - k_dst;
         }
-    } 
 
-
+    }
 
     const int src_idx = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
@@ -141,8 +177,10 @@ acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int
                    (unsigned int)ceil((end.y - start.y) / (float)tpb.y),
                    (unsigned int)ceil((end.z - start.z) / (float)tpb.z));
 
-    int3 bc_top = config.int3_params[AC_bc_type_top];
-    int3 bc_bot = config.int3_params[AC_bc_type_bot];
+    int3 bc_top = {config.int_params[AC_bc_type_top_x], config.int_params[AC_bc_type_top_y], 
+                   config.int_params[AC_bc_type_top_z]};
+    int3 bc_bot = {config.int_params[AC_bc_type_bot_x], config.int_params[AC_bc_type_bot_y], 
+                   config.int_params[AC_bc_type_bot_z]};
 
     if (bc_top.x == AC_BOUNDCOND_SYMMETRIC) 
     {
@@ -153,6 +191,19 @@ acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int
     {
         kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex, -1);
         ERRCHK_CUDA_KERNEL();
+    } 
+    else if (bc_bot.x == AC_BOUNDCOND_PERIODIC) 
+    {
+        kernel_periodic_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf);
+        ERRCHK_CUDA_KERNEL();
+    } 
+    else 
+    {
+        printf("ERROR: Boundary condition not recognized!\n");
+        printf("ERROR: bc_top = %i, %i, %i \n", bc_top.x, bc_top.y, bc_top.z);
+        printf("ERROR: bc_bot = %i, %i, %i \n", bc_bot.x, bc_bot.y, bc_bot.z);
+
+        return AC_FAILURE;
     }
 
     return AC_SUCCESS;

@@ -22,9 +22,12 @@ uniform int AC_save_steps;
 uniform int AC_bin_steps;
 uniform int AC_start_step;
 
-// In3 params 
-uniform int3 AC_bc_type_bot;
-uniform int3 AC_bc_type_top;
+uniform int AC_bc_type_top_x;
+uniform int AC_bc_type_bot_x;
+uniform int AC_bc_type_top_y;
+uniform int AC_bc_type_bot_y;
+uniform int AC_bc_type_top_z;
+uniform int AC_bc_type_bot_z;
 
 // Real params
 uniform Scalar AC_dt;
