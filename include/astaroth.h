@@ -49,6 +49,11 @@ typedef struct {
 
 typedef enum { AC_SUCCESS = 0, AC_FAILURE = 1 } AcResult;
 
+// Neming the associated number of the boundary condition types
+typedef enum { AC_BOUNDCOND_PERIODIC = 0, 
+               AC_BOUNDCOND_SYMMETRIC = 1, 
+               AC_BOUNDCOND_ANTISYMMETRIC = 2 } AcBoundcond;
+
 #define AC_GEN_ID(X) X,
 typedef enum {
     AC_FOR_RTYPES(AC_GEN_ID) //
@@ -577,11 +582,11 @@ AcResult acDevicePeriodicBoundconds(const Device device, const Stream stream, co
 /** */
 AcResult acDeviceGeneralBoundcondStep(const Device device, const Stream stream,
                                       const VertexBufferHandle vtxbuf_handle, const int3 start,
-                                      const int3 end, const int3 bindex);
+                                      const int3 end, const AcMeshInfo config, const int3 bindex);
 
 /** */
 AcResult acDeviceGeneralBoundconds(const Device device, const Stream stream, const int3 start,
-                                   const int3 end, const int3 bindex);
+                                   const int3 end, const AcMeshInfo config, const int3 bindex);
 
 
 /** */

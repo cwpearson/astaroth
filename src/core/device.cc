@@ -436,19 +436,19 @@ acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 
 AcResult
 acDeviceGeneralBoundcondStep(const Device device, const Stream stream,
                               const VertexBufferHandle vtxbuf_handle, const int3 start,
-                              const int3 end, const int3 bindex)
+                              const int3 end, const AcMeshInfo config, const int3 bindex)
 {
     cudaSetDevice(device->id);
     return acKernelGeneralBoundconds(device->streams[stream], start, end,
-                                     device->vba.in[vtxbuf_handle], bindex);
+                                     device->vba.in[vtxbuf_handle], config, bindex);
 }
 
 AcResult
 acDeviceGeneralBoundconds(const Device device, const Stream stream, const int3 start,
-                           const int3 end, const int3 bindex)
+                           const int3 end, const AcMeshInfo config, const int3 bindex)
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        acDeviceGeneralBoundcondStep(device, stream, (VertexBufferHandle)i, start, end, bindex);
+        acDeviceGeneralBoundcondStep(device, stream, (VertexBufferHandle)i, start, end, config, bindex);
     }
     return AC_SUCCESS;
 }
@@ -1435,6 +1435,8 @@ acGridStoreMesh(const Stream stream, AcMesh* host_mesh)
     return AC_SUCCESS;
 }
 
+/*   MV: Commented out for a while, but save for the future when standalone_MPI
+         works with periodic boundary conditions. 
 AcResult
 acGridGeneralBoundconds(const Device device, const Stream stream)
 {
@@ -1475,6 +1477,7 @@ acGridGeneralBoundconds(const Device device, const Stream stream)
 
     return AC_SUCCESS;
 }
+*/
 
 /*
 // Unused
