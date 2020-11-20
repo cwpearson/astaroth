@@ -657,9 +657,11 @@ local_boundcondstep(const Node node, const Stream stream, const VertexBufferHand
 }
 
 static AcResult
-local_boundcondstep_GBC(const Node node, const Stream stream, const VertexBufferHandle vtxbuf) //TODO ADAPT
+local_boundcondstep_GBC(const Node node, const Stream stream, const VertexBufferHandle vtxbuf, const MeshInfo config) 
 {
     acNodeSynchronizeStream(node, stream);
+
+    int3 bindex = {-1, -1, -1} //Dummy for node level. Relevant only for MPI. 
 
     if (node->num_devices > 1) {
         // Local boundary conditions
@@ -667,12 +669,12 @@ local_boundcondstep_GBC(const Node node, const Stream stream, const VertexBuffer
         for (int i = 0; i < node->num_devices; ++i) {
             const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
             const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.n.z};
-            acDeviceGeneralBoundcondStep(node->devices[i], stream, vtxbuf, d0, d1);
+            acDeviceGeneralBoundcondStep(node->devices[i], stream, vtxbuf, d0, d1, config, bindex);
         }
     }
     else {
         acDeviceGeneralBoundcondStep(node->devices[0], stream, vtxbuf, (int3){0, 0, 0},
-                                     node->subgrid.m);
+                                     node->subgrid.m, config, bindex);
     }
     return AC_SUCCESS;
 }
