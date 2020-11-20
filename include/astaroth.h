@@ -304,7 +304,13 @@ AcResult acGridStoreMesh(const Stream stream, AcMesh* host_mesh);
 AcResult acGridIntegrate(const Stream stream, const AcReal dt);
 
 /** */
+/*   MV: Commented out for a while, but save for the future when standalone_MPI
+         works with periodic boundary conditions. 
+AcResult
+acGridIntegrateNonperiodic(const Stream stream, const AcReal dt)
+
 AcResult acGridIntegrateNonperiodic(const Stream stream, const AcReal dt);
+*/
 
 /** */
 AcResult acGridPeriodicBoundconds(const Stream stream);

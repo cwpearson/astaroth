@@ -1907,6 +1907,8 @@ acGridIntegrate(const Stream stream, const AcReal dt)
     return AC_SUCCESS;
 }
 
+/*   MV: Commented out for a while, but save for the future when standalone_MPI
+         works with periodic boundary conditions. 
 AcResult
 acGridIntegrateNonperiodic(const Stream stream, const AcReal dt)
 {
@@ -2129,6 +2131,8 @@ acGridIntegrateNonperiodic(const Stream stream, const AcReal dt)
 
     return AC_SUCCESS;
 }
+
+*/
 
 
 AcResult

@@ -1,5 +1,9 @@
 #pragma once
 
+// Temporary defines untils we can figure out smarter swithches.
+#define BOUNDCOND_SYM  1
+#define BOUNDCOND_ASYM 2
+
 static __global__ void
 kernel_symmetric_boundconds(const int3 start, const int3 end, AcReal* vtxbuf, const int3 bindex, const int sign)
 {
@@ -134,19 +138,19 @@ acKernelPeriodicBoundconds(const cudaStream_t stream, const int3 start, const in
 
 AcResult 
 acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
-                          AcReal* vtxbuf, const int bindex);
+                          AcReal* vtxbuf, const int3 bindex)
 {
     const dim3 tpb(8, 2, 8);
     const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),
                    (unsigned int)ceil((end.y - start.y) / (float)tpb.y),
                    (unsigned int)ceil((end.z - start.z) / (float)tpb.z));
 
-    if (DCONST(AC_bype) == BOUNDCOND_SYM) 
+    if (DCONST(AC_bc_type) == BOUNDCOND_SYM) 
     {
         kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex,  1);
         ERRCHK_CUDA_KERNEL();
     } 
-    else if (DCONST(AC_bype) == BOUNDCOND_ASYM) 
+    else if (DCONST(AC_bc_type) == BOUNDCOND_ASYM) 
     {
         kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex, -1);
         ERRCHK_CUDA_KERNEL();
