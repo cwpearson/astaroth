@@ -87,6 +87,13 @@ acIntegrate(const AcReal dt)
 }
 
 AcResult
+acIntegrateGBC(const AcMeshInfo config, const AcReal dt) 
+{
+    return acNodeIntegrateGBC(nodes[0], config, dt);
+}
+
+
+AcResult
 acIntegrateStep(const int isubstep, const AcReal dt)
 {
     DeviceConfiguration config;
@@ -107,6 +114,12 @@ AcResult
 acBoundcondStep(void)
 {
     return acNodePeriodicBoundconds(nodes[0], STREAM_DEFAULT);
+}
+
+AcResult
+acBoundcondStepGBC(void) //TODO ADAPT
+{
+    return acNodeGeneralBoundconds(nodes[0], STREAM_DEFAULT);
 }
 
 AcReal

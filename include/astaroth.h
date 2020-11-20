@@ -232,6 +232,11 @@ AcResult acStore(AcMesh* host_mesh);
  * substep and the user is responsible for calling acBoundcondStep before reading the data. */
 AcResult acIntegrate(const AcReal dt);
 
+/** Performs Runge-Kutta 3 integration. Note: Boundary conditions are not applied after the final
+ * substep and the user is responsible for calling acBoundcondStep before reading the data.
+ * Has customizable boundary conditions. */
+AcResult acIntegrateGBC(const AcMeshInfo config, const AcReal dt);
+
 /** Applies periodic boundary conditions for the Mesh distributed among the devices visible to
  * the caller*/
 AcResult acBoundcondStep(void);
