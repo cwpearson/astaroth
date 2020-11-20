@@ -431,7 +431,8 @@ run_simulation(const char* config_path)
         const AcReal uref  = max(max(umax,uu_freefall), vAmax); 
         const AcReal dt   = host_timestep(uref, vAmax, mesh_info);
 #else
-        const AcReal dt   = host_timestep(umax, 0.0l, mesh_info);
+        const AcReal uref  = max(umax,uu_freefall); 
+        const AcReal dt   = host_timestep(uref, 0.0l, mesh_info);
 #endif
 
 #if LFORCING
