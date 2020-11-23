@@ -45,6 +45,11 @@ extern "C" {
 /** */
 AcResult acKernelPeriodicBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
                                     AcReal* vtxbuf);
+/** */
+AcResult acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
+                                   AcReal* vtxbuf, const VertexBufferHandle vtxbuf_handle,
+                                   const AcMeshInfo config, const int3 bindex);
+
 
 /** */
 AcResult acKernelDummy(void);

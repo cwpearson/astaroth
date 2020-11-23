@@ -49,6 +49,11 @@ typedef struct {
 
 typedef enum { AC_SUCCESS = 0, AC_FAILURE = 1 } AcResult;
 
+// Neming the associated number of the boundary condition types
+typedef enum { AC_BOUNDCOND_PERIODIC = 0, 
+               AC_BOUNDCOND_SYMMETRIC = 1, 
+               AC_BOUNDCOND_ANTISYMMETRIC = 2 } AcBoundcond;
+
 #define AC_GEN_ID(X) X,
 typedef enum {
     AC_FOR_RTYPES(AC_GEN_ID) //
@@ -227,9 +232,18 @@ AcResult acStore(AcMesh* host_mesh);
  * substep and the user is responsible for calling acBoundcondStep before reading the data. */
 AcResult acIntegrate(const AcReal dt);
 
+/** Performs Runge-Kutta 3 integration. Note: Boundary conditions are not applied after the final
+ * substep and the user is responsible for calling acBoundcondStep before reading the data.
+ * Has customizable boundary conditions. */
+AcResult acIntegrateGBC(const AcMeshInfo config, const AcReal dt);
+
 /** Applies periodic boundary conditions for the Mesh distributed among the devices visible to
  * the caller*/
 AcResult acBoundcondStep(void);
+
+/** Applies general outer boundary conditions for the Mesh distributed among the devices visible to
+ * the caller*/
+AcResult acBoundcondStepGBC(const AcMeshInfo config);
 
 /** Does a scalar reduction with the data stored in some vertex buffer */
 AcReal acReduceScal(const ReductionType rtype, const VertexBufferHandle vtxbuf_handle);
@@ -307,7 +321,19 @@ AcResult acGridStoreMesh(const Stream stream, AcMesh* host_mesh);
 AcResult acGridIntegrate(const Stream stream, const AcReal dt);
 
 /** */
+/*   MV: Commented out for a while, but save for the future when standalone_MPI
+         works with periodic boundary conditions. 
+AcResult
+acGridIntegrateNonperiodic(const Stream stream, const AcReal dt)
+
+AcResult acGridIntegrateNonperiodic(const Stream stream, const AcReal dt);
+*/
+
+/** */
 AcResult acGridPeriodicBoundconds(const Stream stream);
+
+/** */
+AcResult acGridGeneralBoundconds(const Device device, const Stream stream);
 
 /** TODO */
 AcResult acGridReduceScal(const Stream stream, const ReductionType rtype,
@@ -431,11 +457,21 @@ AcResult acNodeIntegrateSubstep(const Node node, const Stream stream, const int 
 AcResult acNodeIntegrate(const Node node, const AcReal dt);
 
 /** */
+AcResult acNodeIntegrateGBC(const Node node, const AcMeshInfo config, const AcReal dt);
+
+/** */
 AcResult acNodePeriodicBoundcondStep(const Node node, const Stream stream,
                                      const VertexBufferHandle vtxbuf_handle);
 
 /** */
 AcResult acNodePeriodicBoundconds(const Node node, const Stream stream);
+
+/** */
+AcResult acNodeGeneralBoundcondStep(const Node node, const Stream stream,   
+                                    const VertexBufferHandle vtxbuf_handle, const AcMeshInfo config);
+
+/** */
+AcResult acNodeGeneralBoundconds(const Node node, const Stream stream, const AcMeshInfo config);
 
 /** */
 AcResult acNodeReduceScal(const Node node, const Stream stream, const ReductionType rtype,
@@ -564,6 +600,16 @@ AcResult acDevicePeriodicBoundcondStep(const Device device, const Stream stream,
 /** */
 AcResult acDevicePeriodicBoundconds(const Device device, const Stream stream, const int3 start,
                                     const int3 end);
+
+/** */
+AcResult acDeviceGeneralBoundcondStep(const Device device, const Stream stream,
+                                      const VertexBufferHandle vtxbuf_handle, const int3 start,
+                                      const int3 end, const AcMeshInfo config, const int3 bindex);
+
+/** */
+AcResult acDeviceGeneralBoundconds(const Device device, const Stream stream, const int3 start,
+                                   const int3 end, const AcMeshInfo config, const int3 bindex);
+
 
 /** */
 AcResult acDeviceReduceScal(const Device device, const Stream stream, const ReductionType rtype,

@@ -374,7 +374,8 @@ run_simulation(const char* config_path)
 #endif
     }
 
-    acBoundcondStep();
+    //acBoundcondStep();
+    acBoundcondStepGBC(mesh_info);
     acStore(mesh);
     if (start_step == 0) {
         save_mesh(*mesh, 0, t_step);
@@ -440,7 +441,11 @@ run_simulation(const char* config_path)
         loadForcingParamsToDevice(forcing_params);
 #endif
 
-        acIntegrate(dt);
+        /* Uses now flexible bokundary conditions */
+        //acIntegrate(dt);
+        acIntegrateGBC(mesh_info, dt);
+
+
 
         t_step += dt;
 
@@ -486,7 +491,8 @@ run_simulation(const char* config_path)
                 acBoundcondStep();
                 acStore(mesh);
             */
-            acBoundcondStep();
+            //acBoundcondStep();
+            acBoundcondStepGBC(mesh_info);
             acStore(mesh);
 
             save_mesh(*mesh, i, t_step);
@@ -507,7 +513,8 @@ run_simulation(const char* config_path)
         if (dt < dt_typical/AcReal(1e5)) {
             if (dtcounter > 10) {
                 printf("dt = %e TOO LOW! Ending run at t = %#e \n", double(dt), double(t_step));
-                acBoundcondStep();
+                //acBoundcondStep();
+                acBoundcondStepGBC(mesh_info);
                 acStore(mesh);
                 save_mesh(*mesh, i, t_step);
                 break;
@@ -521,7 +528,8 @@ run_simulation(const char* config_path)
         // End loop if nan is found
         if (found_nan > 0) {
             printf("Found nan at t = %e \n", double(t_step));
-            acBoundcondStep();
+            //acBoundcondStep();
+            acBoundcondStepGBC(mesh_info);
             acStore(mesh);
             save_mesh(*mesh, i, t_step);
             break;
@@ -536,7 +544,8 @@ run_simulation(const char* config_path)
  
         if (found_stop == 1) {
             printf("Found STOP file at t = %e \n", double(t_step));
-            acBoundcondStep();
+            //acBoundcondStep();
+            acBoundcondStepGBC(mesh_info);
             acStore(mesh);
             save_mesh(*mesh, i, t_step);
             break;

@@ -657,6 +657,30 @@ local_boundcondstep(const Node node, const Stream stream, const VertexBufferHand
 }
 
 static AcResult
+local_boundcondstep_GBC(const Node node, const Stream stream, const VertexBufferHandle vtxbuf, const AcMeshInfo config) 
+{
+    acNodeSynchronizeStream(node, stream);
+
+    int3 bindex = {-1, -1, -1}; //Dummy for node level. Relevant only for MPI. 
+
+    if (node->num_devices > 1) {
+        // Local boundary conditions
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) {
+            const int3 d0 = (int3){0, 0, NGHOST}; // DECOMPOSITION OFFSET HERE
+            const int3 d1 = (int3){node->subgrid.m.x, node->subgrid.m.y, d0.z + node->subgrid.n.z};
+            acDeviceGeneralBoundcondStep(node->devices[i], stream, vtxbuf, d0, d1, config, bindex);
+        }
+    }
+    else {
+        acDeviceGeneralBoundcondStep(node->devices[0], stream, vtxbuf, (int3){0, 0, 0},
+                                     node->subgrid.m, config, bindex);
+    }
+    return AC_SUCCESS;
+}
+
+
+static AcResult
 global_boundcondstep(const Node node, const Stream stream, const VertexBufferHandle vtxbuf_handle)
 {
     acNodeSynchronizeStream(node, stream);
@@ -769,6 +793,85 @@ acNodeIntegrate(const Node node, const AcReal dt)
 }
 
 AcResult
+acNodeIntegrateGBC(const Node node, const AcMeshInfo config, const AcReal dt) 
+{
+    acNodeSynchronizeStream(node, STREAM_ALL);
+    // xxx|OOO OOOOOOOOO OOO|xxx
+    //    ^    ^         ^  ^
+    //   n0   n1        n2  n3
+    // const int3 n0 = (int3){NGHOST, NGHOST, NGHOST};
+    // const int3 n1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+    // const int3 n2 = node->grid.n;
+    // const int3 n3 = n0 + node->grid.n;
+
+    for (int isubstep = 0; isubstep < 3; ++isubstep) {
+        acNodeSynchronizeStream(node, STREAM_ALL);
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+            local_boundcondstep_GBC(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf, config);
+        }
+        acNodeSynchronizeStream(node, STREAM_ALL);
+
+        // Inner inner
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) {
+            const int3 m1 = (int3){2 * NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = node->subgrid.n;
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_16, isubstep, m1, m2, dt);
+        }
+
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+            acNodeSynchronizeVertexBuffer(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
+            global_boundcondstep(node, (Stream)vtxbuf, (VertexBufferHandle)vtxbuf);
+        }
+        for (int vtxbuf = 0; vtxbuf < NUM_VTXBUF_HANDLES; ++vtxbuf) {
+            acNodeSynchronizeStream(node, (Stream)vtxbuf);
+        }
+
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Front
+            const int3 m1 = (int3){NGHOST, NGHOST, NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_0, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Back
+            const int3 m1 = (int3){NGHOST, NGHOST, node->subgrid.n.z};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, node->subgrid.n.y, NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_1, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Bottom
+            const int3 m1 = (int3){NGHOST, NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_2, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Top
+            const int3 m1 = (int3){NGHOST, node->subgrid.n.y, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){node->subgrid.n.x, NGHOST, node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_3, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Left
+            const int3 m1 = (int3){NGHOST, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
+                                        node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_4, isubstep, m1, m2, dt);
+        }
+        // #pragma omp parallel for
+        for (int i = 0; i < node->num_devices; ++i) { // Right
+            const int3 m1 = (int3){node->subgrid.n.x, 2 * NGHOST, 2 * NGHOST};
+            const int3 m2 = m1 + (int3){NGHOST, node->subgrid.n.y - 2 * NGHOST,
+                                        node->subgrid.n.z - 2 * NGHOST};
+            acDeviceIntegrateSubstep(node->devices[i], STREAM_5, isubstep, m1, m2, dt);
+        }
+        acNodeSwapBuffers(node);
+    }
+    acNodeSynchronizeStream(node, STREAM_ALL);
+    return AC_SUCCESS;
+}
+
+AcResult
 acNodePeriodicBoundcondStep(const Node node, const Stream stream,
                             const VertexBufferHandle vtxbuf_handle)
 {
@@ -783,10 +886,32 @@ acNodePeriodicBoundcondStep(const Node node, const Stream stream,
 }
 
 AcResult
-acNodePeriodicBoundconds(const Node node, const Stream stream)
+acNodeGeneralBoundcondStep(const Node node, const Stream stream,   
+                           const VertexBufferHandle vtxbuf_handle, const AcMeshInfo config)
+{
+    local_boundcondstep_GBC(node, stream, vtxbuf_handle, config);
+    acNodeSynchronizeVertexBuffer(node, stream, vtxbuf_handle);
+
+    global_boundcondstep(node, stream, vtxbuf_handle);
+  
+
+    return AC_SUCCESS;
+}
+
+AcResult
+acNodePeriodicBoundconds(const Node node, const Stream stream) 
 {
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
         acNodePeriodicBoundcondStep(node, stream, (VertexBufferHandle)i);
+    }
+    return AC_SUCCESS;
+}
+
+AcResult
+acNodeGeneralBoundconds(const Node node, const Stream stream, const AcMeshInfo config) 
+{
+    for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
+        acNodeGeneralBoundcondStep(node, stream, (VertexBufferHandle)i, config);
     }
     return AC_SUCCESS;
 }
