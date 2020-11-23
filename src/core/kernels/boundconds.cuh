@@ -20,90 +20,111 @@ kernel_symmetric_boundconds(const int3 start, const int3 end, AcReal* vtxbuf, co
 
     // Find the source index
     // Map to nx, ny, nz coordinates
-    int i_src, j_src, k_src, boundloc;
+    int i_src, j_src, k_src, boundlocx0, boundlocx1, boundlocy0, boundlocy1, boundlocz0, boundlocz1;
     int bsize = STENCIL_ORDER/(int) 2;
 
     //if (bindex.x != 0)
-    //{
-    //    // Pick up the mirroring value.
-    //    if ((i_dst < bsize) && ((bindex.x == 3) || (bindex.x ==1)))
-    //    {
-    //        boundloc = bsize;         //Location of central border point. 
-    //        i_src = 2*boundloc - i_dst;
-    //    } else if ((i_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.x == 2) || (bindex.x ==1)))
-    //    {
-    //        boundloc = DCONST(AC_nx_min) - bsize - 1; //Location of central border point. 
-    //        i_src = 2*boundloc - i_dst;
-    //    }
-    //} 
     //if (bindex.y != 0)
-    //{
-    //    // Pick up the mirroring value.
-    //    if ((j_dst < bsize) && ((bindex.y == 3) || (bindex.y ==1)))
-    //    {
-    //        boundloc = bsize;         //Location of central border point. 
-    //        j_src = 2*boundloc - j_dst;
-    //    } else if ((j_dst >= DCONST(AC_nx_min) - bsize) && ((bindex.y == 2) || (bindex.y ==1)))
-    //    {
-    //        boundloc = DCONST(AC_ny_min) - bsize - 1; //Location of central border point. 
-    //        i_src = 2*boundloc - j_dst;
-    //    }
-    //} 
     //if (bindex.z != 0)
-    //{
-    //    // Pick up the mirroring value.
-    //    if ((k_dst < bsize) && ((bindex.z == 3) || (bindex.z ==1)))
-    //    {
-    //        boundloc = bsize;         //Location of central border point. 
-    //        k_src = 2*boundloc - k_dst;
-    //    } else if ((i_dst >= DCONST(AC_nz_min) - bsize) && ((bindex.z == 2) || (bindex.z ==1)))
-    //    {
-    //        boundloc = DCONST(AC_nz_min) - bsize - 1; //Location of central border point. 
-    //        k_src = 2*boundloc - k_dst;
-    //    }
-    //}
+
+    //Location of central border point.
+    boundlocx0 = bsize;
+    boundlocy0 = bsize; 
+    boundlocz0 = bsize;
+    boundlocx1 = DCONST(AC_nx_max) - 1; 
+    boundlocy1 = DCONST(AC_ny_max) - 1;
+    boundlocz1 = DCONST(AC_nz_max) - 1;
+    
+    //Defaults
+    i_src = i_dst;
+    j_src = j_dst;
+    k_src = k_dst;
 
     if (bindex.x < 0)
-    { 
+    {
 
         // Pick up the mirroring value.
-        if ((i_dst < bsize))
+        if ((i_dst < boundlocx0))
         {
-            boundloc = bsize;         //Location of central border point. 
-            i_src = 2*boundloc - i_dst;
-        } else if ((i_dst >= DCONST(AC_nx_min) - bsize))
+            i_src = 2.0f*boundlocx0 - i_dst;
+
+        } else if ((i_dst > boundlocx1))
         {
-            boundloc = DCONST(AC_nx_min) - bsize - 1; //Location of central border point. 
-            i_src = 2*boundloc - i_dst;
+            i_src = 2.0f*boundlocx1 - i_dst;
         }
         
         // Pick up the mirroring value.
-        if ((j_dst < bsize))
+        if ((j_dst < boundlocy0))
         {
-            boundloc = bsize;         //Location of central border point. 
-            j_src = 2*boundloc - j_dst;
-        } else if ((j_dst >= DCONST(AC_nx_min) - bsize))
+            j_src = 2.0f*boundlocy0 - j_dst;
+        } else if ((j_dst > boundlocx1))
         {
-            boundloc = DCONST(AC_ny_min) - bsize - 1; //Location of central border point. 
-            i_src = 2*boundloc - j_dst;
+            j_src = 2.0f*boundlocy1 - j_dst;
         }
         
         // Pick up the mirroring value.
-        if ((k_dst < bsize))
+        if ((k_dst < boundlocz0))
         {
-            boundloc = bsize;         //Location of central border point. 
-            k_src = 2*boundloc - k_dst;
-        } else if ((i_dst >= DCONST(AC_nz_min) - bsize))
+            k_src = 2.0f*boundlocz0 - k_dst;
+        } else if ((k_dst > boundlocz1))
         {
-            boundloc = DCONST(AC_nz_min) - bsize - 1; //Location of central border point. 
-            k_src = 2*boundloc - k_dst;
+            k_src = 2.0f*boundlocz1 - k_dst;
+        }
+
+        //Edges
+        if (       (i_dst < boundlocx0) && (j_dst < boundlocy0)                         )
+        {
+            i_src = 2.0f*boundlocx0 - i_dst;
+            j_src = 2.0f*boundlocy0 - j_dst;
+            //if ((k_dst == 50)) printf("i_dst %i j_dst %i k_dst %i i_src %i j_src %i k_src %i bsize %i \n", i_dst, j_dst, k_dst, i_src, j_src, k_src, bsize);
+        } else if ((i_dst < boundlocx0)                         && (k_dst < boundlocz0) )
+        {
+            i_src = 2.0f*boundlocx0 - i_dst;
+            k_src = 2.0f*boundlocz0 - k_dst;
+        } else if (                        (j_dst < boundlocy0) && (k_dst < boundlocz0) )
+        {
+            j_src = 2.0f*boundlocy0 - j_dst;
+            k_src = 2.0f*boundlocz0 - k_dst;
+
+        } else if ((i_dst > boundlocx1) && (j_dst > boundlocx1)                         )
+        {
+            i_src = 2.0f*boundlocx1 - i_dst;
+            j_src = 2.0f*boundlocy1 - j_dst;
+        } else if ( (i_dst > boundlocx1)                        && (k_dst > boundlocz1) )
+        {
+            i_src = 2.0f*boundlocx1 - i_dst;
+            k_src = 2.0f*boundlocz1 - k_dst;
+        } else if (                        (j_dst > boundlocy1) && (k_dst > boundlocz1) )
+        {
+            j_src = 2.0f*boundlocy1 - j_dst;
+            k_src = 2.0f*boundlocz1 - k_dst;
+        } else if ( (i_dst > boundlocx1)                        && (k_dst < boundlocz0) )
+        {
+            i_src = 2.0f*boundlocx1 - i_dst;
+            k_src = 2.0f*boundlocz0 - k_dst;
+        } else if ( (i_dst > boundlocx1) && (j_dst < bsize)                             )
+        {
+            i_src = 2.0f*boundlocx1 - i_dst;
+            j_src = 2.0f*boundlocy0 - j_dst;
+        } else if ( (i_dst < boundlocx0)                        && (k_dst > boundlocz1) )
+        {
+            i_src = 2.0f*boundlocx0 - i_dst;
+            k_src = 2.0f*boundlocz1 - k_dst;
+        } else if ( (i_dst < boundlocx0) && (j_dst > boundlocy1)                        )
+        {
+            i_src = 2.0f*boundlocx0 - i_dst;
+            j_src = 2.0f*boundlocy1 - j_dst;
+        } else if (                        (j_dst > boundlocy1) && (k_dst < boundlocz0) )
+        {
+            j_src = 2.0f*boundlocy1 - j_dst;
+            k_src = 2.0f*boundlocz0 - k_dst;
         }
 
     }
 
     const int src_idx = DEVICE_VTXBUF_IDX(i_src, j_src, k_src);
     const int dst_idx = DEVICE_VTXBUF_IDX(i_dst, j_dst, k_dst);
-    vtxbuf[dst_idx]   = sign*vtxbuf[src_idx]; // sign = 1 symmetric, sign = -1 antisymmetric
+    vtxbuf[dst_idx]   = sign*vtxbuf[src_idx] *0.0 + 1.0; // sign = 1 symmetric, sign = -1 antisymmetric
 }
 
 
@@ -187,12 +208,12 @@ acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int
         kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex,  1);
         ERRCHK_CUDA_KERNEL();
     } 
-    else if (bc_bot.x == AC_BOUNDCOND_ANTISYMMETRIC) 
+    else if (bc_top.x == AC_BOUNDCOND_ANTISYMMETRIC) 
     {
         kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex, -1);
         ERRCHK_CUDA_KERNEL();
     } 
-    else if (bc_bot.x == AC_BOUNDCOND_PERIODIC) 
+    else if (bc_top.x == AC_BOUNDCOND_PERIODIC) 
     {
         kernel_periodic_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf);
         ERRCHK_CUDA_KERNEL();
