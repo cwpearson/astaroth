@@ -14,7 +14,7 @@
 #define MPI_DECOMPOSITION_AXES (3)
 #define MPI_COMPUTE_ENABLED (1)
 #define MPI_COMM_ENABLED (1)
-#define MPI_INCL_CORNERS (1)
+#define MPI_INCL_CORNERS (0)
 #define MPI_USE_PINNED (0)              // Do inter-node comm with pinned memory
 #define MPI_USE_CUDA_DRIVER_PINNING (0) // Pin with cuPointerSetAttribute, otherwise cudaMallocHost
 
@@ -742,7 +742,7 @@ acCreatePackedDataHost(const int3 dims)
     data.dims = dims;
 
     const size_t bytes = dims.x * dims.y * dims.z * sizeof(data.data[0]) * NUM_VTXBUF_HANDLES;
-    data.data          = (AcReal*)malloc(bytes);
+    data.data          = (AcRealPacked*)malloc(bytes);
     ERRCHK_ALWAYS(data.data);
 
     return data;
@@ -1153,8 +1153,13 @@ acTransferCommData(const Device device, //
     cudaSetDevice(device->id);
 
     MPI_Datatype datatype = MPI_FLOAT;
-    if (sizeof(AcReal) == 8)
+    if (sizeof(data->srcs[0].data[0]) == 2) {
+        datatype = MPI_SHORT; // TODO CONFIRM THAT IS CORRECTLY CAST TO HALF
+    } else if (sizeof(data->srcs[0].data[0]) == 4) {
+        datatype = MPI_FLOAT;
+    } else {
         datatype = MPI_DOUBLE;
+    }
 
     int nprocs, pid;
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -1255,6 +1260,20 @@ acGridSynchronizeStream(const Stream stream)
 
     acDeviceSynchronizeStream(grid.device, stream);
     MPI_Barrier(MPI_COMM_WORLD);
+    return AC_SUCCESS;
+}
+
+AcResult
+acGridRandomize(void)
+{
+    ERRCHK(grid.initialized);
+
+    AcMesh host;
+    acMeshCreate(grid.submesh.info, &host);
+    acMeshRandomize(&host);
+    acDeviceLoadMesh(grid.device, STREAM_DEFAULT, host);
+    acMeshDestroy(&host);
+
     return AC_SUCCESS;
 }
 

@@ -716,7 +716,7 @@ external acdevicesynchronizestream
     fprintf(FHEADER, "integer(c_int), parameter :: AC_NUM_SCALARRAY_HANDLES = %d\n\n", enumcounter);
 
     // Streams
-    const size_t nstreams = 20;
+    const size_t nstreams = 32;
     for (size_t i = 0; i < nstreams; ++i) {
         fprintf(DSLHEADER, "#define STREAM_%lu (%lu)\n", i, i);
         fprintf(FHEADER, "integer(c_int), parameter :: STREAM_%lu = %lu\n", i, i);

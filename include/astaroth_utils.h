@@ -51,9 +51,6 @@ AcResult acVertexBufferSet(const VertexBufferHandle handle, const AcReal value, 
 AcResult acMeshSet(const AcReal value, AcMesh* mesh);
 
 /** */
-AcResult acMeshRandomize(AcMesh* mesh);
-
-/** */
 AcResult acMeshApplyPeriodicBounds(AcMesh* mesh);
 
 /** */

@@ -298,6 +298,9 @@ Resets all devices on the current grid.
  */
 AcResult acGridQuit(void);
 
+/** Randomizes the local mesh */
+AcResult acGridRandomize(void);
+
 /** */
 AcResult acGridSynchronizeStream(const Stream stream);
 
@@ -632,6 +635,9 @@ AcResult acUpdateBuiltinParams(AcMeshInfo* config);
 
 /** Creates a mesh stored in host memory */
 AcResult acMeshCreate(const AcMeshInfo mesh_info, AcMesh* mesh);
+
+/** Randomizes a host mesh */
+AcResult acMeshRandomize(AcMesh* mesh);
 
 /** Destroys a mesh stored in host memory */
 AcResult acMeshDestroy(AcMesh* mesh);

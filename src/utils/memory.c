@@ -38,23 +38,6 @@ acMeshSet(const AcReal value, AcMesh* mesh)
     return AC_SUCCESS;
 }
 
-static AcReal
-randf(void)
-{
-    return (AcReal)rand() / (AcReal)RAND_MAX;
-}
-
-AcResult
-acMeshRandomize(AcMesh* mesh)
-{
-    const int n = acVertexBufferSize(mesh->info);
-    for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
-        for (int i = 0; i < n; ++i)
-            mesh->vertex_buffer[w][i] = randf();
-
-    return AC_SUCCESS;
-}
-
 AcResult
 acMeshApplyPeriodicBounds(AcMesh* mesh)
 {

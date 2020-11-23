@@ -43,7 +43,13 @@
 
 // NEED TO BE DEFINED HERE. IS NOT NOTICED BY compile_acc call.
 #define LFORCING (0)
+
+#ifdef VTXBUF_ACCRETION
+#define LSINK (1)
+#else
 #define LSINK (0)
+#endif
+
 #ifdef BFIELDX
 #define LBFIELD (1)
 #else
@@ -322,6 +328,7 @@ run_simulation(const char* config_path)
     // acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh); //Initial condition for a collapse test
 
 #if LSINK
+    printf("WARNING! Sink particle is under development. USE AT YOUR OWN RISK!")
     vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
 #endif
 
@@ -388,18 +395,10 @@ run_simulation(const char* config_path)
     /* Step the simulation */
     AcReal accreted_mass = 0.0;
     AcReal sink_mass     = 0.0;
+    AcReal uu_freefall = 0.0;
     AcReal dt_typical    = 0.0;
     int dtcounter = 0;
     for (int i = start_step + 1; i < max_steps; ++i) {
-        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
-#if LBFIELD
-        const AcReal vAmax = acReduceVecScal(RTYPE_ALFVEN_MAX, BFIELDX, BFIELDY, BFIELDZ, VTXBUF_LNRHO);
-        const AcReal uref  = max(umax, vAmax); 
-        const AcReal dt   = host_timestep(uref, vAmax, mesh_info);
-#else
-        const AcReal dt   = host_timestep(umax, 0.0l, mesh_info);
-#endif
-
 #if LSINK
 
         const AcReal sum_mass = acReduceScal(RTYPE_SUM, VTXBUF_ACCRETION);
@@ -407,7 +406,7 @@ run_simulation(const char* config_path)
         sink_mass             = 0.0;
         sink_mass             = mesh_info.real_params[AC_M_sink_init] + accreted_mass;
         acLoadDeviceConstant(AC_M_sink, sink_mass);
-        vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh);
+        vertex_buffer_set(VTXBUF_ACCRETION, 0.0, mesh); //TODO THIS IS A BUG! WILL ONLY SET HOST BUFFER 0! 
 
         int on_off_switch;
         if (i < 1) {
@@ -417,9 +416,24 @@ run_simulation(const char* config_path)
             on_off_switch = 1;
         }
         acLoadDeviceConstant(AC_switch_accretion, on_off_switch);
+
+        //Adjust courant condition for free fall velocity
+        const AcReal RR = mesh_info.real_params[AC_soft]*mesh_info.real_params[AC_soft];
+        const AcReal SQ2GM = sqrt(AcReal(2.0)*mesh_info.real_params[AC_G_const]*sink_mass);
+        uu_freefall = fabs(SQ2GM / sqrt(RR));
 #else
         accreted_mass = -1.0;
         sink_mass     = -1.0;
+#endif
+
+        const AcReal umax = acReduceVec(RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+#if LBFIELD
+        const AcReal vAmax = acReduceVecScal(RTYPE_ALFVEN_MAX, BFIELDX, BFIELDY, BFIELDZ, VTXBUF_LNRHO);
+        const AcReal uref  = max(max(umax,uu_freefall), vAmax); 
+        const AcReal dt   = host_timestep(uref, vAmax, mesh_info);
+#else
+        const AcReal uref  = max(umax,uu_freefall); 
+        const AcReal dt   = host_timestep(uref, 0.0l, mesh_info);
 #endif
 
 #if LFORCING
