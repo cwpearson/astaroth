@@ -191,7 +191,8 @@ acKernelPeriodicBoundconds(const cudaStream_t stream, const int3 start, const in
 
 AcResult 
 acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int3 end,
-                          AcReal* vtxbuf, const AcMeshInfo config, const int3 bindex)
+                          AcReal* vtxbuf, const VertexBufferHandle vtxbuf_handle, 
+                          const AcMeshInfo config, const int3 bindex)   
 {
     const dim3 tpb(8, 2, 8);
     const dim3 bpg((unsigned int)ceil((end.x - start.x) / (float)tpb.x),
@@ -203,28 +204,38 @@ acKernelGeneralBoundconds(const cudaStream_t stream, const int3 start, const int
     int3 bc_bot = {config.int_params[AC_bc_type_bot_x], config.int_params[AC_bc_type_bot_y], 
                    config.int_params[AC_bc_type_bot_z]};
 
-    if (bc_top.x == AC_BOUNDCOND_SYMMETRIC) 
-    {
-        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex,  1);
-        ERRCHK_CUDA_KERNEL();
-    } 
-    else if (bc_top.x == AC_BOUNDCOND_ANTISYMMETRIC) 
-    {
-        kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex, -1);
-        ERRCHK_CUDA_KERNEL();
-    } 
-    else if (bc_top.x == AC_BOUNDCOND_PERIODIC) 
-    {
-        kernel_periodic_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf);
-        ERRCHK_CUDA_KERNEL();
-    } 
-    else 
-    {
-        printf("ERROR: Boundary condition not recognized!\n");
-        printf("ERROR: bc_top = %i, %i, %i \n", bc_top.x, bc_top.y, bc_top.z);
-        printf("ERROR: bc_bot = %i, %i, %i \n", bc_bot.x, bc_bot.y, bc_bot.z);
+//#if AC_MPI_ENABLED
+//    printf( "WARNING : NON-PERIODIC BOUNDARY CONDITIONS NOT SUPPORTER BY MPI! Only working at node level.\n");
+//    return AC_FAILURE;
+//#endif
 
-        return AC_FAILURE;
+    if ( vtxbuf_handle != -1) // This is a dummy to make swithing boundary condition with respect to   more possible later  
+    {
+
+        if (bc_top.x == AC_BOUNDCOND_SYMMETRIC) 
+        {
+            kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex,  1);
+            ERRCHK_CUDA_KERNEL();
+        } 
+        else if (bc_top.x == AC_BOUNDCOND_ANTISYMMETRIC) 
+        {
+            kernel_symmetric_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf, bindex, -1);
+            ERRCHK_CUDA_KERNEL();
+        } 
+        else if (bc_top.x == AC_BOUNDCOND_PERIODIC) 
+        {
+            kernel_periodic_boundconds<<<bpg, tpb, 0, stream>>>(start, end, vtxbuf);
+            ERRCHK_CUDA_KERNEL();
+        } 
+        else 
+        {
+            printf("ERROR: Boundary condition not recognized!\n");
+            printf("ERROR: bc_top = %i, %i, %i \n", bc_top.x, bc_top.y, bc_top.z);
+            printf("ERROR: bc_bot = %i, %i, %i \n", bc_bot.x, bc_bot.y, bc_bot.z);
+
+            return AC_FAILURE;
+        }
+
     }
 
     return AC_SUCCESS;

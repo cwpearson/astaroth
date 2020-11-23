@@ -440,7 +440,7 @@ acDeviceGeneralBoundcondStep(const Device device, const Stream stream,
 {
     cudaSetDevice(device->id);
     return acKernelGeneralBoundconds(device->streams[stream], start, end,
-                                     device->vba.in[vtxbuf_handle], config, bindex);
+                                     device->vba.in[vtxbuf_handle], vtxbuf_handle, config, bindex);
 }
 
 AcResult
