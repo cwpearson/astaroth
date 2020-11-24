@@ -445,7 +445,7 @@ main(int argc, char** argv)
 #endif
         }
 
-        acMeshApplyPeriodicBounds(&mesh);
+        acHostMeshApplyPeriodicBounds(&mesh);
         if (start_step == 0) {
             save_mesh(mesh, 0, t_step);
         }

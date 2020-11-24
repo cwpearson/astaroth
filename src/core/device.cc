@@ -1290,7 +1290,7 @@ acGridRandomize(void)
 
     AcMesh host;
     acHostMeshCreate(grid.submesh.info, &host);
-    acMeshRandomize(&host);
+    acHostMeshRandomize(&host);
     acDeviceLoadMesh(grid.device, STREAM_DEFAULT, host);
     acHostMeshDestroy(&host);
 

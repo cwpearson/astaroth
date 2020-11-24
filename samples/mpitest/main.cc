@@ -49,8 +49,8 @@ main(void)
     if (pid == 0) {
         acHostMeshCreate(info, &model);
         acHostMeshCreate(info, &candidate);
-        acMeshRandomize(&model);
-        acMeshRandomize(&candidate);
+        acHostMeshRandomize(&model);
+        acHostMeshRandomize(&candidate);
     }
 
     // GPU alloc & compute
@@ -61,10 +61,10 @@ main(void)
     acGridPeriodicBoundconds(STREAM_DEFAULT);
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
     if (pid == 0) {
-        acMeshApplyPeriodicBounds(&model);
+        acHostMeshApplyPeriodicBounds(&model);
         const AcResult res = acVerifyMesh("Boundconds", model, candidate);
         ERRCHK_ALWAYS(res == AC_SUCCESS);
-        acMeshRandomize(&model);
+        acHostMeshRandomize(&model);
     }
 
     // Integration
@@ -74,10 +74,10 @@ main(void)
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
     if (pid == 0) {
         acHostIntegrateStep(model, FLT_EPSILON);
-        acMeshApplyPeriodicBounds(&model);
+        acHostMeshApplyPeriodicBounds(&model);
         const AcResult res = acVerifyMesh("Integration", model, candidate);
         ERRCHK_ALWAYS(res == AC_SUCCESS);
-        acMeshRandomize(&model);
+        acHostMeshRandomize(&model);
     }
 
     // Scalar reductions

@@ -30,7 +30,7 @@
 #include <stdbool.h>
 
 #include "errchk.h"
-#include "memory.h" // acHostMeshCreate, acHostMeshDestroy, acMeshApplyPeriodicBounds
+#include "memory.h" // acHostMeshCreate, acHostMeshDestroy, acHostMeshApplyPeriodicBounds
 
 // Standalone flags
 #define LDENSITY (1)

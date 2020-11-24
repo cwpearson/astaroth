@@ -120,8 +120,8 @@ main(int argc, char** argv)
     if (pid == 0) {
         acHostMeshCreate(info, &model);
         acHostMeshCreate(info, &candidate);
-        acMeshRandomize(&model);
-        acMeshRandomize(&candidate);
+        acHostMeshRandomize(&model);
+        acHostMeshRandomize(&candidate);
     }*/
 
     // GPU alloc & compute
@@ -131,7 +131,7 @@ main(int argc, char** argv)
     /*
     AcMesh model;
     acHostMeshCreate(info, &model);
-    acMeshRandomize(&model);
+    acHostMeshRandomize(&model);
     acGridLoadMesh(STREAM_DEFAULT, model);
     */
 
@@ -146,7 +146,7 @@ main(int argc, char** argv)
     // Verify
     if (pid == 0) {
         acHostIntegrateStep(model, FLT_EPSILON);
-        acMeshApplyPeriodicBounds(&model);
+        acHostMeshApplyPeriodicBounds(&model);
 
         AcResult retval = acVerifyMesh(model, candidate);
         acHostMeshDestroy(&model);
