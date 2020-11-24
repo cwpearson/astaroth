@@ -7,9 +7,9 @@
  * Utils
  */
 void
-acupdatebuiltinparams_(AcMeshInfo* info)
+achostupdatebuiltinparams_(AcMeshInfo* info)
 {
-    acUpdateBuiltinParams(info);
+    acHostUpdateBuiltinParams(info);
 }
 
 void

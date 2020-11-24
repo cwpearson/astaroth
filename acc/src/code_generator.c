@@ -606,7 +606,7 @@ generate_headers(void)
 !  -*-f90-*-  (for emacs)    vim:set filetype=fortran:  (for vim)
 
 ! Utils (see astaroth_fortran.cc for definitions)
-external acupdatebuiltinparams
+external achostupdatebuiltinparams
 external acgetdevicecount
 
 ! Device interface (see astaroth_fortran.cc for definitions)

@@ -14,7 +14,7 @@ program pc
   info%int_params(AC_nx + 1) = 128
   info%int_params(AC_ny + 1) = 128
   info%int_params(AC_nz + 1) = 128
-  call acupdatebuiltinparams(info)
+  call achostupdatebuiltinparams(info)
 
   call acdevicecreate(0, info, device)
   call acdeviceprintinfo(device)

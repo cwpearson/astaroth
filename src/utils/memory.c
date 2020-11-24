@@ -21,7 +21,7 @@
 #include "errchk.h"
 
 AcResult
-acVertexBufferSet(const VertexBufferHandle handle, const AcReal value, AcMesh* mesh)
+acHostVertexBufferSet(const VertexBufferHandle handle, const AcReal value, AcMesh* mesh)
 {
     const int n = acVertexBufferSize(mesh->info);
     for (int i = 0; i < n; ++i)
@@ -30,16 +30,16 @@ acVertexBufferSet(const VertexBufferHandle handle, const AcReal value, AcMesh* m
     return AC_SUCCESS;
 }
 AcResult
-acMeshSet(const AcReal value, AcMesh* mesh)
+acHostMeshSet(const AcReal value, AcMesh* mesh)
 {
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
-        acVertexBufferSet(w, value, mesh);
+        acHostVertexBufferSet(w, value, mesh);
 
     return AC_SUCCESS;
 }
 
 AcResult
-acMeshApplyPeriodicBounds(AcMesh* mesh)
+acHostMeshApplyPeriodicBounds(AcMesh* mesh)
 {
     const AcMeshInfo info = mesh->info;
     for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w) {
@@ -105,7 +105,7 @@ acMeshApplyPeriodicBounds(AcMesh* mesh)
 }
 
 AcResult
-acMeshClear(AcMesh* mesh)
+acHostMeshClear(AcMesh* mesh)
 {
-    return acMeshSet(0, mesh);
+    return acHostMeshSet(0, mesh);
 }

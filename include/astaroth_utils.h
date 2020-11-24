@@ -45,25 +45,25 @@ typedef struct {
 AcResult acLoadConfig(const char* config_path, AcMeshInfo* config);
 
 /** */
-AcResult acVertexBufferSet(const VertexBufferHandle handle, const AcReal value, AcMesh* mesh);
+AcResult acHostVertexBufferSet(const VertexBufferHandle handle, const AcReal value, AcMesh* mesh);
 
 /** */
-AcResult acMeshSet(const AcReal value, AcMesh* mesh);
+AcResult acHostMeshSet(const AcReal value, AcMesh* mesh);
 
 /** */
-AcResult acMeshApplyPeriodicBounds(AcMesh* mesh);
+AcResult acHostMeshApplyPeriodicBounds(AcMesh* mesh);
 
 /** */
-AcResult acMeshClear(AcMesh* mesh);
+AcResult acHostMeshClear(AcMesh* mesh);
 
 /** */
-AcResult acModelIntegrateStep(AcMesh mesh, const AcReal dt);
+AcResult acHostIntegrateStep(AcMesh mesh, const AcReal dt);
 
 /** */
-AcReal acModelReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a);
+AcReal acHostReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a);
 
 /** */
-AcReal acModelReduceVec(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a,
+AcReal acHostReduceVec(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a,
                         const VertexBufferHandle b, const VertexBufferHandle c);
 
 Error acGetError(const AcReal model, const AcReal candidate);
