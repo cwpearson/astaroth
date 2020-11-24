@@ -107,7 +107,7 @@ main(int argc, char** argv)
         }
     }
 
-    const TestType test = TEST_WEAK_SCALING;
+    const TestType test = TEST_STRONG_SCALING;
     if (test == TEST_WEAK_SCALING) {
         uint3_64 decomp = decompose(nprocs);
         info.int_params[AC_nx] *= decomp.x;
