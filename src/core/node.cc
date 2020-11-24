@@ -537,6 +537,18 @@ acNodeLoadMesh(const Node node, const Stream stream, const AcMesh host_mesh)
 }
 
 AcResult
+acNodeSetVertexBuffer(const Node node, const Stream stream, const VertexBufferHandle handle, const AcReal value)
+{
+    acNodeSynchronizeStream(node, stream);
+
+    for (int i = 0; i < node->num_devices; ++i)
+        acDeviceSetVertexBuffer(node->devices[i], stream, handle, value);
+
+    acNodeSynchronizeStream(node, stream); // For safety
+    return AC_SUCCESS;
+}
+
+AcResult
 acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
                                   const VertexBufferHandle vtxbuf_handle, const int3 src,
                                   const int3 dst, const int num_vertices, AcMesh* host_mesh)

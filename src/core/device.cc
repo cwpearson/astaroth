@@ -295,6 +295,26 @@ acDeviceLoadMesh(const Device device, const Stream stream, const AcMesh host_mes
 }
 
 AcResult
+acDeviceSetVertexBuffer(const Device device, const Stream stream, const VertexBufferHandle handle, const AcReal value)
+{
+    acDeviceSynchronizeStream(device, stream);
+
+    const size_t count = acVertexBufferSize(device->local_config);
+    AcReal* data = (AcReal*) malloc(sizeof(AcReal) * count);
+    ERRCHK_ALWAYS(data);
+
+    for (size_t i = 0; i < count; ++i)
+        data[i] = value;
+
+    // Set both in and out for safety (not strictly needed)
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyAsync(device->vba.in[handle], data, sizeof(data[0]) * count, cudaMemcpyHostToDevice, device->streams[stream]));
+    ERRCHK_CUDA_ALWAYS(cudaMemcpyAsync(device->vba.out[handle], data, sizeof(data[0]) * count, cudaMemcpyHostToDevice, device->streams[stream]));
+
+    free(data);
+    return AC_SUCCESS;
+}
+
+AcResult
 acDeviceStoreVertexBufferWithOffset(const Device device, const Stream stream,
                                     const VertexBufferHandle vtxbuf_handle, const int3 src,
                                     const int3 dst, const int num_vertices, AcMesh* host_mesh)
@@ -1269,10 +1289,10 @@ acGridRandomize(void)
     ERRCHK(grid.initialized);
 
     AcMesh host;
-    acMeshCreate(grid.submesh.info, &host);
+    acHostMeshCreate(grid.submesh.info, &host);
     acMeshRandomize(&host);
     acDeviceLoadMesh(grid.device, STREAM_DEFAULT, host);
-    acMeshDestroy(&host);
+    acHostMeshDestroy(&host);
 
     return AC_SUCCESS;
 }
@@ -1320,7 +1340,7 @@ acGridInit(const AcMeshInfo info)
     };
     submesh_info.int3_params[AC_multigpu_offset] = pid3d *
                                                    (int3){submesh_nx, submesh_ny, submesh_nz};
-    acUpdateBuiltinParams(&submesh_info);
+    acHostUpdateBuiltinParams(&submesh_info);
 
     // GPU alloc
     int devices_per_node = -1;
@@ -1331,7 +1351,7 @@ acGridInit(const AcMeshInfo info)
 
     // CPU alloc
     AcMesh submesh;
-    acMeshCreate(submesh_info, &submesh);
+    acHostMeshCreate(submesh_info, &submesh);
 
     // Setup the global grid structure
     grid.device        = device;
@@ -1380,7 +1400,7 @@ acGridQuit(void)
 
     grid.initialized   = false;
     grid.decomposition = (uint3_64){0, 0, 0};
-    acMeshDestroy(&grid.submesh);
+    acHostMeshDestroy(&grid.submesh);
     acDeviceDestroy(grid.device);
 
     acGridSynchronizeStream(STREAM_ALL);
