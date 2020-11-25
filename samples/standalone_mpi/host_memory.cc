@@ -576,7 +576,7 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
 
     switch (init_type) {
     case INIT_TYPE_RANDOM: {
-        acMeshClear(mesh);
+        acHostMeshClear(mesh);
         const AcReal range = AcReal(0.01);
         for (int w = 0; w < NUM_VTXBUF_HANDLES; ++w)
             for (int i = 0; i < n; ++i)
@@ -585,14 +585,14 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
         break;
     }
     case INIT_TYPE_GAUSSIAN_RADIAL_EXPL:
-        acMeshClear(mesh);
-        acVertexBufferSet(VTXBUF_LNRHO, mesh->info.real_params[AC_ampl_lnrho], mesh);
+        acHostMeshClear(mesh);
+        acHostVertexBufferSet(VTXBUF_LNRHO, mesh->info.real_params[AC_ampl_lnrho], mesh);
         // acmesh_init_to(INIT_TYPE_RANDOM, mesh);
         gaussian_radial_explosion(mesh);
 
         break;
     case INIT_TYPE_XWAVE:
-        acMeshClear(mesh);
+        acHostMeshClear(mesh);
         acmesh_init_to(INIT_TYPE_RANDOM, mesh);
         for (int k = 0; k < mz; k++) {
             for (int j = 0; j < my; j++) {
@@ -605,24 +605,24 @@ acmesh_init_to(const InitType& init_type, AcMesh* mesh)
         }
         break;
     case INIT_TYPE_SIMPLE_CORE:
-        acMeshClear(mesh);
+        acHostMeshClear(mesh);
         simple_uniform_core(mesh);
         break;
     case INIT_TYPE_VEDGE:
-        acMeshClear(mesh);
+        acHostMeshClear(mesh);
         inflow_vedge_freefall(mesh);
         break;
     case INIT_TYPE_VEDGEX:
-        acMeshClear(mesh);
+        acHostMeshClear(mesh);
         inflow_freefall_x(mesh);
         break;
     case INIT_TYPE_RAYLEIGH_TAYLOR:
-        acMeshClear(mesh);
+        acHostMeshClear(mesh);
         inflow_freefall_x(mesh);
         lnrho_step(mesh);
         break;
     case INIT_TYPE_ABC_FLOW: {
-        acMeshClear(mesh);
+        acHostMeshClear(mesh);
         acmesh_init_to(INIT_TYPE_RANDOM, mesh);
         for (int k = nz_min; k < nz_max; k++) {
             for (int j = ny_min; j < ny_max; j++) {

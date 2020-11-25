@@ -98,7 +98,7 @@ main(int argc, char** argv)
             info.int_params[AC_nx] = nx;
             info.int_params[AC_ny] = ny;
             info.int_params[AC_nz] = nz;
-            acUpdateBuiltinParams(&info);
+            acHostUpdateBuiltinParams(&info);
             printf("Benchmark mesh dimensions: (%d, %d, %d)\n", nx, ny, nz);
         }
         else {
@@ -118,10 +118,10 @@ main(int argc, char** argv)
     /*
     AcMesh model, candidate;
     if (pid == 0) {
-        acMeshCreate(info, &model);
-        acMeshCreate(info, &candidate);
-        acMeshRandomize(&model);
-        acMeshRandomize(&candidate);
+        acHostMeshCreate(info, &model);
+        acHostMeshCreate(info, &candidate);
+        acHostMeshRandomize(&model);
+        acHostMeshRandomize(&candidate);
     }*/
 
     // GPU alloc & compute
@@ -130,8 +130,8 @@ main(int argc, char** argv)
 
     /*
     AcMesh model;
-    acMeshCreate(info, &model);
-    acMeshRandomize(&model);
+    acHostMeshCreate(info, &model);
+    acHostMeshRandomize(&model);
     acGridLoadMesh(STREAM_DEFAULT, model);
     */
 
@@ -145,12 +145,12 @@ main(int argc, char** argv)
 
     // Verify
     if (pid == 0) {
-        acModelIntegrateStep(model, FLT_EPSILON);
-        acMeshApplyPeriodicBounds(&model);
+        acHostIntegrateStep(model, FLT_EPSILON);
+        acHostMeshApplyPeriodicBounds(&model);
 
         AcResult retval = acVerifyMesh(model, candidate);
-        acMeshDestroy(&model);
-        acMeshDestroy(&candidate);
+        acHostMeshDestroy(&model);
+        acHostMeshDestroy(&candidate);
 
         if (retval != AC_SUCCESS) {
             fprintf(stderr, "Failures found, benchmark invalid. Skipping\n");

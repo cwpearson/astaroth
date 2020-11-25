@@ -74,7 +74,7 @@ exp_squared_vec(const AcReal a, const AcReal b, const AcReal c) { return exp_squ
 // clang-format on
 
 AcReal
-acModelReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a)
+acHostReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a)
 {
     ReduceInitialScalFunc reduce_initial;
     ReduceFunc reduce;
@@ -139,7 +139,7 @@ acModelReduceScal(const AcMesh mesh, const ReductionType rtype, const VertexBuff
 }
 
 AcReal
-acModelReduceVec(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a,
+acHostReduceVec(const AcMesh mesh, const ReductionType rtype, const VertexBufferHandle a,
                  const VertexBufferHandle b, const VertexBufferHandle c)
 {
     // AcReal (*reduce_initial)(AcReal, AcReal, AcReal);

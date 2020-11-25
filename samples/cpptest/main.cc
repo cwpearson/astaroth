@@ -31,12 +31,12 @@ main(void)
 
     // Alloc
     AcMesh model, candidate;
-    acMeshCreate(info, &model);
-    acMeshCreate(info, &candidate);
+    acHostMeshCreate(info, &model);
+    acHostMeshCreate(info, &candidate);
 
     // Init
-    acMeshRandomize(&model);
-    acMeshApplyPeriodicBounds(&model);
+    acHostMeshRandomize(&model);
+    acHostMeshApplyPeriodicBounds(&model);
 
     // Verify that the mesh was loaded and stored correctly
     acInit(info);
@@ -55,8 +55,8 @@ main(void)
 
     // Destroy
     acQuit();
-    acMeshDestroy(&model);
-    acMeshDestroy(&candidate);
+    acHostMeshDestroy(&model);
+    acHostMeshDestroy(&candidate);
 
     puts("cpptest complete.");
     return EXIT_SUCCESS;

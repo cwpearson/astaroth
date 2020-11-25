@@ -47,10 +47,10 @@ main(void)
 
     AcMesh model, candidate;
     if (pid == 0) {
-        acMeshCreate(info, &model);
-        acMeshCreate(info, &candidate);
-        acMeshRandomize(&model);
-        acMeshRandomize(&candidate);
+        acHostMeshCreate(info, &model);
+        acHostMeshCreate(info, &candidate);
+        acHostMeshRandomize(&model);
+        acHostMeshRandomize(&candidate);
     }
 
     // GPU alloc & compute
@@ -61,10 +61,10 @@ main(void)
     acGridPeriodicBoundconds(STREAM_DEFAULT);
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
     if (pid == 0) {
-        acMeshApplyPeriodicBounds(&model);
+        acHostMeshApplyPeriodicBounds(&model);
         const AcResult res = acVerifyMesh("Boundconds", model, candidate);
         ERRCHK_ALWAYS(res == AC_SUCCESS);
-        acMeshRandomize(&model);
+        acHostMeshRandomize(&model);
     }
 
     // Integration
@@ -73,11 +73,11 @@ main(void)
     acGridPeriodicBoundconds(STREAM_DEFAULT);
     acGridStoreMesh(STREAM_DEFAULT, &candidate);
     if (pid == 0) {
-        acModelIntegrateStep(model, FLT_EPSILON);
-        acMeshApplyPeriodicBounds(&model);
+        acHostIntegrateStep(model, FLT_EPSILON);
+        acHostMeshApplyPeriodicBounds(&model);
         const AcResult res = acVerifyMesh("Integration", model, candidate);
         ERRCHK_ALWAYS(res == AC_SUCCESS);
-        acMeshRandomize(&model);
+        acHostMeshRandomize(&model);
     }
 
     // Scalar reductions
@@ -93,10 +93,10 @@ main(void)
         AcReal candval;
         acGridReduceScal(STREAM_DEFAULT, (ReductionType)i, v0, &candval);
         if (pid == 0) {
-            const AcReal modelval   = acModelReduceScal(model, (ReductionType)i, v0);
+            const AcReal modelval   = acHostReduceScal(model, (ReductionType)i, v0);
             Error error             = acGetError(modelval, candval);
-            error.maximum_magnitude = acModelReduceScal(model, RTYPE_MAX, v0);
-            error.minimum_magnitude = acModelReduceScal(model, RTYPE_MIN, v0);
+            error.maximum_magnitude = acHostReduceScal(model, RTYPE_MAX, v0);
+            error.minimum_magnitude = acHostReduceScal(model, RTYPE_MIN, v0);
             ERRCHK_ALWAYS(acEvalError(rtype_names[i], error));
         }
     }
@@ -114,17 +114,17 @@ main(void)
         AcReal candval;
         acGridReduceVec(STREAM_DEFAULT, (ReductionType)i, v0, v1, v2, &candval);
         if (pid == 0) {
-            const AcReal modelval   = acModelReduceVec(model, (ReductionType)i, v0, v1, v2);
+            const AcReal modelval   = acHostReduceVec(model, (ReductionType)i, v0, v1, v2);
             Error error             = acGetError(modelval, candval);
-            error.maximum_magnitude = acModelReduceVec(model, RTYPE_MAX, v0, v1, v2);
-            error.minimum_magnitude = acModelReduceVec(model, RTYPE_MIN, v0, v1, v1);
+            error.maximum_magnitude = acHostReduceVec(model, RTYPE_MAX, v0, v1, v2);
+            error.minimum_magnitude = acHostReduceVec(model, RTYPE_MIN, v0, v1, v1);
             ERRCHK_ALWAYS(acEvalError(rtype_names[i], error));
         }
     }
 
     if (pid == 0) {
-        acMeshDestroy(&model);
-        acMeshDestroy(&candidate);
+        acHostMeshDestroy(&model);
+        acHostMeshDestroy(&candidate);
     }
 
     acGridQuit();

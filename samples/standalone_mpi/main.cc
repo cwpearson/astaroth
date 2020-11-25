@@ -199,9 +199,9 @@ print_diagnostics_host(const AcMesh mesh, const int step, const AcReal dt, const
     const int max_name_width = 16;
 
     // Calculate rms, min and max from the velocity vector field
-    buf_max = acModelReduceVec(mesh, RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
-    buf_min = acModelReduceVec(mesh, RTYPE_MIN, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
-    buf_rms = acModelReduceVec(mesh, RTYPE_RMS, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+    buf_max = acHostReduceVec(mesh, RTYPE_MAX, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+    buf_min = acHostReduceVec(mesh, RTYPE_MIN, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
+    buf_rms = acHostReduceVec(mesh, RTYPE_RMS, VTXBUF_UUX, VTXBUF_UUY, VTXBUF_UUZ);
 
     // MV: The ordering in the earlier version was wrong in terms of variable
     // MV: name and its diagnostics.
@@ -213,9 +213,9 @@ print_diagnostics_host(const AcMesh mesh, const int step, const AcReal dt, const
 
     // Calculate rms, min and max from the variables as scalars
     for (int i = 0; i < NUM_VTXBUF_HANDLES; ++i) {
-        buf_max = acModelReduceScal(mesh, RTYPE_MAX, VertexBufferHandle(i));
-        buf_min = acModelReduceScal(mesh, RTYPE_MIN, VertexBufferHandle(i));
-        buf_rms = acModelReduceScal(mesh, RTYPE_RMS, VertexBufferHandle(i));
+        buf_max = acHostReduceScal(mesh, RTYPE_MAX, VertexBufferHandle(i));
+        buf_min = acHostReduceScal(mesh, RTYPE_MIN, VertexBufferHandle(i));
+        buf_rms = acHostReduceScal(mesh, RTYPE_RMS, VertexBufferHandle(i));
 
         printf("  %*s: min %.3e,\trms %.3e,\tmax %.3e\n", max_name_width, vtxbuf_names[i],
                double(buf_min), double(buf_rms), double(buf_max));
@@ -330,7 +330,7 @@ main(int argc, char** argv)
 
     AcMesh mesh;
     if (pid == 0) {
-        acMeshCreate(info, &mesh);
+        acHostMeshCreate(info, &mesh);
         acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, &mesh);
     }
     acGridInit(info);
@@ -362,7 +362,7 @@ main(int argc, char** argv)
         }
     }
     if (pid == 0)
-        acMeshDestroy(&mesh);
+        acHostMeshDestroy(&mesh);
 
     acGridQuit();
     /////////////// Simple example END
@@ -376,7 +376,7 @@ main(int argc, char** argv)
         if (argc == 3 && (!strcmp(argv[1], "-c") || !strcmp(argv[1], "--config"))) {
             acLoadConfig(argv[2], &info);
             load_config(argv[2], &info);
-            acUpdateBuiltinParams(&info);
+            acHostUpdateBuiltinParams(&info);
         }
         else {
             printf("Usage: ./ac_run\n");
@@ -388,7 +388,7 @@ main(int argc, char** argv)
     else {
         acLoadConfig(AC_DEFAULT_CONFIG, &info);
         load_config(AC_DEFAULT_CONFIG, &info);
-        acUpdateBuiltinParams(&info);
+        acHostUpdateBuiltinParams(&info);
     }
 
     const int start_step     = info.int_params[AC_start_step];
@@ -406,7 +406,7 @@ main(int argc, char** argv)
     AcMesh mesh;
     ///////////////////////////////// PROC 0 BLOCK START ///////////////////////////////////////////
     if (pid == 0) {
-        acMeshCreate(info, &mesh);
+        acHostMeshCreate(info, &mesh);
         // TODO: This need to be possible to define in astaroth.conf
         acmesh_init_to(INIT_TYPE_GAUSSIAN_RADIAL_EXPL, &mesh);
         // acmesh_init_to(INIT_TYPE_SIMPLE_CORE, mesh); //Initial condition for a collapse test
@@ -445,7 +445,7 @@ main(int argc, char** argv)
 #endif
         }
 
-        acMeshApplyPeriodicBounds(&mesh);
+        acHostMeshApplyPeriodicBounds(&mesh);
         if (start_step == 0) {
             save_mesh(mesh, 0, t_step);
         }
@@ -564,7 +564,7 @@ main(int argc, char** argv)
 
     acGridQuit();
     if (pid == 0)
-        acMeshDestroy(&mesh);
+        acHostMeshDestroy(&mesh);
     fclose(diag_file);
 #endif
 

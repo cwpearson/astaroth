@@ -30,12 +30,12 @@ main(void)
 
     // Alloc
     AcMesh model, candidate;
-    acMeshCreate(info, &model);
-    acMeshCreate(info, &candidate);
+    acHostMeshCreate(info, &model);
+    acHostMeshCreate(info, &candidate);
 
     // Init
-    acMeshRandomize(&model);
-    acMeshApplyPeriodicBounds(&model);
+    acHostMeshRandomize(&model);
+    acHostMeshApplyPeriodicBounds(&model);
 
     // Verify that the mesh was loaded and stored correctly
     acInit(info);
@@ -46,6 +46,7 @@ main(void)
     // Attempt to integrate and check max and min
     printf("Integrating... ");
     acIntegrate(FLT_EPSILON);
+
     printf("Done.\nVTXBUF ranges after one integration step:\n");
     for (size_t i = 0; i < NUM_VTXBUF_HANDLES; ++i)
         printf("\t%-15s... [%.3g, %.3g]\n", vtxbuf_names[i], //
@@ -54,8 +55,8 @@ main(void)
 
     // Destroy
     acQuit();
-    acMeshDestroy(&model);
-    acMeshDestroy(&candidate);
+    acHostMeshDestroy(&model);
+    acHostMeshDestroy(&candidate);
 
     puts("ctest complete.");
     return EXIT_SUCCESS;

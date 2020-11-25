@@ -225,6 +225,9 @@ AcResult acLoadDeviceConstant(const AcRealParam param, const AcReal value);
 /** Loads an AcMesh to the devices visible to the caller */
 AcResult acLoad(const AcMesh host_mesh);
 
+/** Sets the whole mesh to some value */
+AcResult acSetVertexBuffer(const VertexBufferHandle handle, const AcReal value);
+
 /** Stores the AcMesh distributed among the devices visible to the caller back to the host*/
 AcResult acStore(AcMesh* host_mesh);
 
@@ -432,6 +435,9 @@ AcResult acNodeLoadVertexBuffer(const Node node, const Stream stream, const AcMe
 /** */
 AcResult acNodeLoadMesh(const Node node, const Stream stream, const AcMesh host_mesh);
 
+/** */
+AcResult acNodeSetVertexBuffer(const Node node, const Stream stream, const VertexBufferHandle handle, const AcReal value);
+
 /** Deprecated ? */
 AcResult acNodeStoreVertexBufferWithOffset(const Node node, const Stream stream,
                                            const VertexBufferHandle vtxbuf_handle, const int3 src,
@@ -555,6 +561,9 @@ AcResult acDeviceLoadVertexBuffer(const Device device, const Stream stream, cons
 AcResult acDeviceLoadMesh(const Device device, const Stream stream, const AcMesh host_mesh);
 
 /** */
+AcResult acDeviceSetVertexBuffer(const Device device, const Stream stream, const VertexBufferHandle handle, const AcReal value);
+
+/** */
 AcResult acDeviceStoreVertexBufferWithOffset(const Device device, const Stream stream,
                                              const VertexBufferHandle vtxbuf_handle, const int3 src,
                                              const int3 dst, const int num_vertices,
@@ -631,16 +640,16 @@ AcResult acDeviceRunMPITest(void);
  * =============================================================================
  */
 /** Updates the built-in parameters based on nx, ny and nz */
-AcResult acUpdateBuiltinParams(AcMeshInfo* config);
+AcResult acHostUpdateBuiltinParams(AcMeshInfo* config);
 
 /** Creates a mesh stored in host memory */
-AcResult acMeshCreate(const AcMeshInfo mesh_info, AcMesh* mesh);
+AcResult acHostMeshCreate(const AcMeshInfo mesh_info, AcMesh* mesh);
 
 /** Randomizes a host mesh */
-AcResult acMeshRandomize(AcMesh* mesh);
+AcResult acHostMeshRandomize(AcMesh* mesh);
 
 /** Destroys a mesh stored in host memory */
-AcResult acMeshDestroy(AcMesh* mesh);
+AcResult acHostMeshDestroy(AcMesh* mesh);
 
 #ifdef __cplusplus
 } // extern "C"

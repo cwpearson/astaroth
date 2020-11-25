@@ -30,7 +30,7 @@
 #include <stdbool.h>
 
 #include "errchk.h"
-#include "memory.h" // acMeshCreate, acMeshDestroy, acMeshApplyPeriodicBounds
+#include "memory.h" // acHostMeshCreate, acHostMeshDestroy, acHostMeshApplyPeriodicBounds
 
 // Standalone flags
 #define LDENSITY (1)
@@ -985,7 +985,7 @@ checkConfiguration(const AcMeshInfo info)
 }
 
 AcResult
-acModelIntegrateStep(AcMesh mesh, const AcReal dt)
+acHostIntegrateStep(AcMesh mesh, const AcReal dt)
 {
     mesh_info = &(mesh.info);
 
@@ -998,7 +998,7 @@ acModelIntegrateStep(AcMesh mesh, const AcReal dt)
     checkConfiguration(*mesh_info);
 
     AcMesh intermediate_mesh;
-    acMeshCreate(mesh.info, &intermediate_mesh);
+    acHostMeshCreate(mesh.info, &intermediate_mesh);
 
     const int nx_min = getInt(AC_nx_min);
     const int nx_max = getInt(AC_nx_max);
@@ -1012,7 +1012,7 @@ acModelIntegrateStep(AcMesh mesh, const AcReal dt)
     for (int step_number = 0; step_number < 3; ++step_number) {
 
         // Boundconds
-        acMeshApplyPeriodicBounds(&mesh);
+        acHostMeshApplyPeriodicBounds(&mesh);
 
         // Alpha step
         // #pragma omp parallel for
@@ -1035,7 +1035,7 @@ acModelIntegrateStep(AcMesh mesh, const AcReal dt)
         }
     }
 
-    acMeshDestroy(&intermediate_mesh);
+    acHostMeshDestroy(&intermediate_mesh);
     mesh_info = NULL;
     return AC_SUCCESS;
 }

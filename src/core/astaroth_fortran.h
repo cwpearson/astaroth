@@ -8,7 +8,7 @@ extern "C" {
 /**
  * Utils
  */
-void acupdatebuiltinparams_(AcMeshInfo* info);
+void achostupdatebuiltinparams_(AcMeshInfo* info);
 
 void acgetdevicecount_(int* count);
 

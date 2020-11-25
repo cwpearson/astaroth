@@ -89,7 +89,7 @@ acLoadConfig(const char* config_path, AcMeshInfo* config)
     memset(config, (uint8_t)0xFF, sizeof(*config));
 
     parse_config(config_path, config);
-    acUpdateBuiltinParams(config);
+    acHostUpdateBuiltinParams(config);
 #if AC_VERBOSE
     printf("###############################################################\n");
     printf("Config dimensions loaded:\n");
