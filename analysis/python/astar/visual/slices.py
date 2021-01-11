@@ -142,4 +142,103 @@ def plot_3(mesh, input_grid, title = '', fname = 'default', bitmap=False,
         print('Saved %s_%s.png' % (fname, mesh.framenum))
         plt.close(fig)
          
+def volume_render(mesh, val1 = {"variable": None, "min": None, "max":None, "opacity":1.0}):
+        
+    if val1["variable"] == "btot":
+        plt.figure()
+        bb_tot = np.sqrt(mesh.bb[0]**2.0 + mesh.bb[1]**2.0 + mesh.bb[2]**2.0)
+        array = bb_tot
+        varname = "btot"
+        meshxx = mesh.xx[3:-3]
+        meshyy = mesh.yy[3:-3]
+        meshzz = mesh.zz[3:-3]
+
+    if val1["variable"] == "utot":
+        plt.figure()
+        uu_tot = np.sqrt(mesh.uu[0]**2.0 + mesh.uu[1]**2.0 + mesh.uu[2]**2.0)
+        array = uu_tot
+        varname = "utot"
+        meshxx = mesh.xx
+        meshyy = mesh.yy
+        meshzz = mesh.zz
+
+    if val1["variable"] == "rho":
+        plt.figure()
+        array = np.exp(mesh.lnrho)
+        varname = "rho"
+        meshxx = mesh.xx
+        meshyy = mesh.yy
+        meshzz = mesh.zz
+
+    if val1["variable"] == "aa":
+        plt.figure()
+        aa_tot = np.sqrt(mesh.aa[0]**2.0 + mesh.aa[1]**2.0 + mesh.aa[2]**2.0)
+        array = aa_tot
+        varname = "aa"
+        meshxx = mesh.xx
+        meshyy = mesh.yy
+        meshzz = mesh.zz
+
+    #Histogram plot to find value ranges. 
+    hist, bedges = np.histogram(array, bins=mesh.xx.size)
+    plt.plot(bedges[:-1], hist)
+    plt.yscale('log')
+    if val1["min"] != None or val1["max"] != None:
+        plt.plot([val1["min"],val1["min"]], [1,hist.max()], label=varname+" min")
+        plt.plot([val1["max"],val1["max"]], [1,hist.max()], label=varname+" max")
+        plt.legend()
+
+    plt.savefig('volrend_hist_%s_%s.png' % (varname, mesh.framenum))
+    plt.close()
+
+    if val1["min"] != None or val1["max"] != None:
+
+        #print(np.where(bb_tot < val1["min"]))
+    
+        array[np.where(array < val1["min"])] = 0.0
+        array[np.where(array > val1["max"])] = 0.0
+        array[np.where(array > 0.0)] = val1["opacity"]
+    
+        #plt.figure()
+        #plt.plot(bb_tot[:,64,64])
+
+        mapyz = array.sum(axis=0)
+        mapxz = array.sum(axis=1)
+        mapxy = array.sum(axis=2)
+
+        yy_yz, zz_yz = np.meshgrid(meshyy, meshzz, indexing='ij')
+        xx_xz, zz_xz = np.meshgrid(meshxx, meshzz, indexing='ij')
+        xx_xy, yy_xy = np.meshgrid(meshxx, meshyy, indexing='ij')
+
+        fig, ax = plt.subplots()
+        #plt.imshow(mapyz, vmin=0.0, vmax=1.0)
+        plt.pcolormesh(yy_yz, zz_yz, mapyz, vmin=0.0, vmax=1.0, shading='auto')
+        ax.set_aspect('equal')
+        ax.set_title(varname)
+        ax.set_xlabel('y')
+        ax.set_ylabel('z')
+        plt.savefig('volrend_%s_%s_%s.png' % (varname, "yz", mesh.framenum))
+        plt.close()
+    
+        fig, ax = plt.subplots()
+        #plt.imshow(mapxz, vmin=0.0, vmax=1.0)
+        plt.pcolormesh(xx_xz, zz_xz, mapxz, vmin=0.0, vmax=1.0, shading='auto')
+        ax.set_aspect('equal')
+        ax.set_title(varname)
+        ax.set_xlabel('x')
+        ax.set_ylabel('z')
+        plt.savefig('volrend_%s_%s_%s.png' % (varname, "xz", mesh.framenum))
+        plt.close()
+    
+        fig, ax = plt.subplots()
+        #plt.imshow(mapxy, vmin=0.0, vmax=1.0)
+        plt.pcolormesh(xx_xy, yy_xy, mapxy, vmin=0.0, vmax=1.0, shading='auto')
+        ax.set_aspect('equal')
+        ax.set_title(varname)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        plt.savefig('volrend_%s_%s_%s.png' % (varname, "xy", mesh.framenum))
+        plt.close()
+
+    #plt.show()
  

@@ -25,6 +25,16 @@ import sys
 import os
 import pandas as pd
 
+from mpl_toolkits.mplot3d import Axes3D
+
+#Optional YT interface
+try:
+    import yt
+    yt_present = True 
+except ImportError:
+    yt_present = False
+
+
 ##mesh = ad.read.Mesh(500, fdir="/tiara/home/mvaisala/astaroth-code/astaroth_2.0/build/")
 ##
 ##print(np.shape(mesh.uu))
@@ -122,28 +132,110 @@ if "single" in sys.argv:
     print( mesh.uu[2][100, 101, 00], "periodic")
 
 if 'xline' in sys.argv:
-    mesh = ad.read.Mesh(0, fdir=meshdir)
-    plt.figure()
-    plt.plot(mesh.uu[0][100, 50, :] , label="z")
-    plt.plot(mesh.uu[0][100, :, 100], label="x")
-    plt.plot(mesh.uu[0][:, 50, 100] , label="y")
-    plt.legend()
+    mesh_file_numbers = ad.read.parse_directory(meshdir)
+    print(mesh_file_numbers)
+    maxfiles = np.amax(mesh_file_numbers)
 
-    plt.figure()
-    plt.plot(mesh.uu[0][197, 50, :] , label="z edge")
+    for i in mesh_file_numbers[-3:]:
+        mesh = ad.read.Mesh(i, fdir=meshdir)
+        mesh.Bfield(trim=True)
 
-    plt.figure()
-    plt.plot(mesh.uu[1][100, 50, :] , label="z")
-    plt.plot(mesh.uu[1][100, :, 100], label="x")
-    plt.plot(mesh.uu[1][:, 50, 100] , label="y")
-    plt.legend()
+        xhalf = int(mesh.uu[0].shape[0]/2.0)
+        yhalf = int(mesh.uu[0].shape[1]/2.0)
+        zhalf = int(mesh.uu[0].shape[2]/2.0)
+  
+        print(xhalf, yhalf, zhalf)
 
-    plt.figure()
-    plt.plot(mesh.uu[2][100, 50, :] , label="z")
-    plt.plot(mesh.uu[2][100, :, 100], label="x")
-    plt.plot(mesh.uu[2][:, 50, 100] , label="y")
-    plt.legend()
-    plt.show()
+        plt.figure()
+        plt.plot(mesh.uu[0][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.uu[0][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.uu[0][    :, yhalf, zhalf], label="x")
+        plt.title("UUX")
+        plt.legend()
+
+        #plt.figure()
+        #plt.plot(mesh.uu[0][197, 50, :] , label="z edge")
+
+        plt.figure()
+        plt.plot(mesh.uu[1][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.uu[1][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.uu[1][    :, yhalf, zhalf], label="x")
+        plt.title("UUY")
+        plt.legend()
+
+        plt.figure()
+        plt.plot(mesh.uu[2][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.uu[2][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.uu[2][    :, yhalf, zhalf], label="x")
+        plt.legend()
+        plt.title("UUZ")
+
+        plt.figure()
+        plt.plot(mesh.bb[0][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.bb[0][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.bb[0][    :, yhalf, zhalf], label="x")
+        plt.title("BBX")
+        plt.legend()
+
+        plt.figure()
+        plt.plot(mesh.bb[1][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.bb[1][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.bb[1][    :, yhalf, zhalf], label="x")
+        plt.title("BBY")
+        plt.legend()
+
+        plt.figure()
+        plt.plot(mesh.bb[2][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.bb[2][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.bb[2][    :, yhalf, zhalf], label="x")
+        plt.legend()
+        plt.title("BBZ")
+
+        plt.figure()
+        plt.plot(mesh.aa[0][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.aa[0][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.aa[0][    :, yhalf, zhalf], label="x")
+        plt.title("AX")
+        plt.legend()
+
+        plt.figure()
+        plt.plot(mesh.aa[1][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.aa[1][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.aa[1][    :, yhalf, zhalf], label="x")
+        plt.title("AY")
+        plt.legend()
+
+        plt.figure()
+        plt.plot(mesh.aa[2][xhalf, yhalf,     :], label="z")
+        plt.plot(mesh.aa[2][xhalf,     :, zhalf], label="y")
+        plt.plot(mesh.aa[2][    :, yhalf, zhalf], label="x")
+        plt.legend()
+        plt.title("AZ")
+
+        uu_tot = np.sqrt(mesh.uu[0]**2.0 + mesh.uu[1]**2.0 + mesh.uu[2]**2.0)
+        bb_tot = np.sqrt(mesh.bb[0]**2.0 + mesh.bb[1]**2.0 + mesh.bb[2]**2.0)
+
+        plt.figure()
+        plt.plot(uu_tot[xhalf, yhalf,     :], label="z")
+        plt.plot(uu_tot[xhalf,     :, zhalf], label="y")
+        plt.plot(uu_tot[    :, yhalf, zhalf], label="x")
+        plt.legend()
+        plt.title("UTOT")
+
+        plt.figure()
+        plt.plot(bb_tot[xhalf, yhalf,     :], label="z")
+        plt.plot(bb_tot[xhalf,     :, zhalf], label="y")
+        plt.plot(bb_tot[    :, yhalf, zhalf], label="x")
+        plt.legend()
+        plt.title("BTOT")
+
+        plt.figure()
+        plt.plot(np.exp(mesh.lnrho[xhalf, yhalf,     :]), label="z")
+        plt.plot(np.exp(mesh.lnrho[xhalf,     :, zhalf]), label="y")
+        plt.plot(np.exp(mesh.lnrho[    :, yhalf, zhalf]), label="x")
+        plt.legend()
+        plt.title("RHO")
+
 
 if 'check' in sys.argv:
     mesh = ad.read.Mesh(0, fdir=meshdir)
@@ -180,22 +272,43 @@ if '1d' in sys.argv:
  
             plt.legend()
 
+
     plt.show()
+
+if 'csv' in sys.argv:
+    filenum = sys.argv[1]
+    mesh = ad.read.Mesh(filenum, fdir=meshdir)
+    mesh.Bfield()
+    mesh.export_csv()
+
+if 'raw' in sys.argv:
+    filenum = sys.argv[1]
+    mesh = ad.read.Mesh(filenum, fdir=meshdir)
+    mesh.Bfield()
+    mesh.export_raw()
+
+if 'findnan' in sys.argv:
+    filenum = sys.argv[1]
+    mesh = ad.read.Mesh(filenum, fdir=meshdir)
+    print("nan uu", np.where(np.isnan(mesh.uu)))
+    print("nan aa", np.where(np.isnan(mesh.aa)))
+    print("nan lnrho", np.where(np.isnan(mesh.lnrho)))
+    print("inf uu", np.where(np.isinf(mesh.uu)))
+    print("inf aa", np.where(np.isinf(mesh.aa)))
+    print("inf lnrho", np.where(np.isinf(mesh.lnrho)))
 
 
 if 'sl' in sys.argv:
-    #maxfiles = 200002
-    #stride = 10000
-    maxfiles = 500000001
-    stride = 1
-    for i in range(0, maxfiles, stride):
-        #mesh = ad.read.Mesh(i, fdir=meshdir) 
+    mesh_file_numbers = ad.read.parse_directory(meshdir)
+    print(mesh_file_numbers)
+    maxfiles = np.amax(mesh_file_numbers)
+    for i in mesh_file_numbers:
         mesh = ad.read.Mesh(i, fdir=meshdir) 
         print(" %i / %i" % (i, maxfiles))
         if mesh.ok:
             uu_tot = np.sqrt(mesh.uu[0]**2.0 + mesh.uu[1]**2.0 + mesh.uu[2]**2.0)
             aa_tot = np.sqrt(mesh.aa[0]**2.0 + mesh.aa[1]**2.0 + mesh.aa[2]**2.0)
-            mesh.Bfield()
+            mesh.Bfield(trim=True)
             bb_tot = np.sqrt(mesh.bb[0]**2.0 + mesh.bb[1]**2.0 + mesh.bb[2]**2.0)
 
             if 'sym' in sys.argv:
@@ -248,6 +361,133 @@ if 'sl' in sys.argv:
                 vis.slices.plot_3(mesh, mesh.bb[1],         title = r'$B_y$', bitmap = True, fname = 'bby',     trimghost=3)#, bfieldlines=True)
                 vis.slices.plot_3(mesh, mesh.bb[2],         title = r'$B_z$', bitmap = True, fname = 'bbz',     trimghost=3)#, bfieldlines=True)
                  
+            if 'yt' in sys.argv:
+                mesh.yt_conversion()
+                from mpl_toolkits.axes_grid1 import AxesGrid
+
+                coords = ['x', 'y','z']
+                for coord in coords:
+                    fields = ['density', 'uux', 'uuy', 'uuz']
+                    fig = plt.figure()
+                    grid = AxesGrid(fig, (0.075,0.075,0.85,0.85),
+                                    nrows_ncols = (2, 2),
+                                    axes_pad = 1.0,
+                                    label_mode = "1",
+                                    share_all = True,
+                                    cbar_location="right",
+                                    cbar_mode="each",
+                                    cbar_size="3%",
+                                    cbar_pad="0%")
+
+                    p = yt.SlicePlot(mesh.ytdata, coord, fields)
+                    p.set_log('uux', False)
+                    p.set_log('uuy', False)
+                    p.set_log('uuz', False)
+
+                    for i, field in enumerate(fields):
+                        plot = p.plots[field]
+                        plot.figure = fig
+                        plot.axes = grid[i].axes
+                        plot.cax = grid.cbar_axes[i]
+
+                    p._setup_plots()
+                    plt.savefig('yt_rho_uu_%s_%s.png' % (coord, mesh.framenum))
+
+                    plt.close(fig=fig)
+
+                    ###
+
+                    fields = ['density', 'bbx', 'bby', 'bbz']
+                    fig = plt.figure()
+                    grid = AxesGrid(fig, (0.075,0.075,0.85,0.85),
+                                    nrows_ncols = (2, 2),
+                                    axes_pad = 1.0,
+                                    label_mode = "1",
+                                    share_all = True,
+                                    cbar_location="right",
+                                    cbar_mode="each",
+                                    cbar_size="3%",
+                                    cbar_pad="0%")
+
+                    p = yt.SlicePlot(mesh.ytdata, coord, fields)
+                    p.set_log('bbx', False)
+                    p.set_log('bby', False)
+                    p.set_log('bbz', False)
+
+                    for i, field in enumerate(fields):
+                        plot = p.plots[field]
+                        plot.figure = fig
+                        plot.axes = grid[i].axes
+                        plot.cax = grid.cbar_axes[i]
+
+                    p._setup_plots()
+                    plt.savefig('yt_rho_bb_%s_%s.png' % (coord, mesh.framenum))
+
+                    plt.close(fig=fig)
+
+            elif 'csvall' in sys.argv:
+                mesh.export_csv()
+
+            elif 'rawall' in sys.argv:
+                mesh.export_raw()
+   
+if "vol" in sys.argv: 
+   print("VOLUME RENDERING") 
+   mesh_file_numbers = ad.read.parse_directory(meshdir)
+   print(mesh_file_numbers)
+   maxfiles = np.amax(mesh_file_numbers)
+
+   for i in mesh_file_numbers:
+       mesh = ad.read.Mesh(i, fdir=meshdir) 
+       mesh.Bfield(trim=True)
+       print(" %i / %i" % (i, maxfiles))
+       if mesh.ok:
+           vis.slices.volume_render(mesh, val1 = {"variable": "btot", "min":0.5, "max":2.0, "opacity":0.05})
+           vis.slices.volume_render(mesh, val1 = {"variable": "utot", "min":0.5, "max":2.0, "opacity":0.05})
+           vis.slices.volume_render(mesh, val1 = {"variable": "rho", "min":10.0, "max":300.0, "opacity":0.05})
+           vis.slices.volume_render(mesh, val1 = {"variable": "aa", "min":0.1, "max":0.25, "opacity":0.05})
+
+if (("bline" in sys.argv) or ("uline" in sys.argv)): 
+   print("Field line computation") 
+   mesh_file_numbers = ad.read.parse_directory(meshdir)
+   print(mesh_file_numbers)
+   maxfiles = np.amax(mesh_file_numbers)
+
+   for i in mesh_file_numbers:
+       mesh = ad.read.Mesh(i, fdir=meshdir) 
+       mesh.Bfield(trim=True)
+       print(" %i / %i" % (i, maxfiles))
+       if mesh.ok:
+           if "uline" in sys.argv:
+               mesh.Bfieldlines(footloc = 'cube', vartype='U', maxstep = 200)
+           else: 
+               mesh.Bfieldlines(footloc = 'default')
+           print(mesh.df_lines)
+    
+       fig = plt.figure(figsize=(5.0,5.0))
+       ax = fig.gca(projection='3d')
+       for line_num in range(int(mesh.df_lines['line_num'].max()+1)):
+           df_myline = mesh.df_lines.loc[mesh.df_lines['line_num'] == line_num]
+           print(df_myline)
+           my_xscale = [mesh.xx_trim.min(), mesh.xx_trim.max()]
+           my_yscale = [mesh.yy_trim.min(), mesh.yy_trim.max()]
+           my_zscale = [mesh.zz_trim.min(), mesh.zz_trim.max()]
+           ax.plot(df_myline["coordx"], df_myline["coordy"], df_myline["coordz"], color="red")
+           ax.set_xlim3d(my_xscale)
+           ax.set_ylim3d(my_yscale)
+           ax.set_zlim3d(my_zscale)
+
+       if "uline" in sys.argv:
+           filename = 'Ugeometry_%s.png' % (mesh.framenum)
+       else:
+           filename = 'Bgeometry_%s.png' % (mesh.framenum)  
+
+       plt.savefig(filename)
+       plt.close()
+
+       
+   #plt.show()
+
 
 if 'ts' in sys.argv:
    ts = ad.read.TimeSeries(fdir=meshdir)

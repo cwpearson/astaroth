@@ -21,6 +21,7 @@
 
 import numpy as np
 import os
+import pandas as pd
 
 #Optional YT interface
 try:
@@ -302,8 +303,115 @@ class Mesh:
             self.jj = curl_of_curl(self.aa, self.minfo)
         if trim:
             self.bb = (    self.bb[0][3:-3, 3:-3, 3:-3],self.bb[1][3:-3, 3:-3, 3:-3],self.bb[2][3:-3, 3:-3, 3:-3])
+            self.xx_trim = self.xx[3:-3]
+            self.yy_trim = self.yy[3:-3]
+            self.zz_trim = self.zz[3:-3]
             if get_jj:
                 self.jj = (self.jj[0][3:-3, 3:-3, 3:-3],self.jj[1][3:-3, 3:-3, 3:-3],self.jj[2][3:-3, 3:-3, 3:-3])
+
+
+
+    def Bfieldlines(self, footloc = 'default', vartype = 'B', maxstep = 1000):
+        dx = self.minfo.contents['AC_dsx']
+        dy = self.minfo.contents['AC_dsy']
+        dz = self.minfo.contents['AC_dsz']
+ 
+        if vartype == 'U':
+            #Trim to match
+            self.uu = (self.uu[0][3:-3, 3:-3, 3:-3],self.uu[1][3:-3, 3:-3, 3:-3],self.uu[2][3:-3, 3:-3, 3:-3])
+ 
+        def field_line_step(self, coord, ds): 
+            #TODO assume that grid is at a cell centre
+            ix = np.argmin(np.abs(self.xx_trim - coord[0]))            
+            iy = np.argmin(np.abs(self.yy_trim - coord[1]))            
+            iz = np.argmin(np.abs(self.zz_trim - coord[2]))
+            if vartype == 'U':
+                Bcell_vec = np.array([self.uu[0][ix, iy, iz],
+                                      self.uu[1][ix, iy, iz],
+                                      self.uu[2][ix, iy, iz]])
+            else:
+                Bcell_vec = np.array([self.bb[0][ix, iy, iz],
+                                      self.bb[1][ix, iy, iz],
+                                      self.bb[2][ix, iy, iz]])
+ 
+            Bcell_abs = np.sqrt(Bcell_vec[0]**2.0 + Bcell_vec[1]**2.0 + Bcell_vec[2]**2.0) 
+ 
+            coord_new = coord + (Bcell_vec/Bcell_abs)*ds
+            return coord_new
+ 
+        self.df_lines = pd.DataFrame()
+ 
+        ds = np.amin([self.minfo.contents['AC_dsx'], 
+                      self.minfo.contents['AC_dsy'], 
+                      self.minfo.contents['AC_dsz']])
+        ii = 0
+    
+        if footloc == 'middlez':
+            ixtot = 6
+            iytot = 6
+            iztot = 1
+            xfoots = np.linspace(self.xx_trim.min(), self.xx_trim.max(), num = ixtot)
+            yfoots = np.linspace(self.yy_trim.min(), self.yy_trim.max(), num = iytot)
+            zfoots = np.array([(self.zz_trim.max() - self.zz_trim.min())/2.0 + self.zz_trim.min()])
+        elif footloc == 'cube':
+            ixtot = 5
+            iytot = 5
+            iztot = 5
+            xfoots = np.linspace(self.xx_trim.min()+3.0*dx, self.xx_trim.max()-3.0*dx, num = ixtot)
+            yfoots = np.linspace(self.yy_trim.min()+3.0*dy, self.yy_trim.max()-3.0*dy, num = iytot)
+            zfoots = np.linspace(self.zz_trim.min()+3.0*dz, self.zz_trim.max()-3.0*dz, num = iztot)
+        else:
+            ixtot = 6
+            iytot = 6
+            iztot = 1
+            xfoots = np.linspace(self.xx_trim.min(), self.xx_trim.max(), num = ixtot)
+            yfoots = np.linspace(self.yy_trim.min(), self.yy_trim.max(), num = iytot)
+            zfoots = np.array([self.zz_trim.min()])
+ 
+        imax = ixtot * iytot * iztot
+ 
+        for zfoot in zfoots:
+            for yfoot in yfoots:
+                for xfoot in xfoots:
+                    print(ii, "/", imax-1)
+                    integrate = 1 
+                    counter = 0
+                    dstot = 0.0
+                    coord = np.array([xfoot, yfoot, zfoot])
+                    self.df_lines = self.df_lines.append({"line_num":ii, 
+                                                          "dstot":dstot, 
+                                                          "coordx":coord[0], 
+                                                          "coordy":coord[1], 
+                                                          "coordz":coord[2]}, 
+                                                          ignore_index=True) 
+                    while integrate:
+                        coord = field_line_step(self, coord, ds)
+                        dstot += ds
+                        self.df_lines = self.df_lines.append({"line_num":ii, 
+                                                              "dstot":dstot, 
+                                                              "coordx":coord[0], 
+                                                              "coordy":coord[1], 
+                                                              "coordz":coord[2]}, 
+                                                              ignore_index=True) 
+                         
+                        counter += 1
+                        if counter >= maxstep:
+                            integrate = 0   
+                        if ((coord[0] > self.xx_trim.max()) or 
+                            (coord[1] > self.yy_trim.max()) or 
+                            (coord[2] > self.zz_trim.max()) or 
+                            (coord[0] < self.xx_trim.min()) or 
+                            (coord[1] < self.yy_trim.min()) or 
+                            (coord[2] < self.zz_trim.min())): 
+                            #print("out of bounds")
+                            integrate = 0   
+                        if (np.isnan(coord[0]) or 
+                            np.isnan(coord[1]) or 
+                            np.isnan(coord[2])): 
+                            integrate = 0   
+                    ii += 1
+        #print(self.df_lines)
+
 
     def get_jj(self, trim=False):
         self.jj = curl_of_curl(self.aa, minfo, trim=False)
